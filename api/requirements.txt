@@ -1,0 +1,11 @@
+# fmt: off
+fastapi==0.115.5
+uvicorn==0.32.0
+python-dotenv==1.0.1
+bcrypt==4.2.0
+pydantic==2.9.2
+pydantic[email]==2.9.2
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.36
+python-jose==3.3.0
+passlib==1.7.4
