@@ -1,14 +1,19 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
-    create_engine,
     Column,
     String,
+    Integer,
+    Float,
     DateTime,
+    ForeignKey,
+    create_engine,
 )
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.orm import relationship, declared_attr
+from sqlalchemy.ext.declarative import declarative_base
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -21,11 +26,15 @@ class ParentBase(Base):
 
     @declared_attr
     def created_at(cls):
-        return Column(DateTime, default=datetime.utcnow)
+        return Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     @declared_attr
     def updated_at(cls):
-        return Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        return Column(
+            DateTime,
+            default=lambda: datetime.now(timezone.utc),
+            onupdate=lambda: datetime.now(timezone.utc),
+        )
 
     @declared_attr
     def deleted_at(cls):
@@ -34,6 +43,7 @@ class ParentBase(Base):
 
 class UserModel(ParentBase):
     __tablename__ = "users"
+
     id = Column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -43,6 +53,268 @@ class UserModel(ParentBase):
     )
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=True)
+
+    # Relationships
+    workspaces = relationship(
+        "Workspace", back_populates="user", cascade="all, delete-orphan"
+    )
+    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+    projects = relationship(
+        "Project", back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class Workspace(ParentBase):
+    __tablename__ = "workspaces"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+
+    # Relationships
+    user = relationship("UserModel", back_populates="workspaces")
+    projects = relationship(
+        "Project", back_populates="workspace", cascade="all, delete-orphan"
+    )
+
+
+class Project(ParentBase):
+    __tablename__ = "projects"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    workspace_id = Column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+
+    # Relationships
+    workspace = relationship("Workspace", back_populates="projects")
+    user = relationship("UserModel", back_populates="projects")
+    tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    sub_tasks = relationship(
+        "SubTask", back_populates="project", cascade="all, delete-orphan"
+    )
+    task_events = relationship(
+        "TaskEvent", back_populates="project", cascade="all, delete-orphan"
+    )
+    sub_task_tools = relationship(
+        "SubTaskTool", back_populates="project", cascade="all, delete-orphan"
+    )
+    task_usages = relationship(
+        "TaskUsage", back_populates="project", cascade="all, delete-orphan"
+    )
+    sub_task_objects = relationship(
+        "SubTaskObject", back_populates="project", cascade="all, delete-orphan"
+    )
+
+
+class Task(ParentBase):
+    __tablename__ = "tasks"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=True)
+    prompt = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    response = Column(String, nullable=True)
+    extra_data = Column(JSONB, nullable=True)
+
+    # Relationships
+    project = relationship("Project", back_populates="tasks")
+    user = relationship("UserModel", back_populates="tasks")
+    sub_tasks = relationship(
+        "SubTask", back_populates="task", cascade="all, delete-orphan"
+    )
+    task_events = relationship(
+        "TaskEvent", back_populates="task", cascade="all, delete-orphan"
+    )
+    sub_task_tools = relationship(
+        "SubTaskTool", back_populates="task", cascade="all, delete-orphan"
+    )
+    task_usages = relationship(
+        "TaskUsage", back_populates="task", cascade="all, delete-orphan"
+    )
+    sub_task_objects = relationship(
+        "SubTaskObject", back_populates="task", cascade="all, delete-orphan"
+    )
+
+
+class SubTask(ParentBase):
+    __tablename__ = "sub_tasks"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    name = Column(String, nullable=True)
+    prompt = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    priority = Column(Integer, nullable=True)
+    order = Column(Integer, nullable=True)
+    response = Column(String, nullable=True)
+    extra_data = Column(JSONB, nullable=True)
+
+    # Relationships
+    task = relationship("Task", back_populates="sub_tasks")
+    project = relationship("Project", back_populates="sub_tasks")
+    task_events = relationship(
+        "TaskEvent", back_populates="sub_task", cascade="all, delete-orphan"
+    )
+    sub_task_tools = relationship(
+        "SubTaskTool", back_populates="sub_task", cascade="all, delete-orphan"
+    )
+    task_usages = relationship(
+        "TaskUsage", back_populates="sub_task", cascade="all, delete-orphan"
+    )
+    sub_task_objects = relationship(
+        "SubTaskObject", back_populates="sub_task", cascade="all, delete-orphan"
+    )
+
+
+class TaskEvent(ParentBase):
+    __tablename__ = "task_events"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=True)
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=True)
+    type = Column(String, nullable=False)
+    info = Column(String, nullable=True)
+    input = Column(String, nullable=True)
+    extra_data = Column(JSONB, nullable=True)
+
+    # Relationships
+    project = relationship("Project", back_populates="task_events")
+    task = relationship("Task", back_populates="task_events")
+    sub_task = relationship("SubTask", back_populates="task_events")
+
+
+class SubTaskTool(ParentBase):
+    __tablename__ = "sub_task_tools"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
+    tool_id = Column(UUID(as_uuid=True), ForeignKey("tools.id"), nullable=False)
+    status = Column(String, nullable=False)
+    response = Column(String, nullable=True)
+    score = Column(Integer, nullable=False)
+
+    # Relationships
+    sub_task = relationship("SubTask", back_populates="sub_task_tools")
+    project = relationship("Project", back_populates="sub_task_tools")
+    task = relationship("Task", back_populates="sub_task_tools")
+    tool = relationship("Tool", back_populates="sub_task_tools")
+
+
+class Tool(ParentBase):
+    __tablename__ = "tools"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    name = Column(String, nullable=False)
+    descriptions = Column(String, nullable=True)
+    vector_id = Column(String, nullable=True)
+    function_name = Column(String, nullable=True)
+    extra_data = Column(JSONB, nullable=True)
+
+    # Relationships
+    sub_task_tools = relationship(
+        "SubTaskTool", back_populates="tool", cascade="all, delete-orphan"
+    )
+
+
+class TaskUsage(ParentBase):
+    __tablename__ = "task_usages"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=True)
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=True)
+    provider = Column(String, nullable=False)
+    model = Column(String, nullable=False)
+    total_token = Column(Integer, nullable=False)
+    input_token = Column(Integer, nullable=False)
+    output_token = Column(Integer, nullable=False)
+    cost = Column(Float, nullable=False)
+    fee = Column(Float, nullable=False)
+    extra_data = Column(JSONB, nullable=True)
+
+    # Relationships
+    project = relationship("Project", back_populates="task_usages")
+    task = relationship("Task", back_populates="task_usages")
+    sub_task = relationship("SubTask", back_populates="task_usages")
+
+
+class SubTaskObject(ParentBase):
+    __tablename__ = "sub_task_objects"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
+    object_key = Column(String, nullable=False)
+    source = Column(String, nullable=False)
+
+    # Relationships
+    sub_task = relationship("SubTask", back_populates="sub_task_objects")
+    project = relationship("Project", back_populates="sub_task_objects")
+    task = relationship("Task", back_populates="sub_task_objects")
 
 
 def init_db():
