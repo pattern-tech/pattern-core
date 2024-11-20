@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.11.2
+    restart: always
+    volumes:
+      - /root/qdrant:/qdrant/storage
+    networks:
+      - app_network
+
+  postgres:
+    image: postgres:15.7-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    ports:
+      - "5432:5432"
+
+  minio:
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - app_network
+
+  api:
+    build: .
+    restart: always
+    environment:
+      MODULE_NAME: src.main
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
+      QDRANT_HOST: ${QDRANT_HOST}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION}
+    volumes:
+      - .:/app
+    ports:
+      - "0.0.0.0:8000:8000"
+    networks:
+      - app_network
+
+volumes:
+  pg_data:
+  minio_data:
+
+networks:
+  app_network:
