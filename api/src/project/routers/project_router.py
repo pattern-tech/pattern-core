@@ -56,21 +56,15 @@ def create_project(
 
     Args:
         input (CreateProjectInput): The project creation input.
-        db (Session): SQLAlchemy session.
-        service (ProjectService): Project service instance.
-        user_id (UUID): ID of the current user.
 
     Returns:
         ProjectOutput: The created project data.
     """
     try:
-        project = service.create_project(
-            db, input.name, user_id, input.workspace_id)
+        project = service.create_project(db, input.name, user_id, input.workspace_id)
         return global_response(project)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/{project_id}", response_model=ProjectOutput)
@@ -85,9 +79,6 @@ def get_project(
 
     Args:
         project_id (UUID): The project ID.
-        db (Session): SQLAlchemy session.
-        service (ProjectService): Project service instance.
-        user_id (UUID): ID of the current user.
 
     Returns:
         ProjectOutput: The project data.
@@ -96,9 +87,7 @@ def get_project(
         project = service.get_project(db, project_id, user_id)
         return global_response(project)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get("", response_model=List[ProjectOutput])
@@ -109,11 +98,6 @@ def list_projects(
 ):
     """
     Lists all projects for the current user.
-
-    Args:
-        db (Session): SQLAlchemy session.
-        service (ProjectService): Project service instance.
-        user_id (UUID): ID of the current user.
 
     Returns:
         List[ProjectOutput]: List of all projects for the user.
@@ -135,10 +119,6 @@ def update_project(
 
     Args:
         project_id (UUID): The project ID.
-        input (CreateProjectInput): Updated project data.
-        db (Session): SQLAlchemy session.
-        service (ProjectService): Project service instance.
-        user_id (UUID): ID of the current user.
 
     Returns:
         ProjectOutput: The updated project data.
@@ -147,9 +127,7 @@ def update_project(
         updated_project = service.update_project(db, project_id, input.dict(), user_id)
         return global_response(updated_project)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -164,9 +142,6 @@ def delete_project(
 
     Args:
         project_id (UUID): The project ID.
-        db (Session): SQLAlchemy session.
-        service (ProjectService): Project service instance.
-        user_id (UUID): ID of the current user.
 
     Returns:
         None
@@ -175,6 +150,4 @@ def delete_project(
         project = service.delete_project(db, project_id, user_id)
         return global_response(project)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

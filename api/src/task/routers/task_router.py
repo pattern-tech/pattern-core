@@ -62,9 +62,6 @@ def create_task(
 
     Args:
         input (CreateTaskInput): The input data for creating a task.
-        db (Session): SQLAlchemy session.
-        service (TaskService): Task service instance.
-        user_id (UUID): The ID of the current user.
 
     Returns:
         TaskOutput: The created task data.
@@ -93,9 +90,6 @@ def get_task(
 
     Args:
         task_id (UUID): The task ID.
-        db (Session): SQLAlchemy session.
-        service (TaskService): Task service instance.
-        user_id (UUID): The ID of the current user.
 
     Returns:
         TaskOutput: The task data.
@@ -115,11 +109,6 @@ def list_tasks(
 ):
     """
     Lists all tasks for the current user.
-
-    Args:
-        db (Session): SQLAlchemy session.
-        service (TaskService): Task service instance.
-        user_id (UUID): The ID of the current user.
 
     Returns:
         List[TaskOutput]: List of task data.
@@ -141,10 +130,6 @@ def update_task(
 
     Args:
         task_id (UUID): The task ID.
-        task_data (dict): The task data to update.
-        db (Session): SQLAlchemy session.
-        service (TaskService): Task service instance.
-        user_id (UUID): The ID of the current user.
 
     Returns:
         TaskOutput: The updated task data.
@@ -168,9 +153,6 @@ def delete_task(
 
     Args:
         task_id (UUID): The task ID.
-        db (Session): SQLAlchemy session.
-        service (TaskService): Task service instance.
-        user_id (UUID): The ID of the current user.
 
     Returns:
         None

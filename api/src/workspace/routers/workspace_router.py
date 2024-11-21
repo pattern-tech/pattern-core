@@ -54,9 +54,6 @@ def create_workspace(
 
     Args:
         input (CreateWorkspaceInput): The workspace creation input
-        user_id (UUID): The authenticated user ID
-        db (Session): SQLAlchemy session
-        service (WorkspaceService): Workspace service instance
 
     Returns:
         WorkspaceOutput: The created workspace data
@@ -83,9 +80,6 @@ def get_workspace(
 
     Args:
         workspace_id (UUID): The workspace ID
-        user_id (UUID): The authenticated user ID
-        db (Session): SQLAlchemy session
-        service (WorkspaceService): Workspace service instance
 
     Returns:
         WorkspaceOutput: The workspace data
@@ -109,11 +103,6 @@ def list_workspaces(
     """
     Lists all workspaces for the authenticated user.
 
-    Args:
-        user_id (UUID): The authenticated user ID
-        db (Session): SQLAlchemy session
-        service (WorkspaceService): Workspace service instance
-
     Returns:
         List[WorkspaceOutput]: List of all user workspaces
     """
@@ -134,10 +123,6 @@ def update_workspace(
 
     Args:
         workspace_id (UUID): The workspace ID
-        input (CreateWorkspaceInput): Updated workspace data
-        user_id (UUID): The authenticated user ID
-        db (Session): SQLAlchemy session
-        service (WorkspaceService): Workspace service instance
 
     Returns:
         WorkspaceOutput: The updated workspace data
@@ -166,9 +151,6 @@ def delete_workspace(
 
     Args:
         workspace_id (UUID): The workspace ID
-        user_id (UUID): The authenticated user ID
-        db (Session): SQLAlchemy session
-        service (WorkspaceService): Workspace service instance
 
     Returns:
         None: If the workspace is successfully deleted
