@@ -10,7 +10,7 @@ from src.auth.utils.get_token import authenticate_user
 from src.task.services.task_service import TaskService
 from src.task.repositories.task_repository import TaskRepository
 
-router = APIRouter(prefix="/tasks")
+router = APIRouter(prefix="/task")
 database = Database()
 
 
