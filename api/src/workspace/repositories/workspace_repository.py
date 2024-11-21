@@ -1,8 +1,9 @@
-from typing import List, Optional
 from uuid import UUID
+from typing import List, Optional
 from sqlalchemy.orm import Session
-from src.share.base_repository import BaseRepository
+
 from src.db.models import Workspace
+from src.share.base_repository import BaseRepository
 
 
 class WorkspaceRepository(BaseRepository[Workspace]):
@@ -30,7 +31,7 @@ class WorkspaceRepository(BaseRepository[Workspace]):
             .first()
         )
 
-    def list(self, db_session: Session, user_id: UUID) -> List[Workspace]:
+    def get_all(self, db_session: Session, user_id: UUID) -> List[Workspace]:
         """
         Retrieves all workspaces for a given user.
 

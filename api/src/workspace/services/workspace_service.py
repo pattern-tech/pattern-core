@@ -1,9 +1,10 @@
-from typing import List
-from src.workspace.repository.workspace_repository import WorkspaceRepository
-from src.share.base_service import BaseService
-from src.db.models import Workspace
-from sqlalchemy.orm import Session
 from uuid import UUID
+from typing import List
+from sqlalchemy.orm import Session
+
+from src.db.models import Workspace
+from src.share.base_service import BaseService
+from src.workspace.repositories.workspace_repository import WorkspaceRepository
 
 
 class WorkspaceService(BaseService):
@@ -60,7 +61,7 @@ class WorkspaceService(BaseService):
         Returns:
             List[Workspace]: A list of Workspace instances owned by the user.
         """
-        return self.repository.list(db_session, user_id)
+        return self.repository.get_all(db_session, user_id)
 
     def update_workspace(
         self, db_session: Session, workspace_id: UUID, data: dict, user_id: UUID

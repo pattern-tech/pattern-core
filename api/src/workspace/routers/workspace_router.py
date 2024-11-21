@@ -1,13 +1,14 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from uuid import UUID
-from src.workspace.repository.workspace_repository import WorkspaceRepository
+from typing import List
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
 from src.workspace.services.workspace_service import WorkspaceService
-from src.db.sql_alchemy import Database
-from sqlalchemy.orm import Session
+from src.workspace.repositories.workspace_repository import WorkspaceRepository
 
 router = APIRouter(prefix="/workspace")
 database = Database()

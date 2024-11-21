@@ -11,7 +11,7 @@ class BaseRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    def list(self, db_session, user_id: UUID) -> List[T]:
+    def get_all(self, db_session, user_id: UUID) -> List[T]:
         pass
 
     @abstractmethod
