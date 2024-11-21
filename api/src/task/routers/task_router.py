@@ -28,12 +28,8 @@ def get_task_service() -> TaskService:
 
 
 class CreateTaskInput(BaseModel):
-    prompt: str
-    status: str
-    name: str = None
-    response: str = None
-    extra_data: dict = None
     project_id: UUID
+    prompt: str
 
     class Config:
         orm_mode = True
@@ -74,13 +70,15 @@ def create_task(
         TaskOutput: The created task data.
     """
     try:
-        task = service.create_task(db, input.project_id, user_id, input.prompt,
-                                   input.status, input.name, input.response, input.extra_data)
+        task = service.create_task(
+            db,
+            input.project_id,
+            user_id,
+            input.prompt,
+        )
         return global_response(task)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/{task_id}", response_model=TaskOutput)
@@ -106,9 +104,7 @@ def get_task(
         task = service.get_task(db, task_id, user_id)
         return global_response(task)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get("", response_model=List[TaskOutput])
@@ -157,9 +153,7 @@ def update_task(
         updated_task = service.update_task(db, task_id, input.dict(), user_id)
         return global_response(updated_task)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.delete("/{task_id}")
@@ -185,6 +179,4 @@ def delete_task(
         deleted_task = service.delete_task(db, task_id, user_id)
         return global_response(deleted_task)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

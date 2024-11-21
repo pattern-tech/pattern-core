@@ -2,6 +2,7 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
+from src.task.enum.task_status_enum import TaskStatusEnum
 from src.db.models import Task
 from src.task.repositories.task_repository import TaskRepository
 
@@ -10,7 +11,9 @@ class TaskService:
     def __init__(self, repository: TaskRepository):
         self.repository = repository
 
-    def create_task(self, db_session: Session, project_id: UUID, user_id: UUID, prompt: str, status: str, name: str = None, response: str = None, extra_data: dict = None) -> Task:
+    def create_task(
+        self, db_session: Session, project_id: UUID, user_id: UUID, prompt: str
+    ) -> Task:
         """
         Creates a new task.
 
@@ -30,11 +33,8 @@ class TaskService:
         task = Task(
             project_id=project_id,
             user_id=user_id,
-            name=name,
             prompt=prompt,
-            status=status,
-            response=response,
-            extra_data=extra_data,
+            status=TaskStatusEnum.INIT,
         )
         return self.repository.create(db_session, task)
 
@@ -71,7 +71,9 @@ class TaskService:
         """
         return self.repository.get_all(db_session, user_id)
 
-    def update_task(self, db_session: Session, task_id: UUID, task_data: dict, user_id: UUID) -> Task:
+    def update_task(
+        self, db_session: Session, task_id: UUID, task_data: dict, user_id: UUID
+    ) -> Task:
         """
         Updates an existing task.
 
