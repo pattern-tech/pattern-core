@@ -11,11 +11,11 @@ class ProjectService:
     Service class for handling project-related business logic.
     """
 
-    def __init__(self, repository: ProjectRepository):
-        self.repository = repository
+    def __init__(self):
+        self.repository = ProjectRepository()
 
     def create_project(
-            self, db_session: Session, name: str, user_id: UUID, workspace_id: UUID
+        self, db_session: Session, name: str, user_id: UUID, workspace_id: UUID
     ) -> Project:
         """
         Creates a new project.
@@ -29,8 +29,7 @@ class ProjectService:
         Returns:
             Project: The created project instance.
         """
-        project = Project(name=name, user_id=user_id,
-                          workspace_id=workspace_id)
+        project = Project(name=name, user_id=user_id, workspace_id=workspace_id)
         return self.repository.create(db_session, project)
 
     def get_project(
@@ -55,9 +54,7 @@ class ProjectService:
             raise Exception("Project not found")
         return project
 
-    def list_projects(
-        self, db_session: Session, user_id: UUID
-    ) -> List[Project]:
+    def get_all_projects(self, db_session: Session, user_id: UUID) -> List[Project]:
         """
         Lists all projects owned by a specific user.
 

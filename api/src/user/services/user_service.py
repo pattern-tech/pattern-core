@@ -7,8 +7,8 @@ from src.user.repositories.user_repository import UserRepository
 
 
 class UserService:
-    def __init__(self, repository: UserRepository):
-        self.repository = repository
+    def __init__(self):
+        self.repository = UserRepository()
 
     def create_user(self, db_session: Session, email: str, password: str) -> UserModel:
         """

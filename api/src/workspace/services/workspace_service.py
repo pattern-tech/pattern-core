@@ -8,8 +8,8 @@ from src.workspace.repositories.workspace_repository import WorkspaceRepository
 
 
 class WorkspaceService(BaseService):
-    def __init__(self, repository: WorkspaceRepository):
-        self.repository = repository
+    def __init__(self):
+        self.repository = WorkspaceRepository()
 
     def create_workspace(
         self, db_session: Session, name: str, user_id: UUID
@@ -50,7 +50,7 @@ class WorkspaceService(BaseService):
             raise Exception("Workspace not found or not owned by user")
         return workspace
 
-    def list_workspaces(self, db_session: Session, user_id: UUID) -> List[Workspace]:
+    def get_all_workspaces(self, db_session: Session, user_id: UUID) -> List[Workspace]:
         """
         Lists all workspaces owned by a user.
 
