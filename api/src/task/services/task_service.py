@@ -51,19 +51,19 @@ class TaskService:
         )
 
         # Create sub-tasks if allowed
-        # if allow_create_sub_tasks:
-        for index, step in enumerate(plan.steps):
-            self.sub_task_service.create_sub_task(
-                db_session,
-                new_task.id,
-                project_id,
-                user_id,
-                step.task,
-                TaskStatusEnum.INIT,
-                None,
-                None,
-                index + 1,
-            )
+        if allow_create_sub_tasks:
+            for index, step in enumerate(plan.steps):
+                self.sub_task_service.create_sub_task(
+                    db_session,
+                    new_task.id,
+                    project_id,
+                    user_id,
+                    step.task,
+                    TaskStatusEnum.INIT,
+                    None,
+                    None,
+                    index + 1,
+                )
 
         return {
             "task": task,
