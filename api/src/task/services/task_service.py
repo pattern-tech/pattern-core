@@ -37,7 +37,7 @@ class TaskService:
         _task = Task(
             project_id=project_id,
             user_id=user_id,
-            task=task,
+            task=task.strip(),
             status=TaskStatusEnum.INIT,
         )
         new_task = self.repository.create(db_session, _task)
@@ -46,9 +46,15 @@ class TaskService:
         plan = self.agent_service.planner(task)
 
         # Check if sub-tasks can be created
-        allow_create_sub_tasks = not any(
-            step.action != AgentActionEnum.NO_ACTION for step in plan.steps
-        )
+        action_descriptions = ""
+        allow_create_sub_tasks = True
+
+        _count = 0
+        for step in plan.steps:
+            if step.action != AgentActionEnum.NO_ACTION:
+                _count += 1
+                action_descriptions += f"{_count}- " + step.action_description.strip()
+                allow_create_sub_tasks = False
 
         # Create sub-tasks if allowed
         if allow_create_sub_tasks:
@@ -58,16 +64,21 @@ class TaskService:
                     new_task.id,
                     project_id,
                     user_id,
-                    step.task,
+                    step.task.strip(),
                     TaskStatusEnum.INIT,
                     None,
                     None,
                     index + 1,
                 )
+        else:
+            new_task.status = TaskStatusEnum.ACTION_REQUIRED
+            db_session.commit()
+            db_session.refresh(new_task)
 
         return {
             "task": task,
-            "sub_task": allow_create_sub_tasks,
+            "sub_task_created": allow_create_sub_tasks,
+            "action_descriptions": action_descriptions,
         }
 
     def get_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> Task:
