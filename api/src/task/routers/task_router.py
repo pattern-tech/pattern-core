@@ -33,6 +33,13 @@ class CreateTaskInput(BaseModel):
         orm_mode = True
 
 
+class UpdateTaskInput(BaseModel):
+    task: str
+
+    class Config:
+        orm_mode = True
+
+
 class TaskOutput(BaseModel):
     id: UUID
     project_id: UUID
@@ -118,7 +125,7 @@ def get_all_tasks(
 @router.put("/{task_id}", response_model=TaskOutput)
 def update_task(
     task_id: UUID,
-    input: CreateTaskInput,
+    input: UpdateTaskInput,
     db: Session = Depends(get_db),
     service: TaskService = Depends(get_task_service),
     user_id: UUID = Depends(authenticate_user),
@@ -133,7 +140,7 @@ def update_task(
         TaskOutput: The updated task data.
     """
     try:
-        updated_task = service.update_task(db, task_id, input.dict(), user_id)
+        updated_task = service.update_task(db, task_id, input.task, user_id)
         return global_response(updated_task)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

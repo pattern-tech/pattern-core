@@ -18,30 +18,14 @@ class TaskService:
         self.agent_service = AgentService()
         self.sub_task_service = SubTaskService()
 
-    def create_task(
-        self, db_session: Session, project_id: UUID, user_id: UUID, task: str
-    ) -> Task:
-        """
-        Creates a new task.
-
-        Args:
-            db_session (Session): The database session.
-            project_id (UUID): The ID of the project to which the task belongs.
-            user_id (UUID): The ID of the user creating the task.
-            task (str): The prompt for the task.
-            status (str): Default set to `TaskStatusEnum.INIT`
-
-        Returns:
-            Task: The created task instance.
-        """
-        _task = Task(
-            project_id=project_id,
-            user_id=user_id,
-            task=task.strip(),
-            status=TaskStatusEnum.INIT,
-        )
-        new_task = self.repository.create(db_session, _task)
-
+    def _planner(
+        self,
+        db_session: Session,
+        task_id: UUID,
+        project_id: UUID,
+        user_id: UUID,
+        task: str,
+    ):
         # Generate a plan for the task
         planner = self.agent_service.planner(task)
         plan: Plan = planner.invoke(
@@ -71,7 +55,7 @@ class TaskService:
             for index, step in enumerate(plan.steps):
                 self.sub_task_service.create_sub_task(
                     db_session,
-                    new_task.id,
+                    task_id,
                     project_id,
                     user_id,
                     step.task.strip(),
@@ -81,15 +65,41 @@ class TaskService:
                     index + 1,
                 )
         else:
-            new_task.status = TaskStatusEnum.ACTION_REQUIRED
+            _task = self.repository.get_by_id(db_session, task_id, user_id)
+            _task.status = TaskStatusEnum.ACTION_REQUIRED
             db_session.commit()
-            db_session.refresh(new_task)
+            db_session.refresh(_task)
 
         return {
             "task": task,
             "sub_task_created": allow_create_sub_tasks,
             "action_descriptions": action_descriptions,
         }
+
+    def create_task(
+        self, db_session: Session, project_id: UUID, user_id: UUID, task: str
+    ) -> Task:
+        """
+        Creates a new task.
+
+        Args:
+            db_session (Session): The database session.
+            project_id (UUID): The ID of the project to which the task belongs.
+            user_id (UUID): The ID of the user creating the task.
+            task (str): The prompt for the task.
+            status (str): Default set to `TaskStatusEnum.INIT`
+
+        Returns:
+            Task: The created task instance.
+        """
+        _task = Task(
+            project_id=project_id,
+            user_id=user_id,
+            task=task.strip(),
+            status=TaskStatusEnum.INIT,
+        )
+        new_task = self.repository.create(db_session, _task)
+        return self._planner(db_session, new_task.id, project_id, user_id, task)
 
     def get_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> Task:
         """
@@ -125,7 +135,7 @@ class TaskService:
         return self.repository.get_all(db_session, user_id)
 
     def update_task(
-        self, db_session: Session, task_id: UUID, task_data: dict, user_id: UUID
+        self, db_session: Session, task_id: UUID, task: str, user_id: UUID
     ) -> Task:
         """
         Updates an existing task.
@@ -133,13 +143,14 @@ class TaskService:
         Args:
             db_session (Session): The database session.
             task_id (UUID): The ID of the task to update.
-            task_data (dict): A dictionary of fields to update.
+            task (str): The prompt for the task.
             user_id (UUID): The ID of the user.
 
         Returns:
             Task: The updated Task instance.
         """
-        return self.repository.update(db_session, task_id, task_data, user_id)
+        task = self.repository.update(db_session, task_id, {"task": task}, user_id)
+        return self._planner(db_session, task.id, task.project_id, user_id, task)
 
     def delete_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> None:
         """
