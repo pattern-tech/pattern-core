@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from src.agent.enum.agent_action_enum import AgentActionEnum
 from src.task.services.sub_task_service import SubTaskService
-from src.agent.services.agent_service import AgentService
+from src.agent.services.agent_service import AgentService, Plan
 from src.task.enum.task_status_enum import TaskStatusEnum
 from src.db.models import Task
 from src.task.repositories.task_repository import TaskRepository
@@ -43,7 +43,17 @@ class TaskService:
         new_task = self.repository.create(db_session, _task)
 
         # Generate a plan for the task
-        plan = self.agent_service.planner(task)
+        planner = self.agent_service.planner(task)
+        plan: Plan = planner.invoke(
+            {
+                "messages": [
+                    (
+                        "user",
+                        task,
+                    )
+                ]
+            }
+        )
 
         # Check if sub-tasks can be created
         action_descriptions = ""

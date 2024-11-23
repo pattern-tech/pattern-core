@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class Step(BaseModel):
+class PlanStep(BaseModel):
     """Represents a single step with an action."""
 
     task: str = Field(description="Task definition")
@@ -24,7 +24,7 @@ class Step(BaseModel):
 class Plan(BaseModel):
     """Plan to follow in the future."""
 
-    steps: List[Step] = Field(
+    steps: List[PlanStep] = Field(
         description="Different steps to follow, should be in sorted order"
     )
 
@@ -56,15 +56,4 @@ class AgentService:
         planner = planner_prompt | ChatOpenAI(
             model="gpt-4o-mini", temperature=0
         ).with_structured_output(Plan)
-
-        plan: Plan = planner.invoke(
-            {
-                "messages": [
-                    (
-                        "user",
-                        task,
-                    )
-                ]
-            }
-        )
-        return plan
+        return planner
