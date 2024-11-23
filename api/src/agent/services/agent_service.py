@@ -44,9 +44,9 @@ class AgentService:
                     
                     Step Action Guidelines
                     The step_action must be one of the following values:
-                    {AgentActionEnum.NO_ACTION}: No additional input is required from the user to perform the step.
-                    {AgentActionEnum.INPUT_TEXT}: Text input is required from the user to complete the step. (Based on real-wold use cases)
-                    {AgentActionEnum.INPUT_MEDIA}: Media input (e.g., images, videos, or files) is required from the user to complete the step. (Based on real-wold use cases)
+                    {AgentActionEnum.NO_ACTION.value}: No additional input is required from the user to perform the step.
+                    {AgentActionEnum.INPUT_TEXT.value}: Text input is required from the user to complete the step. (Based on real-wold use cases)
+                    {AgentActionEnum.INPUT_MEDIA.value}: Media input (e.g., images, videos, or files) is required from the user to complete the step. (Based on real-wold use cases)
                     """,
                 ),
                 ("placeholder", "{messages}"),
