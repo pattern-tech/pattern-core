@@ -3,8 +3,10 @@ from pydantic import BaseModel, Field
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from src.agent.enum.agent_action_enum import AgentActionEnum
 
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -36,15 +38,15 @@ class AgentService:
             [
                 (
                     "system",
-                    """For the given objective, come up with a simple step by step plan.
+                    f"""For the given objective, come up with a simple step by step plan.
                     This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps.
                     The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps.
                     
                     Step Action Guidelines
                     The step_action must be one of the following values:
-                    no_action: No additional input is required from the user to perform the step.
-                    input_text: Text input is required from the user to complete the step. (Based on real-wold use cases)
-                    input_media: Media input (e.g., images, videos, or files) is required from the user to complete the step. (Based on real-wold use cases)
+                    {AgentActionEnum.NO_ACTION}: No additional input is required from the user to perform the step.
+                    {AgentActionEnum.INPUT_TEXT}: Text input is required from the user to complete the step. (Based on real-wold use cases)
+                    {AgentActionEnum.INPUT_MEDIA}: Media input (e.g., images, videos, or files) is required from the user to complete the step. (Based on real-wold use cases)
                     """,
                 ),
                 ("placeholder", "{messages}"),

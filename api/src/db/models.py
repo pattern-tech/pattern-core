@@ -172,7 +172,7 @@ class SubTask(ParentBase):
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
     name = Column(String, nullable=True)
-    task = Column(String, nullable=False)
+    sub_task = Column(String, nullable=False)
     status = Column(String, nullable=False)
     priority = Column(Integer, nullable=True)
     order = Column(Integer, nullable=True)

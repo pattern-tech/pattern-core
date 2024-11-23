@@ -2,17 +2,24 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
+from src.agent.enum.agent_action_enum import AgentActionEnum
+from src.task.services.sub_task_service import SubTaskService
+from src.agent.services.agent_service import AgentService
 from src.task.enum.task_status_enum import TaskStatusEnum
 from src.db.models import Task
 from src.task.repositories.task_repository import TaskRepository
 
 
 class TaskService:
-    def __init__(self, repository: TaskRepository):
-        self.repository = repository
+    def __init__(
+        self,
+    ):
+        self.repository = TaskRepository()
+        self.agent_service = AgentService()
+        self.sub_task_service = SubTaskService()
 
     def create_task(
-        self, db_session: Session, project_id: UUID, user_id: UUID, prompt: str
+        self, db_session: Session, project_id: UUID, user_id: UUID, task: str
     ) -> Task:
         """
         Creates a new task.
@@ -21,22 +28,47 @@ class TaskService:
             db_session (Session): The database session.
             project_id (UUID): The ID of the project to which the task belongs.
             user_id (UUID): The ID of the user creating the task.
-            prompt (str): The prompt for the task.
-            status (str): The status of the task.
-            name (str): Optional name of the task.
-            response (str): Optional response to the task.
-            extra_data (dict): Optional extra data related to the task.
+            task (str): The prompt for the task.
+            status (str): Default set to `TaskStatusEnum.INIT`
 
         Returns:
             Task: The created task instance.
         """
-        task = Task(
+        _task = Task(
             project_id=project_id,
             user_id=user_id,
-            prompt=prompt,
+            task=task,
             status=TaskStatusEnum.INIT,
         )
-        return self.repository.create(db_session, task)
+        new_task = self.repository.create(db_session, _task)
+
+        # Generate a plan for the task
+        plan = self.agent_service.planner(task)
+
+        # Check if sub-tasks can be created
+        allow_create_sub_tasks = not any(
+            step.action != AgentActionEnum.NO_ACTION for step in plan.steps
+        )
+
+        # Create sub-tasks if allowed
+        # if allow_create_sub_tasks:
+        for index, step in enumerate(plan.steps):
+            self.sub_task_service.create_sub_task(
+                db_session,
+                new_task.id,
+                project_id,
+                user_id,
+                step.task,
+                TaskStatusEnum.INIT,
+                None,
+                None,
+                index + 1,
+            )
+
+        return {
+            "task": task,
+            "sub_task": allow_create_sub_tasks,
+        }
 
     def get_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> Task:
         """
@@ -58,7 +90,7 @@ class TaskService:
             raise Exception("Task not found")
         return task
 
-    def list_tasks(self, db_session: Session, user_id: UUID) -> List[Task]:
+    def get_all_tasks(self, db_session: Session, user_id: UUID) -> List[Task]:
         """
         Lists all tasks for a user.
 

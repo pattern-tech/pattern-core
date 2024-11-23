@@ -8,7 +8,6 @@ from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
 from src.task.services.task_service import TaskService
-from src.task.repositories.task_repository import TaskRepository
 
 router = APIRouter(prefix="/task")
 database = Database()
@@ -23,13 +22,12 @@ def get_db():
 
 
 def get_task_service() -> TaskService:
-    repository = TaskRepository()
-    return TaskService(repository)
+    return TaskService()
 
 
 class CreateTaskInput(BaseModel):
     project_id: UUID
-    prompt: str
+    task: str
 
     class Config:
         orm_mode = True
@@ -71,7 +69,7 @@ def create_task(
             db,
             input.project_id,
             user_id,
-            input.prompt,
+            input.task,
         )
         return global_response(task)
     except Exception as e:
@@ -102,7 +100,7 @@ def get_task(
 
 
 @router.get("", response_model=List[TaskOutput])
-def list_tasks(
+def get_all_tasks(
     db: Session = Depends(get_db),
     service: TaskService = Depends(get_task_service),
     user_id: UUID = Depends(authenticate_user),
@@ -113,7 +111,7 @@ def list_tasks(
     Returns:
         List[TaskOutput]: List of task data.
     """
-    tasks = service.list_tasks(db, user_id)
+    tasks = service.get_all_tasks(db, user_id)
     return global_response(tasks)
 
 
