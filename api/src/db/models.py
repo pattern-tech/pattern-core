@@ -6,6 +6,7 @@ from sqlalchemy import (
     String,
     Integer,
     Float,
+    Text,
     DateTime,
     ForeignKey,
     create_engine,
@@ -136,7 +137,7 @@ class Task(ParentBase):
     name = Column(String, nullable=True)
     task = Column(String, nullable=False)
     status = Column(String, nullable=False)
-    response = Column(String, nullable=True)
+    response = Column(Text, nullable=True)
     extra_data = Column(JSONB, nullable=True)
 
     # Relationships
@@ -176,7 +177,7 @@ class SubTask(ParentBase):
     status = Column(String, nullable=False)
     priority = Column(Integer, nullable=True)
     order = Column(Integer, nullable=True)
-    response = Column(String, nullable=True)
+    response = Column(Text, nullable=True)
     extra_data = Column(JSONB, nullable=True)
 
     # Relationships
