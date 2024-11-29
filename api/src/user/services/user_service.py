@@ -2,6 +2,7 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
+from src.workspace.services.workspace_service import WorkspaceService
 from src.db.models import UserModel
 from src.user.repositories.user_repository import UserRepository
 
@@ -9,6 +10,7 @@ from src.user.repositories.user_repository import UserRepository
 class UserService:
     def __init__(self):
         self.repository = UserRepository()
+        self.workspace_service = WorkspaceService()
 
     def create_user(self, db_session: Session, email: str, password: str) -> UserModel:
         """
@@ -22,8 +24,11 @@ class UserService:
         Returns:
             UserModel: The created user instance.
         """
-        user = UserModel(email=email, password=password)
-        return self.repository.create(db_session, user)
+        _user = UserModel(email=email, password=password)
+        user = self.repository.create(db_session, _user)
+
+        self.workspace_service.create_workspace(db_session, "Default", user.id)
+        return user
 
     def get_user(self, db_session: Session, user_id: UUID) -> UserModel:
         """
