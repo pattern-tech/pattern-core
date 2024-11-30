@@ -2,12 +2,16 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
-from src.agent.enum.agent_action_enum import AgentActionEnum
+from src.agent.tools.tools_index import get_tool_by_name
+from src.agent.services.tool_service import ToolAdminService
 from src.task.services.sub_task_service import SubTaskService
 from src.agent.services.agent_service import AgentService, Plan
 from src.task.enum.task_status_enum import TaskStatusEnum
 from src.db.models import Task
 from src.task.repositories.task_repository import TaskRepository
+
+from langgraph.prebuilt import create_react_agent
+from langchain_openai import ChatOpenAI
 
 
 class TaskService:
@@ -17,6 +21,7 @@ class TaskService:
         self.repository = TaskRepository()
         self.agent_service = AgentService()
         self.sub_task_service = SubTaskService()
+        self.tool_service = ToolAdminService()
 
     def _planner(
         self,
@@ -26,29 +31,28 @@ class TaskService:
         user_id: UUID,
         task: str,
     ):
+        tools = []  # TODO: Pass tools here
         # Generate a plan for the task
-        planner = self.agent_service.planner(task)
+        planner = self.agent_service.planner(tools)
         plan: Plan = planner.invoke(
             {
                 "messages": [
                     (
                         "user",
                         task,
-                    )
-                ]
+                    ),
+                ],
             }
         )
 
         # Check if sub-tasks can be created
         action_descriptions = ""
         allow_create_sub_tasks = True
-
         _count = 0
         for step in plan.steps:
-            if step.action != AgentActionEnum.NO_ACTION:
-                _count += 1
-                action_descriptions += f"{_count}- " + step.action_description.strip()
-                allow_create_sub_tasks = False
+            _count += 1
+            action_descriptions += f"{_count}- " + step.action_description.strip()
+            allow_create_sub_tasks = False
 
         # Create sub-tasks if allowed
         if allow_create_sub_tasks:
@@ -165,3 +169,29 @@ class TaskService:
             None
         """
         self.repository.delete(db_session, task_id, user_id)
+
+
+##### Dynamic Tool Picker ######
+# simple_planner = self.agent_service.simple_planner()
+# simple_plan: Plan = simple_planner.invoke(
+#     {
+#         "messages": [
+#             (
+#                 "user",
+#                 task,
+#             )
+#         ]
+#     }
+# )
+
+# tools_name = []
+# for step in simple_plan.steps:
+#     _t = self.tool_service.tools_picker(query=step, k=1)
+#     tools_name.extend(_t)
+# tools_name = list(set(tools_name))
+
+# tools = []
+# for tool_name in tools_name:
+#     _t = get_tool_by_name(tool_name)
+#     tools.append(_t)
+##### Dynamic Tool Picker ######

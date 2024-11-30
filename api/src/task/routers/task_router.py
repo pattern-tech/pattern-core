@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import List
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from src.db.sql_alchemy import Database
 from src.util.response import global_response
@@ -80,7 +80,7 @@ def create_task(
         )
         return global_response(task)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise e
 
 
 @router.get("/{task_id}", response_model=TaskOutput)
@@ -103,7 +103,7 @@ def get_task(
         task = service.get_task(db, task_id, user_id)
         return global_response(task)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise e
 
 
 @router.get("", response_model=List[TaskOutput])
@@ -143,7 +143,7 @@ def update_task(
         updated_task = service.update_task(db, task_id, input.task, user_id)
         return global_response(updated_task)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise e
 
 
 @router.delete("/{task_id}")
@@ -166,4 +166,4 @@ def delete_task(
         deleted_task = service.delete_task(db, task_id, user_id)
         return global_response(deleted_task)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise e
