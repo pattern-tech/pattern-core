@@ -9,9 +9,15 @@ from src.agent.services.agent_service import AgentService, Plan
 from src.task.enum.task_status_enum import TaskStatusEnum
 from src.db.models import Task
 from src.task.repositories.task_repository import TaskRepository
+from src.agent.tools.tools_index import get_all_tools
 
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
+from langchain.memory import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+from langchain import hub
+from langchain.agents import AgentExecutor, create_openai_functions_agent
 
 
 class TaskService:
@@ -31,8 +37,8 @@ class TaskService:
         user_id: UUID,
         task: str,
     ):
-        tools = []  # TODO: Pass tools here
-        # Generate a plan for the task
+
+        tools = []  # TODO
         planner = self.agent_service.planner(tools)
         plan: Plan = planner.invoke(
             {
@@ -51,7 +57,8 @@ class TaskService:
         _count = 0
         for step in plan.steps:
             _count += 1
-            action_descriptions += f"{_count}- " + step.action_description.strip()
+            action_descriptions += f"{_count}- " + \
+                step.action_description.strip()
             allow_create_sub_tasks = False
 
         # Create sub-tasks if allowed
@@ -103,7 +110,36 @@ class TaskService:
             status=TaskStatusEnum.INIT,
         )
         new_task = self.repository.create(db_session, _task)
-        return self._planner(db_session, new_task.id, project_id, user_id, task)
+
+        tools = get_all_tools()
+
+        llm = ChatOpenAI(model="gpt-4o-mini")
+
+        prompt = hub.pull("pattern-agent/pattern-agent")
+
+        agent = create_openai_functions_agent(llm, tools, prompt)
+
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+        memory = ChatMessageHistory(session_id="test-session")
+
+        agent_with_chat_history = RunnableWithMessageHistory(
+            agent_executor,
+            lambda session_id: memory,
+            input_messages_key="input",
+            history_messages_key="chat_history",
+        )
+
+        result = agent_with_chat_history.invoke({"input": task},
+                                                config={"configurable": {"session_id": "1"}},)
+
+        output = result["output"]
+        new_task.response = output
+
+        db_session.commit()
+        db_session.refresh(new_task)
+
+        return {"final_response": output}
 
     def get_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> Task:
         """
@@ -153,7 +189,8 @@ class TaskService:
         Returns:
             Task: The updated Task instance.
         """
-        task = self.repository.update(db_session, task_id, {"task": task}, user_id)
+        task = self.repository.update(
+            db_session, task_id, {"task": task}, user_id)
         return self._planner(db_session, task.id, task.project_id, user_id, task)
 
     def delete_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> None:

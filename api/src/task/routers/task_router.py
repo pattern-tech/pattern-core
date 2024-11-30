@@ -8,6 +8,7 @@ from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
 from src.task.services.task_service import TaskService
+from fastapi import HTTPException
 
 router = APIRouter(prefix="/task")
 database = Database()
@@ -71,6 +72,7 @@ def create_task(
     Returns:
         TaskOutput: The created task data.
     """
+
     try:
         task = service.create_task(
             db,
@@ -140,6 +142,10 @@ def update_task(
         TaskOutput: The updated task data.
     """
     try:
+
+        # TODO : fix this
+        return HTTPException(status_code=501, detail="Not implemented yet")
+
         updated_task = service.update_task(db, task_id, input.task, user_id)
         return global_response(updated_task)
     except Exception as e:
@@ -163,6 +169,9 @@ def delete_task(
         None
     """
     try:
+        # TODO : fix this
+        return HTTPException(status_code=501, detail="Not implemented yet")
+
         deleted_task = service.delete_task(db, task_id, user_id)
         return global_response(deleted_task)
     except Exception as e:

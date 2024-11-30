@@ -1,7 +1,6 @@
 from typing import Any
 from langchain_core.tools import tool
 
-
 @tool
 def get_asset_price(asset: str) -> int:
     """
