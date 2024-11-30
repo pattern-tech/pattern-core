@@ -23,7 +23,11 @@ class TaskRepository(BaseRepository[Task]):
         Returns:
             Optional[Task]: The task if found, otherwise None.
         """
-        return db_session.query(Task).filter(Task.id == id, Task.user_id == user_id).first()
+        return (
+            db_session.query(Task)
+            .filter(Task.id == id, Task.user_id == user_id)
+            .first()
+        )
 
     def get_all(self, db_session: Session, user_id: UUID) -> list[Task]:
         """
@@ -54,7 +58,9 @@ class TaskRepository(BaseRepository[Task]):
         db_session.refresh(task)
         return task
 
-    def update(self, db_session: Session, id: UUID, task_data: dict, user_id: UUID) -> Task:
+    def update(
+        self, db_session: Session, id: UUID, task_data: dict, user_id: UUID
+    ) -> Task:
         """
         Updates an existing task.
 
