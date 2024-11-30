@@ -237,7 +237,7 @@ class SubTaskTool(ParentBase):
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
     tool_id = Column(UUID(as_uuid=True), ForeignKey("tools.id"), nullable=False)
     status = Column(String, nullable=False)
-    response = Column(String, nullable=True)
+    response = Column(Text, nullable=True)
     score = Column(Integer, nullable=False)
 
     # Relationships
