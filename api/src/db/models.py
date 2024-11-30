@@ -2,6 +2,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
+    Boolean,
     Column,
     String,
     Integer,
@@ -257,10 +258,12 @@ class Tool(ParentBase):
         nullable=False,
     )
     name = Column(String, nullable=False)
-    descriptions = Column(String, nullable=True)
+    description = Column(String, nullable=True)
     vector_id = Column(String, nullable=True)
-    function_name = Column(String, nullable=True)
+    function_name = Column(String, nullable=True, unique=True)
     extra_data = Column(JSONB, nullable=True)
+    api_key = Column(String, nullable=True)
+    active = Column(Boolean, default=True, nullable=False)
 
     # Relationships
     sub_task_tools = relationship(
