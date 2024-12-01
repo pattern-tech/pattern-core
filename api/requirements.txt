@@ -13,3 +13,4 @@ langgraph==0.2.53
 langchain-community==0.3.7
 langchain-openai==0.2.9
 langchain-qdrant==0.2.0
+langchain-postgres==0.0.12

@@ -2,22 +2,18 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
+from langchain_openai import ChatOpenAI
+
+from src.db.models import Task
+from src.agent.tools.tools_index import get_all_tools
 from src.agent.tools.tools_index import get_tool_by_name
+from src.task.enum.task_status_enum import TaskStatusEnum
 from src.agent.services.tool_service import ToolAdminService
 from src.task.services.sub_task_service import SubTaskService
 from src.agent.services.agent_service import AgentService, Plan
-from src.task.enum.task_status_enum import TaskStatusEnum
-from src.db.models import Task
 from src.task.repositories.task_repository import TaskRepository
-from src.agent.tools.tools_index import get_all_tools
-
-from langgraph.prebuilt import create_react_agent
-from langchain_openai import ChatOpenAI
-from langchain.memory import ChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
-
-from langchain import hub
-from langchain.agents import AgentExecutor, create_openai_functions_agent
+from src.agent.services.agent_service import DataProviderAgentService
+from src.agent.services.memory_service import MemoryService
 
 
 class TaskService:
@@ -28,6 +24,7 @@ class TaskService:
         self.agent_service = AgentService()
         self.sub_task_service = SubTaskService()
         self.tool_service = ToolAdminService()
+        self.memory_service = MemoryService()
 
     def _planner(
         self,
@@ -113,33 +110,23 @@ class TaskService:
 
         tools = get_all_tools()
 
-        llm = ChatOpenAI(model="gpt-4o-mini")
+        session_id, memory = self.memory_service.create_new_memory()
 
-        prompt = hub.pull("pattern-agent/pattern-agent")
+        agent = DataProviderAgentService(tools, memory)
 
-        agent = create_openai_functions_agent(llm, tools, prompt)
+        result = agent.ask(task)
 
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-
-        memory = ChatMessageHistory(session_id="test-session")
-
-        agent_with_chat_history = RunnableWithMessageHistory(
-            agent_executor,
-            lambda session_id: memory,
-            input_messages_key="input",
-            history_messages_key="chat_history",
-        )
-
-        result = agent_with_chat_history.invoke({"input": task},
-                                                config={"configurable": {"session_id": "1"}},)
+        print(result)
 
         output = result["output"]
+        intermediate_steps = result["intermediate_steps"]
         new_task.response = output
 
         db_session.commit()
         db_session.refresh(new_task)
 
-        return {"final_response": output}
+        return {"final_response": output,
+                "intermediate_steps": intermediate_steps}
 
     def get_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> Task:
         """

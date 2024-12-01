@@ -1,12 +1,13 @@
 from typing import List
 from pydantic import BaseModel, Field
 
-from langchain_core.prompts import ChatPromptTemplate
+from langchain import hub
 from langchain_openai import ChatOpenAI
-
-from dotenv import load_dotenv
-
-load_dotenv()
+from langgraph.prebuilt import create_react_agent
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.callbacks import StdOutCallbackHandler
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain.agents import AgentExecutor, create_openai_functions_agent
 
 
 class PlanStep(BaseModel):
@@ -86,3 +87,39 @@ class AgentService:
             model="gpt-4o-mini", temperature=0
         ).with_structured_output(SimplePlan)
         return planner
+
+
+class DataProviderAgentService:
+
+    def __init__(self, tools, memory=None):
+        self.tools = tools
+
+        self.llm = ChatOpenAI(model="gpt-4o-mini")
+        self.prompt = hub.pull("pattern-agent/pattern-agent")
+        self.agent = create_openai_functions_agent(
+            self.llm,
+            self.tools,
+            self.prompt)
+        self.agent_executor = AgentExecutor(
+            agent=self.agent,
+            tools=self.tools,
+            return_intermediate_steps=True,
+            verbose=True)
+
+        self.memory = memory
+
+        if self.memory:
+            self.agent_with_chat_history = RunnableWithMessageHistory(
+                self.agent_executor,
+                lambda session_id: memory,
+                input_messages_key="input",
+                history_messages_key="chat_history",
+            )
+
+    def ask(self, message):
+        if self.memory:
+            return self.agent_with_chat_history.invoke(
+                input={"input": message},
+                config={"configurable": {"session_id": "1"}})
+        else:
+            return self.agent_executor.invoke({"input": message})
