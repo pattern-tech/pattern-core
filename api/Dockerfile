@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY ./requirements.txt /app
 RUN pip install -r requirements.txt
+RUN apt-get install libpq-dev python3-dev
 
 COPY . /app
 
