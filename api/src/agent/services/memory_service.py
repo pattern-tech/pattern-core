@@ -30,6 +30,9 @@ class MemoryService:
                     cls._instance.connection_string = connection_string
                     cls._instance.connection = psycopg.connect(
                         connection_string)
+
+        PostgresChatMessageHistory.create_tables(
+            cls._instance.connection, "chat_history")
         return cls._instance
 
     def __init__(self):
