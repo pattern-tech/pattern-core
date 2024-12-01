@@ -1,8 +1,11 @@
 from uuid import UUID
 from typing import List
-from sqlalchemy.orm import Session
 
-from src.db.models import Workspace
+from sqlalchemy import join, select
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import aliased
+
+from src.db.models import Project, Workspace
 from src.share.base_service import BaseService
 from src.workspace.repositories.workspace_repository import WorkspaceRepository
 
@@ -45,10 +48,26 @@ class WorkspaceService(BaseService):
         Raises:
             Exception: If the workspace is not found or the user does not own it.
         """
-        workspace = self.repository.get_by_id(db_session, workspace_id, user_id)
-        if not workspace:
-            raise Exception("Workspace not found or not owned by user")
-        return workspace
+        workspace_query = (
+            db_session.query(Workspace, Project.id, Project.name)
+            .join(Project, Workspace.id == Project.workspace_id)
+            .filter(Workspace.id == workspace_id, Workspace.user_id == user_id)
+            .all()
+        )
+        if not workspace_query:
+            raise Exception("Workspace not found or no projects available")
+
+        # Transform the result into a structured dictionary
+        workspace_data = {
+            "id": workspace_query[0][0].id,
+            "name": workspace_query[0][0].name,
+            "projects": [
+                {"id": project_id, "name4": project_name}
+                for _, project_id, project_name in workspace_query
+            ],
+        }
+
+        return workspace_data
 
     def get_all_workspaces(self, db_session: Session, user_id: UUID) -> List[Workspace]:
         """
