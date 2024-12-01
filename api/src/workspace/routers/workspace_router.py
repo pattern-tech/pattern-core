@@ -8,7 +8,6 @@ from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
 from src.workspace.services.workspace_service import WorkspaceService
-from src.workspace.repositories.workspace_repository import WorkspaceRepository
 
 router = APIRouter(prefix="/workspace")
 database = Database()
@@ -23,8 +22,7 @@ def get_db():
 
 
 def get_workspace_service() -> WorkspaceService:
-    repository = WorkspaceRepository()
-    return WorkspaceService(repository)
+    return WorkspaceService()
 
 
 class CreateWorkspaceInput(BaseModel):
@@ -95,7 +93,7 @@ def get_workspace(
 
 
 @router.get("", response_model=List[WorkspaceOutput])
-def list_workspaces(
+def get_all_workspaces(
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),
     service: WorkspaceService = Depends(get_workspace_service),
@@ -106,7 +104,7 @@ def list_workspaces(
     Returns:
         List[WorkspaceOutput]: List of all user workspaces
     """
-    workspaces = service.list_workspaces(db, user_id)
+    workspaces = service.get_all_workspaces(db, user_id)
     return global_response(workspaces)
 
 

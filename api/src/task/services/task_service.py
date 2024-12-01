@@ -2,17 +2,93 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
+from src.agent.tools.tools_index import get_tool_by_name
+from src.agent.services.tool_service import ToolAdminService
+from src.task.services.sub_task_service import SubTaskService
+from src.agent.services.agent_service import AgentService, Plan
 from src.task.enum.task_status_enum import TaskStatusEnum
 from src.db.models import Task
 from src.task.repositories.task_repository import TaskRepository
+from src.agent.tools.tools_index import get_all_tools
+
+from langgraph.prebuilt import create_react_agent
+from langchain_openai import ChatOpenAI
+from langchain.memory import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+from langchain import hub
+from langchain.agents import AgentExecutor, create_openai_functions_agent
 
 
 class TaskService:
-    def __init__(self, repository: TaskRepository):
-        self.repository = repository
+    def __init__(
+        self,
+    ):
+        self.repository = TaskRepository()
+        self.agent_service = AgentService()
+        self.sub_task_service = SubTaskService()
+        self.tool_service = ToolAdminService()
+
+    def _planner(
+        self,
+        db_session: Session,
+        task_id: UUID,
+        project_id: UUID,
+        user_id: UUID,
+        task: str,
+    ):
+
+        tools = []  # TODO
+        planner = self.agent_service.planner(tools)
+        plan: Plan = planner.invoke(
+            {
+                "messages": [
+                    (
+                        "user",
+                        task,
+                    ),
+                ],
+            }
+        )
+
+        # Check if sub-tasks can be created
+        action_descriptions = ""
+        allow_create_sub_tasks = True
+        _count = 0
+        for step in plan.steps:
+            _count += 1
+            action_descriptions += f"{_count}- " + \
+                step.action_description.strip()
+            allow_create_sub_tasks = False
+
+        # Create sub-tasks if allowed
+        if allow_create_sub_tasks:
+            for index, step in enumerate(plan.steps):
+                self.sub_task_service.create_sub_task(
+                    db_session,
+                    task_id,
+                    project_id,
+                    user_id,
+                    step.task.strip(),
+                    TaskStatusEnum.INIT,
+                    None,
+                    None,
+                    index + 1,
+                )
+        else:
+            _task = self.repository.get_by_id(db_session, task_id, user_id)
+            _task.status = TaskStatusEnum.ACTION_REQUIRED
+            db_session.commit()
+            db_session.refresh(_task)
+
+        return {
+            "task": task,
+            "sub_task_created": allow_create_sub_tasks,
+            "action_descriptions": action_descriptions,
+        }
 
     def create_task(
-        self, db_session: Session, project_id: UUID, user_id: UUID, prompt: str
+        self, db_session: Session, project_id: UUID, user_id: UUID, task: str
     ) -> Task:
         """
         Creates a new task.
@@ -21,22 +97,49 @@ class TaskService:
             db_session (Session): The database session.
             project_id (UUID): The ID of the project to which the task belongs.
             user_id (UUID): The ID of the user creating the task.
-            prompt (str): The prompt for the task.
-            status (str): The status of the task.
-            name (str): Optional name of the task.
-            response (str): Optional response to the task.
-            extra_data (dict): Optional extra data related to the task.
+            task (str): The prompt for the task.
+            status (str): Default set to `TaskStatusEnum.INIT`
 
         Returns:
             Task: The created task instance.
         """
-        task = Task(
+        _task = Task(
             project_id=project_id,
             user_id=user_id,
-            prompt=prompt,
+            task=task.strip(),
             status=TaskStatusEnum.INIT,
         )
-        return self.repository.create(db_session, task)
+        new_task = self.repository.create(db_session, _task)
+
+        tools = get_all_tools()
+
+        llm = ChatOpenAI(model="gpt-4o-mini")
+
+        prompt = hub.pull("pattern-agent/pattern-agent")
+
+        agent = create_openai_functions_agent(llm, tools, prompt)
+
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+        memory = ChatMessageHistory(session_id="test-session")
+
+        agent_with_chat_history = RunnableWithMessageHistory(
+            agent_executor,
+            lambda session_id: memory,
+            input_messages_key="input",
+            history_messages_key="chat_history",
+        )
+
+        result = agent_with_chat_history.invoke({"input": task},
+                                                config={"configurable": {"session_id": "1"}},)
+
+        output = result["output"]
+        new_task.response = output
+
+        db_session.commit()
+        db_session.refresh(new_task)
+
+        return {"final_response": output}
 
     def get_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> Task:
         """
@@ -58,7 +161,7 @@ class TaskService:
             raise Exception("Task not found")
         return task
 
-    def list_tasks(self, db_session: Session, user_id: UUID) -> List[Task]:
+    def get_all_tasks(self, db_session: Session, user_id: UUID) -> List[Task]:
         """
         Lists all tasks for a user.
 
@@ -72,7 +175,7 @@ class TaskService:
         return self.repository.get_all(db_session, user_id)
 
     def update_task(
-        self, db_session: Session, task_id: UUID, task_data: dict, user_id: UUID
+        self, db_session: Session, task_id: UUID, task: str, user_id: UUID
     ) -> Task:
         """
         Updates an existing task.
@@ -80,13 +183,15 @@ class TaskService:
         Args:
             db_session (Session): The database session.
             task_id (UUID): The ID of the task to update.
-            task_data (dict): A dictionary of fields to update.
+            task (str): The prompt for the task.
             user_id (UUID): The ID of the user.
 
         Returns:
             Task: The updated Task instance.
         """
-        return self.repository.update(db_session, task_id, task_data, user_id)
+        task = self.repository.update(
+            db_session, task_id, {"task": task}, user_id)
+        return self._planner(db_session, task.id, task.project_id, user_id, task)
 
     def delete_task(self, db_session: Session, task_id: UUID, user_id: UUID) -> None:
         """
@@ -101,3 +206,29 @@ class TaskService:
             None
         """
         self.repository.delete(db_session, task_id, user_id)
+
+
+##### Dynamic Tool Picker ######
+# simple_planner = self.agent_service.simple_planner()
+# simple_plan: Plan = simple_planner.invoke(
+#     {
+#         "messages": [
+#             (
+#                 "user",
+#                 task,
+#             )
+#         ]
+#     }
+# )
+
+# tools_name = []
+# for step in simple_plan.steps:
+#     _t = self.tool_service.tools_picker(query=step, k=1)
+#     tools_name.extend(_t)
+# tools_name = list(set(tools_name))
+
+# tools = []
+# for tool_name in tools_name:
+#     _t = get_tool_by_name(tool_name)
+#     tools.append(_t)
+##### Dynamic Tool Picker ######

@@ -8,7 +8,6 @@ from src.auth.utils.get_token import authenticate_user
 from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.user.services.user_service import UserService
-from src.user.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/user")
 database = Database()
@@ -23,8 +22,7 @@ def get_db():
 
 
 def get_user_service() -> UserService:
-    repository = UserRepository()
-    return UserService(repository)
+    return UserService()
 
 
 class CreateUserInput(BaseModel):

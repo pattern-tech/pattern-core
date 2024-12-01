@@ -27,8 +27,15 @@ def register(input: RegisterInput, db: Session = Depends(database.get_db)):
     - **email**: User's email address
     - **password**: User's password
     """
-    result = auth.register(input, db)
-    return global_response(result)
+    user = auth.register(input, db)
+
+    payload = {"id": str(user.id)}
+    token = generate_access_token(data=payload)
+    return global_response(
+        {
+            "access_token": token,
+        }
+    )
 
 
 @router.post(

@@ -6,3 +6,4 @@ class TaskStatusEnum(str, Enum):
     STARTED = "started"
     COMPLETED = "completed"
     FAILED = "failed"
+    ACTION_REQUIRED = "action_required"

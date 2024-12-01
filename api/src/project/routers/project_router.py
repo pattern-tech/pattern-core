@@ -8,7 +8,6 @@ from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
 from src.project.services.project_service import ProjectService
-from src.project.repositories.project_repository import ProjectRepository
 
 router = APIRouter(prefix="/project")
 database = Database()
@@ -23,8 +22,7 @@ def get_db():
 
 
 def get_project_service() -> ProjectService:
-    repository = ProjectRepository()
-    return ProjectService(repository)
+    return ProjectService()
 
 
 class CreateProjectInput(BaseModel):
@@ -91,7 +89,7 @@ def get_project(
 
 
 @router.get("", response_model=List[ProjectOutput])
-def list_projects(
+def get_all_projects(
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),
     service: ProjectService = Depends(get_project_service),
@@ -102,7 +100,7 @@ def list_projects(
     Returns:
         List[ProjectOutput]: List of all projects for the user.
     """
-    projects = service.list_projects(db, user_id)
+    projects = service.get_all_projects(db, user_id)
     return global_response(projects)
 
 
