@@ -10,7 +10,6 @@ from src.user.repositories.user_repository import UserRepository
 class UserService:
     def __init__(self):
         self.repository = UserRepository()
-        self.workspace_service = WorkspaceService()
 
     def create_user(self, db_session: Session, email: str, password: str) -> UserModel:
         """
@@ -27,7 +26,6 @@ class UserService:
         _user = UserModel(email=email, password=password)
         user = self.repository.create(db_session, _user)
 
-        self.workspace_service.create_workspace(db_session, "Default", user.id)
         return user
 
     def get_user(self, db_session: Session, user_id: UUID) -> UserModel:
