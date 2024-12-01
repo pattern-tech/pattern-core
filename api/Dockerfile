@@ -3,7 +3,6 @@ FROM python:3.11.8-slim
 WORKDIR /app
 
 COPY ./requirements.txt /app
-RUN agt update && apt-get install build-dep python-psycopg2
 RUN pip install -r requirements.txt
 COPY . /app
 

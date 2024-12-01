@@ -13,6 +13,6 @@ langchain-community==0.3.7
 langchain-openai==0.2.9
 langchain-qdrant==0.2.0
 langchain-postgres==0.0.12
-psycopg
-psycopg[binary,pool]
-psycopg2-binary 
+psycopg==3.2.3
+psycopg-pool==3.2.4
+psycopg2-binary==2.9.10 
