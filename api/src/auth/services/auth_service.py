@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, EmailStr
 from sqlalchemy.orm import Session
+from src.workspace.services.workspace_service import WorkspaceService
 from src.auth.utils.bcrypt_helper import hash_password, verify_password
 from src.db.models import UserModel
 from src.db.sql_alchemy import Database
@@ -35,6 +36,9 @@ class AuthService:
     Service class for handling user authentication and registration logic.
     """
 
+    def __init__(self):
+        self.workspace = WorkspaceService()
+
     def register(self, input: RegisterInput, db: Session) -> str:
         """
         Registers a new user by saving their details into the database.
@@ -59,7 +63,10 @@ class AuthService:
         new_user = UserModel(email=input.email.lower(), password=hashed_password)
         db.add(new_user)
         db.commit()
-        return "User registered successfully"
+
+        self.workspace.create_workspace(db, "Default", new_user.id)
+
+        return new_user
 
     def authenticate_user(self, email: str, password: str, db: Session):
         """
