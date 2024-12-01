@@ -1,8 +1,11 @@
 from fastapi import FastAPI
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 
 from src import api_router
 from src.db.models import init_db
+
+load_dotenv()
 
 app = FastAPI()
 
