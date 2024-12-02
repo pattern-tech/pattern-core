@@ -62,7 +62,7 @@ class WorkspaceService(BaseService):
             "id": workspace_query[0][0].id,
             "name": workspace_query[0][0].name,
             "projects": [
-                {"id": project_id, "name4": project_name}
+                {"id": project_id, "name": project_name}
                 for _, project_id, project_name in workspace_query
             ],
         }
