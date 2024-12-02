@@ -1,8 +1,9 @@
+import os
 import inspect
 import requests
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from langchain_core.tools import tool
 
 from src.db.models import Tool
@@ -43,7 +44,7 @@ def get_weather(
                                    inspect.currentframe().f_code.co_name)
     ).scalar_one_or_none()
 
-    base_url = "https://api.weatherapi.com/v1/current.json"
+    base_url = os.getenv("WEATHER_URL")
     params = {"key": api_key, "q": city, "aqi": aqi}
 
     try:
