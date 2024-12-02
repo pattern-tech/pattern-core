@@ -1,16 +1,30 @@
+import os
+import inspect
 import requests
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from langchain_core.tools import tool
 
 from src.db.models import Tool
+from src.db.sql_alchemy import Database
 from src.shared.error_code import FunctionsErrorCodeEnum
+
+
+database = Database()
+
+
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @tool
 def get_weather(
-    db_session: Session, api_key: str, city: str = "London", aqi: str = "no"
+    city: str = "London", aqi: str = "no"
 ) -> dict:
     """
     Fetches the current weather data for a given city using WeatherAPI.
@@ -24,13 +38,13 @@ def get_weather(
         Optional[WeatherResponse]: The weather data parsed as a Pydantic model or None if an error occurs.
     """
 
-    result = db_session.execute(
-        select(Tool.api_key).where(Tool.function_name == "get_weather")
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
     ).scalar_one_or_none()
-    if result is None:
-        return f"Get weather service failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
 
-    base_url = "https://api.weatherapi.com/v1/current.json"
+    base_url = os.getenv("WEATHER_URL")
     params = {"key": api_key, "q": city, "aqi": aqi}
 
     try:

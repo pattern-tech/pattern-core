@@ -116,8 +116,6 @@ class TaskService:
 
         result = agent.ask(task)
 
-        print(result)
-
         output = result["output"]
         intermediate_steps = result["intermediate_steps"]
         new_task.response = output

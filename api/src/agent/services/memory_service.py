@@ -59,8 +59,6 @@ class MemoryService:
         """
         session_id = str(uuid.uuid4())
 
-        print(table_name, session_id, self.get_connection())
-
         memory = PostgresChatMessageHistory(
             table_name,
             session_id,

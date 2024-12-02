@@ -9,6 +9,9 @@ services:
     networks:
       - app_network
 
+    ports:
+      - 6333:6333
+
   postgres:
     image: postgres:15.7-alpine
     restart: always
