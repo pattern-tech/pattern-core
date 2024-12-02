@@ -1,13 +1,28 @@
 
 import os
+import inspect
 import requests
 
+from sqlalchemy import select
 from langchain.tools import tool
 
+from src.db.models import Tool
+from src.db.sql_alchemy import Database
+from src.shared.error_code import FunctionsErrorCodeEnum
 from src.agent.tools.shared_tools import text_post_process
 
+database = Database()
 
-def get_reddit_posts(query):
+
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_reddit_posts(query: str, api_key: str) -> dict:
     """
     Makes an API request to Reddit search endpoint to fetch posts matching a query.
 
@@ -47,7 +62,16 @@ def search_on_reddit(query):
         str: Processed text content combined from all matching Reddit posts
     """
 
-    response = get_reddit_posts(query)
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        return f"getting latest news failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
+
+    response = get_reddit_posts(query, api_key)
 
     result = []
 
