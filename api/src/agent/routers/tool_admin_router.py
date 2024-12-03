@@ -1,13 +1,16 @@
+import os
+
 from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.agent.services.tool_service import ToolAdminService
 from src.db.sql_alchemy import Database
 from src.util.response import global_response
+from src.util.encryption import encrypt_message
 from src.auth.utils.get_token import authenticate_user
+from src.agent.services.tool_service import ToolAdminService
 
 router = APIRouter(prefix="/admin/tool")
 database = Database()
@@ -52,9 +55,22 @@ def create_tool(
         ProjectOutput: The created tool data.
     """
     try:
+
+        secrete_key = os.getenv("SECRET_KEY")
+
+        if secrete_key is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="secrete key not found")
+
+        api_key_encrypted = encrypt_message(
+            message=input.api_key,
+            password=secrete_key)
+        print(api_key_encrypted)
+
         project = service.create_tool(
-            db, input.name, input.description, input.function_name, input.api_key
+            db, input.name, input.description, input.function_name, api_key_encrypted
         )
         return global_response(project)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

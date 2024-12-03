@@ -9,6 +9,7 @@ from langchain_community.document_loaders import WebBaseLoader
 
 from src.db.models import Tool
 from src.db.sql_alchemy import Database
+from src.util.encryption import decrypt_message
 from src.shared.error_code import FunctionsErrorCodeEnum
 from src.agent.tools.shared_tools import text_post_process
 
@@ -75,7 +76,11 @@ def search_on_web_by_query(query: str) -> list:
     if api_key is None:
         return f"searching in web failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
 
-    search_results = search_on_google(query, api_key)
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    search_results = search_on_google(query, api_key_decrypted)
 
     links = [res['link'] for res in search_results]
 

@@ -8,6 +8,7 @@ from langchain_core.tools import tool
 
 from src.db.models import Tool
 from src.db.sql_alchemy import Database
+from src.util.encryption import decrypt_message
 from src.shared.error_code import FunctionsErrorCodeEnum
 
 
@@ -45,7 +46,14 @@ def get_weather(
     ).scalar_one_or_none()
 
     base_url = os.getenv("WEATHER_URL")
-    params = {"key": api_key, "q": city, "aqi": aqi}
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    # TODO: check city is valid and accepted for this API
+
+    params = {"key": api_key_decrypted, "q": city, "aqi": aqi}
 
     try:
         response = requests.get(base_url, params=params)

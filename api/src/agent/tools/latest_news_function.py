@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from src.db.sql_alchemy import Database
 
 from src.db.models import Tool
+from src.util.encryption import decrypt_message
 from src.shared.error_code import FunctionsErrorCodeEnum
 
 database = Database()
@@ -74,7 +75,11 @@ def get_latest_news(query: str):
     if api_key is None:
         return f"getting latest news failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
 
-    all_articles = fetch_news_by_query(query, api_key)
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    all_articles = fetch_news_by_query(query, api_key_decrypted)
 
     results = []
 
