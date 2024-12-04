@@ -62,13 +62,16 @@ def create_tool(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="secrete key not found")
 
-        api_key_encrypted = encrypt_message(
-            message=input.api_key,
-            password=secrete_key)
-        print(api_key_encrypted)
+        if input.api_key is not None:
+
+            api_key = encrypt_message(
+                message=input.api_key,
+                password=secrete_key)
+        else:
+            api_key = None
 
         project = service.create_tool(
-            db, input.name, input.description, input.function_name, api_key_encrypted
+            db, input.name, input.description, input.function_name, api_key
         )
         return global_response(project)
     except Exception as e:
