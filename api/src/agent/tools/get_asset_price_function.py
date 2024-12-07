@@ -17,8 +17,6 @@ def get_asset_price(asset: str) -> int:
         "ETH": 1800,
         "BTC": 35000,
         "USDT": 1,
-        "ADA": 0.37,
-        "SOL": 20,
         "DOGE": 0.08,
     }
 

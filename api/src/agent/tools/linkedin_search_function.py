@@ -52,7 +52,62 @@ def get_linkedin_posts(query: str, api_key: str) -> dict:
     return response.json()
 
 
+def get_linkedin_profile(profile_url: str, api_key: str) -> dict:
+    """
+    Get the profile information for a LinkedIn post.
+
+    Args:
+        url (str): The URL of the LinkedIn post
+        api_key (str): The RapidAPI key for authentication
+
+    Returns:
+        dict: The raw JSON response from the LinkedIn API
+    """
+
+    url = "https://linkedin-data-api.p.rapidapi.com/get-profile-data-by-url"
+
+    querystring = {"url": profile_url}
+
+    headers = {
+        "x-rapidapi-key": api_key,
+        "x-rapidapi-host": "linkedin-data-api.p.rapidapi.com"
+    }
+
+    response = requests.get(url, headers=headers, params=querystring)
+
+    return response.json()
+
+
 @tool
+def get_linkedin_profile_by_url(profile_url: str):
+    """
+    Get the profile information for a LinkedIn profile by URL.
+
+    Args:
+        url (str): The URL of the LinkedIn profile
+
+    Returns:
+        dict: The raw JSON response from the LinkedIn API
+    """
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        return f"getting linkedin profile failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    response = get_linkedin_profile(profile_url, api_key_decrypted)
+
+    return response
+
+
+@ tool
 def search_on_linkedin(query):
     """
     Search for posts and content on LinkedIn based on a query.
