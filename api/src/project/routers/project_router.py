@@ -8,6 +8,7 @@ from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
 from src.project.services.project_service import ProjectService
+from typing import Set
 
 router = APIRouter(prefix="/project")
 database = Database()
@@ -42,6 +43,11 @@ class ProjectOutput(BaseModel):
         orm_mode = True
 
 
+class AddToolInput(BaseModel):
+    project_id: UUID
+    tools_id: Set[UUID]
+
+
 @router.post("", response_model=ProjectOutput)
 def create_project(
     input: CreateProjectInput,
@@ -59,10 +65,12 @@ def create_project(
         ProjectOutput: The created project data.
     """
     try:
-        project = service.create_project(db, input.name, user_id, input.workspace_id)
+        project = service.create_project(
+            db, input.name, user_id, input.workspace_id)
         return global_response(project)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/{project_id}", response_model=ProjectOutput)
@@ -85,7 +93,8 @@ def get_project(
         project = service.get_project(db, project_id, user_id)
         return global_response(project)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get("", response_model=List[ProjectOutput])
@@ -122,10 +131,12 @@ def update_project(
         ProjectOutput: The updated project data.
     """
     try:
-        updated_project = service.update_project(db, project_id, input.dict(), user_id)
+        updated_project = service.update_project(
+            db, project_id, input.dict(), user_id)
         return global_response(updated_project)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -148,4 +159,55 @@ def delete_project(
         project = service.delete_project(db, project_id, user_id)
         return global_response(project)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/{project_id}/tools")
+def get_project_tools(
+    project_id: UUID,
+    user_id: UUID = Depends(authenticate_user),
+    db: Session = Depends(get_db),
+    service: ProjectService = Depends(get_project_service),
+):
+    """
+    Retrieves all tools associated with a project.
+
+    Args:
+        project_id (UUID): The project ID.
+
+    Returns:
+        List[Tool]: List of tools associated with the project.
+    """
+    try:
+        tools = service.get_project_tools(db, project_id)
+        return global_response(tools)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/tools")
+def add_tool_to_project(
+    input: AddToolInput,
+    user_id: UUID = Depends(authenticate_user),
+    db: Session = Depends(get_db),
+    service: ProjectService = Depends(get_project_service),
+):
+    """
+    Adds a tool to a project.
+
+    Args:
+        project_id (UUID): The project ID.
+        tools_id (Set[UUID]): The tool ID.
+
+    Returns:
+        None
+    """
+    try:
+        tools = service.add_tool_to_project(
+            db, input.project_id, input.tools_id)
+        return global_response(tools)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
