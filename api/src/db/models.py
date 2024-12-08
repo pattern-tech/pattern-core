@@ -143,7 +143,8 @@ class Project(ParentBase):
     tools = relationship(
         "Tool",
         secondary=project_tools_association,
-        back_populates="projects"
+        back_populates="projects",
+        lazy="dynamic"
     )
 
 
@@ -308,7 +309,8 @@ class Tool(ParentBase):
     projects = relationship(
         "Project",
         secondary=project_tools_association,
-        back_populates="tools"
+        back_populates="tools",
+        lazy="dynamic"
     )
 
 

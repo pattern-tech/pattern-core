@@ -44,7 +44,7 @@ class ToolAdminService:
             description=description,
             vector_id=vector_id,
             function_name=function_name,
-            api_key=api_key,  # TODO: Hash api key
+            api_key=api_key,
         )
         self.repository.create(db_session, tool)
 

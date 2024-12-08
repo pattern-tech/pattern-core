@@ -43,7 +43,16 @@ class ProjectOutput(BaseModel):
         orm_mode = True
 
 
-class AddToolInput(BaseModel):
+class ToolOutput(BaseModel):
+    id: UUID
+    function_name: str
+    description: str
+
+    class Config:
+        orm_mode = True
+
+
+class ModifyToolInput(BaseModel):
     project_id: UUID
     tools_id: Set[UUID]
 
@@ -163,33 +172,50 @@ def delete_project(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/{project_id}/tools")
+@router.get("/{project_id}/tools", response_model=List[ToolOutput])
 def get_project_tools(
     project_id: UUID,
+    limit: int = 10,  # Default number of items per page
+    offset: int = 0,  # Default starting point
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),
     service: ProjectService = Depends(get_project_service),
 ):
     """
-    Retrieves all tools associated with a project.
+    Retrieves all tools associated with a project with pagination.
 
     Args:
         project_id (UUID): The project ID.
+        limit (int): Maximum number of items to return per page. Defaults to 10.
+        offset (int): Number of items to skip. Defaults to 0.
+        user_id (UUID): ID of the authenticated user.
+        db (Session): Database session.
+        service (ProjectService): Project service instance.
 
     Returns:
-        List[Tool]: List of tools associated with the project.
+        dict: Dictionary containing:
+            - items (List[Tool]): List of tools associated with the project
+            - total_count (int): Total number of tools returned
+            - limit (int): Maximum items per page
+            - offset (int): Number of items skipped
     """
     try:
-        tools = service.get_project_tools(db, project_id)
-        return global_response(tools)
+        tools, total_count = service.get_project_tools(
+            db, project_id, limit, offset)
+        return global_response({
+            "items": tools,
+            "total_count": total_count,
+            "limit": limit,
+            "offset": offset,
+        })
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.post("/tools")
-def add_tool_to_project(
-    input: AddToolInput,
+@router.post("/tools", response_model=List[ToolOutput])
+def modify_project_tools(
+    input: ModifyToolInput,
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),
     service: ProjectService = Depends(get_project_service),
@@ -205,7 +231,7 @@ def add_tool_to_project(
         None
     """
     try:
-        tools = service.add_tool_to_project(
+        tools = service.modify_project_tools(
             db, input.project_id, input.tools_id)
         return global_response(tools)
     except Exception as e:

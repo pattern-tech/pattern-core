@@ -102,7 +102,7 @@ class ProjectService:
         """
         self.repository.delete(db_session, project_id, user_id)
 
-    def get_project_tools(self, db_session: Session, project_id: UUID) -> List[Tool]:
+    def get_project_tools(self, db_session: Session, project_id: UUID, limit: int, offset: int) -> List[Tool]:
         """
         Retrieves all tools associated with a project.
 
@@ -113,9 +113,9 @@ class ProjectService:
         Returns:
             List[dict]: A list of dictionaries representing the tools associated with the project.
         """
-        return self.repository.get_tools_for_project(db_session, project_id)
+        return self.repository.get_tools_for_project(db_session, project_id, limit, offset)
 
-    def add_tool_to_project(self, db_session: Session, project_id: UUID, tools_id: Set[UUID]) -> None:
+    def modify_project_tools(self, db_session: Session, project_id: UUID, tools_id: Set[UUID]) -> None:
         """
         Adds a tool to a project.
 
@@ -127,4 +127,4 @@ class ProjectService:
         Returns:
             None
         """
-        return self.repository.add_tool_to_project(db_session, project_id, tools_id)
+        return self.repository.modify_project_tools(db_session, project_id, tools_id)

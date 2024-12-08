@@ -98,16 +98,29 @@ class ProjectRepository(BaseRepository[Project]):
         db_session.delete(project)
         db_session.commit()
 
-    def get_tools_for_project(self,  db_session: Session, project_id: UUID) -> List[Tool]:
+    def get_tools_for_project(
+        self,
+        db_session: Session,
+        project_id: UUID,
+        limit: int,
+        offset: int
+    ) -> List[Tool]:
         """
-        Retrieve all tools associated with a given project.
+        Retrieves a paginated list of tools associated with a project.
 
         Args:
-            session (Session): SQLAlchemy session object.
-            project_id (UUID): The UUID of the project.
+            db_session (Session): The database session to use.
+            project_id (UUID): The unique identifier of the project.
+            limit (int): Maximum number of tools to return.
+            offset (int): Number of tools to skip before starting to return results.
 
         Returns:
-            List[dict]: A list of tools associated with the project, each represented as a dictionary.
+            tuple: A tuple containing:
+                - list: List of dictionaries containing tool details (id, name, description)
+                - int: Total count of tools for the project
+
+        Raises:
+            ValueError: If the project with the given ID is not found.
         """
         # Query the project and join the tools relationship
         project = db_session.query(Project).filter(
@@ -116,11 +129,15 @@ class ProjectRepository(BaseRepository[Project]):
         if not project:
             raise ValueError(f"Project with id {project_id} not found.")
 
-        return project.tools
+        tools = project.tools.offset(offset).limit(limit).all()
 
-    def add_tool_to_project(self, db_session: Session, project_id: UUID, tools_id: Set[UUID]) -> None:
+        tools_count = project.tools.count()
+
+        return [{"id": tool.id, "name": tool.name, "description": tool.description} for tool in tools], tools_count
+
+    def modify_project_tools(self, db_session: Session, project_id: UUID, tools_id: Set[UUID]) -> None:
         """
-        Add a tool to a project.
+        Update tool list of a project.
 
         Args:
             session (Session): SQLAlchemy session object.
@@ -143,14 +160,7 @@ class ProjectRepository(BaseRepository[Project]):
         except Exception as e:
             raise ValueError("Tools not found.")
 
-        # Convert existing tools in the project to a set of IDs
-        existing_tool_ids = {tool.id for tool in project.tools}
-
-        # Add only tools that are not already associated with the project
-        new_tools = [
-            tool for tool in tools if tool.id not in existing_tool_ids]
-        if new_tools:
-            project.tools.extend(new_tools)
+        project.tools = tools
 
         # Commit the changes to the database
         db_session.commit()
