@@ -61,17 +61,10 @@ def search_tools(
     Returns:
         dict: A list of tools matching the search query, with pagination.
     """
-    # try:
-    tools, total_count = service.search_tools(
-        db_session, query, active, limit, offset)
-    return global_response({
-        "items": tools,
+    tools, total_count = service.search_tools(db_session, query, active, limit, offset)
+    metadata = {
         "total_count": total_count,
         "limit": limit,
         "offset": offset,
-    })
-
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-    #     )
+    }
+    return global_response(content=tools, metadata=metadata)
