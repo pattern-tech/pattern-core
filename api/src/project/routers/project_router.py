@@ -202,12 +202,12 @@ def get_project_tools(
     try:
         tools, total_count = service.get_project_tools(
             db, project_id, limit, offset)
-        return global_response({
-            "items": tools,
+        metadata = {
             "total_count": total_count,
             "limit": limit,
             "offset": offset,
-        })
+        }
+        return global_response(content=tools, metadata=metadata)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
