@@ -120,6 +120,6 @@ class DataProviderAgentService:
         if self.memory:
             return self.agent_with_chat_history.invoke(
                 input={"input": message},
-                config={"configurable": {"session_id": "1"}})
+                config={"configurable": {"session_id": "ـ"}})
         else:
             return self.agent_executor.invoke({"input": message})

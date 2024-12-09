@@ -1,5 +1,7 @@
 from uuid import UUID
+from sqlalchemy import desc
 from typing import Optional, List
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from src.db.models import Tool
@@ -38,10 +40,11 @@ class ToolRepository(BaseRepository[Tool]):
             Optional[Tool]: The tool if found, otherwise None.
         """
         return (
-            db_session.query(Tool).filter(Tool.function_name == function_name).first()
+            db_session.query(Tool).filter(
+                Tool.function_name == function_name).first()
         )
 
-    def get_all(self, db_session: Session) -> List[Tool]:
+    def get_all(self, db_session: Session, limit: int, offset: int) -> List[Tool]:
         """
         Retrieves all tools.
 
@@ -51,7 +54,61 @@ class ToolRepository(BaseRepository[Tool]):
         Returns:
             List[Tool]: A list of all tools.
         """
-        return db_session.query(Tool).all()
+        return db_session.query(Tool).order_by(desc(Tool.created_at)).offset(offset).limit(limit).all()
+
+    def get_tool_count(self, db_session: Session) -> int:
+        """
+        Retrieves the total count of tools.
+
+        Args:
+            db_session (Session): The database session to use.
+
+        Returns:
+            int: The total count of tools.
+        """
+        return db_session.query(Tool).count()
+
+    def search_tools(
+        self, db_session: Session, query: str, active: Optional[bool], limit: int, offset: int
+    ):
+        """
+        Searches for tools based on the query and optional filters.
+
+        Args:
+            db_session (Session): The database session.
+            query (str): The search keyword.
+            active (Optional[bool]): Filter by active status (True/False). Default is no filter.
+            limit (int): Number of items to retrieve.
+            offset (int): Number of items to skip.
+
+        Returns:
+            tuple: A tuple containing the list of tools and total count.
+        """
+        # Base query
+
+        if (query.strip() != ""):
+            search_query = db_session.query(Tool).filter(
+                or_(
+                    # Case-insensitive search on name
+                    Tool.name.ilike(f"%{query}%"),
+                    # Case-insensitive search on description
+                    Tool.description.ilike(f"%{query}%")
+                )
+            )
+        else:
+            search_query = db_session.query(Tool)
+
+        # Optional filter for active status
+        if active is not None:
+            search_query = search_query.filter(Tool.active == active)
+
+        # Get total count before applying pagination
+        total_count = search_query.count()
+
+        # Apply pagination
+        tools = search_query.offset(offset).limit(limit).all()
+
+        return tools, total_count
 
     def create(self, db_session: Session, tool: Tool) -> Tool:
         """

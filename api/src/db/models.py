@@ -1,7 +1,13 @@
 import os
 import uuid
+
+from dotenv import load_dotenv
 from datetime import datetime, timezone
+from sqlalchemy.orm import relationship, declared_attr
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import (
+    Table,
     Boolean,
     Column,
     String,
@@ -12,11 +18,7 @@ from sqlalchemy import (
     ForeignKey,
     create_engine,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, declared_attr
-from sqlalchemy.ext.declarative import declarative_base
 
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -43,6 +45,17 @@ class ParentBase(Base):
         return Column(DateTime, nullable=True)
 
 
+# Association table for the many-to-many relationship
+project_tools_association = Table(
+    "project_tools_association",
+    Base.metadata,
+    Column("project_id", UUID(as_uuid=True),
+           ForeignKey("projects.id"), primary_key=True),
+    Column("tool_id", UUID(as_uuid=True),
+           ForeignKey("tools.id"), primary_key=True)
+)
+
+
 class UserModel(ParentBase):
     __tablename__ = "users"
 
@@ -60,7 +73,8 @@ class UserModel(ParentBase):
     workspaces = relationship(
         "Workspace", back_populates="user", cascade="all, delete-orphan"
     )
-    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="user",
+                         cascade="all, delete-orphan")
     projects = relationship(
         "Project", back_populates="user", cascade="all, delete-orphan"
     )
@@ -76,7 +90,8 @@ class Workspace(ParentBase):
         unique=True,
         nullable=False,
     )
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        "users.id"), nullable=False)
     name = Column(String, nullable=False)
 
     # Relationships
@@ -99,13 +114,15 @@ class Project(ParentBase):
     workspace_id = Column(
         UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
     )
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        "users.id"), nullable=False)
     name = Column(String, nullable=False)
 
     # Relationships
     workspace = relationship("Workspace", back_populates="projects")
     user = relationship("UserModel", back_populates="projects")
-    tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="project",
+                         cascade="all, delete-orphan")
     sub_tasks = relationship(
         "SubTask", back_populates="project", cascade="all, delete-orphan"
     )
@@ -122,6 +139,14 @@ class Project(ParentBase):
         "SubTaskObject", back_populates="project", cascade="all, delete-orphan"
     )
 
+    # Many-to-Many Relationship with Tools
+    tools = relationship(
+        "Tool",
+        secondary=project_tools_association,
+        back_populates="projects",
+        lazy="dynamic"
+    )
+
 
 class Task(ParentBase):
     __tablename__ = "tasks"
@@ -133,8 +158,10 @@ class Task(ParentBase):
         unique=True,
         nullable=False,
     )
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(
+        "projects.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        "users.id"), nullable=False)
     name = Column(String, nullable=True)
     task = Column(String, nullable=False)
     status = Column(String, nullable=False)
@@ -171,8 +198,10 @@ class SubTask(ParentBase):
         unique=True,
         nullable=False,
     )
-    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey(
+        "tasks.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(
+        "projects.id"), nullable=False)
     name = Column(String, nullable=True)
     sub_task = Column(String, nullable=False)
     status = Column(String, nullable=False)
@@ -208,9 +237,11 @@ class TaskEvent(ParentBase):
         unique=True,
         nullable=False,
     )
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(
+        "projects.id"), nullable=False)
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=True)
-    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=True)
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey(
+        "sub_tasks.id"), nullable=True)
     type = Column(String, nullable=False)
     info = Column(String, nullable=True)
     input = Column(String, nullable=True)
@@ -232,10 +263,14 @@ class SubTaskTool(ParentBase):
         unique=True,
         nullable=False,
     )
-    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=False)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
-    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
-    tool_id = Column(UUID(as_uuid=True), ForeignKey("tools.id"), nullable=False)
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey(
+        "sub_tasks.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(
+        "projects.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey(
+        "tasks.id"), nullable=False)
+    tool_id = Column(UUID(as_uuid=True), ForeignKey(
+        "tools.id"), nullable=False)
     status = Column(String, nullable=False)
     response = Column(Text, nullable=True)
     score = Column(Integer, nullable=False)
@@ -270,6 +305,14 @@ class Tool(ParentBase):
         "SubTaskTool", back_populates="tool", cascade="all, delete-orphan"
     )
 
+    # Many-to-Many Relationship with Projects
+    projects = relationship(
+        "Project",
+        secondary=project_tools_association,
+        back_populates="tools",
+        lazy="dynamic"
+    )
+
 
 class TaskUsage(ParentBase):
     __tablename__ = "task_usages"
@@ -281,9 +324,11 @@ class TaskUsage(ParentBase):
         unique=True,
         nullable=False,
     )
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(
+        "projects.id"), nullable=False)
     task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=True)
-    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=True)
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey(
+        "sub_tasks.id"), nullable=True)
     provider = Column(String, nullable=False)
     model = Column(String, nullable=False)
     total_token = Column(Integer, nullable=False)
@@ -309,9 +354,12 @@ class SubTaskObject(ParentBase):
         unique=True,
         nullable=False,
     )
-    sub_task_id = Column(UUID(as_uuid=True), ForeignKey("sub_tasks.id"), nullable=False)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
-    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=False)
+    sub_task_id = Column(UUID(as_uuid=True), ForeignKey(
+        "sub_tasks.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(
+        "projects.id"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey(
+        "tasks.id"), nullable=False)
     object_key = Column(String, nullable=False)
     source = Column(String, nullable=False)
 

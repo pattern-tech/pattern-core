@@ -34,17 +34,3 @@ def decrypt_message(message: str, password: str) -> str:
     fernet = Fernet(key)
     decrypted_message = fernet.decrypt(message.encode('utf-8'))
     return decrypted_message.decode('utf-8')
-
-
-# Example usage
-if __name__ == "__main__":
-    password = os.getenv("SECRET_KEY")
-    message = "This is a secret message."
-
-    # Encrypt the message
-    encrypted = encrypt_message(message, password)
-    print(f"Encrypted message: {encrypted}")
-
-    # Decrypt the message
-    decrypted = decrypt_message(encrypted, password)
-    print(f"Decrypted message: {decrypted}")
