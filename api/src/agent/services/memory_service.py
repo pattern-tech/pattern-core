@@ -57,11 +57,11 @@ class MemoryService:
                 - session_id (str): Unique identifier for the chat session
                 - memory (PostgresChatMessageHistory): A new memory instance
         """
-        session_id = str(uuid.uuid4())
+        session_id = uuid.uuid4()
 
         memory = PostgresChatMessageHistory(
             table_name,
-            session_id,
+            str(session_id),
             sync_connection=self.get_connection()
         )
         return (session_id, memory)
@@ -78,8 +78,8 @@ class MemoryService:
             PostgresChatMessageHistory: The memory instance associated with the session ID
         """
         memory = PostgresChatMessageHistory(
-            table_name=table_name,
-            session_id=session_id,
+            table_name,
+            str(session_id),
             sync_connection=self.get_connection()
         )
         return memory

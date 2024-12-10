@@ -102,7 +102,7 @@ class ProjectService:
         """
         self.repository.delete(db_session, project_id, user_id)
 
-    def get_project_tools(self, db_session: Session, project_id: UUID, limit: int, offset: int) -> List[Tool]:
+    def get_project_tools(self, db_session: Session, project_id: UUID, limit: int = None, offset: int = None) -> List[Tool]:
         """
         Retrieves all tools associated with a project.
 
