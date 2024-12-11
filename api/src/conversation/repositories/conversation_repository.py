@@ -98,5 +98,23 @@ class ConversationRepository(BaseRepository[Conversation]):
         conversation = self.get_by_id(db_session, id, project_id)
         if not conversation:
             raise Exception("Conversation not found")
+
         db_session.delete(conversation)
         db_session.commit()
+
+    def get_project_associated_with_conversation(self, db_session: Session, conversation_id: UUID) -> Optional[UUID]:
+        """
+        Retrieves the project ID associated with a conversation.
+
+        Args:
+            db_session (Session): The database session to use.
+            conversation_id (UUID): The unique identifier of the conversation.
+
+        Returns:
+            Optional[UUID]: The project ID associated with the conversation, or None if not found.
+        """
+        conversation = db_session.query(Conversation).filter(
+            Conversation.id == conversation_id).first()
+        return conversation.project_id if conversation else None
+
+    

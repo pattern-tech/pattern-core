@@ -1,4 +1,5 @@
 from uuid import UUID
+from enum import Enum
 from typing import List
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -9,7 +10,7 @@ from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
 from src.conversation.services.conversation_service import ConversationService
 
-router = APIRouter(prefix="/conversation")
+router = APIRouter(prefix="/playground/conversation")
 database = Database()
 
 
@@ -40,6 +41,16 @@ class ConversationOutput(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class MessageType(str, Enum):
+    TEXT = "text"
+    AUDIO = "audio"
+
+
+class MessageInput(BaseModel):
+    message: str
+    message_type: MessageType = MessageType.TEXT
 
 
 @router.post("", response_model=ConversationOutput)
@@ -82,11 +93,15 @@ def get_conversation(
         conversation_id (UUID): The conversation ID.
 
     Returns:
-        ConversationOutput: The conversation data.
+        ConversationOutput: The conversation data and chat history metadata.
+
+    Raises:
+        HTTPException: If conversation is not found or user is not authorized.
     """
     try:
-        conversation = service.get_conversation(db, conversation_id, user_id)
-        return global_response(conversation)
+        conversation, history = service.get_conversation(
+            db, conversation_id, user_id)
+        return global_response(content=conversation, metadata={"history": history})
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
@@ -161,6 +176,39 @@ def delete_conversation(
     try:
         service.delete_conversation(db, conversation_id, project_id)
         return global_response({"detail": "Conversation deleted successfully."})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
+
+
+@router.post("/{conversation_id}/chat")
+def send_message(
+    input: MessageInput,
+    conversation_id: UUID,
+    db: Session = Depends(get_db),
+    service: ConversationService = Depends(get_conversation_service),
+    user_id: UUID = Depends(authenticate_user),
+):
+    """
+    Sends a message in the chat.
+
+    Args:
+        input (MessageInput): The message input.
+
+    Returns:
+        MessageOutput: The message data.
+    """
+    try:
+        response = service.send_message(
+            db,
+            input.message,
+            user_id,
+            conversation_id,
+            input.message_type,
+        )
+        metadata = {"intermediate_steps": response["intermediate_steps"]}
+        return global_response(content=response["response"], metadata=metadata)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)

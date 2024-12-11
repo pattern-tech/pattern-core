@@ -7,8 +7,7 @@ from src.agent.routers import agent_router
 from src.project.routers import project_router
 from src.agent.routers import tool_admin_router
 from src.workspace.routers import workspace_router
-from src.playground.routers import playground_router
-from src.conversation.routers import conversation_router
+from src.conversation.routers import playground_conversation_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router.router, tags=["Auth"])
@@ -18,8 +17,8 @@ api_router.include_router(project_router.router, tags=["Project"])
 api_router.include_router(task_router.router, tags=["Task"])
 api_router.include_router(agent_router.router, tags=["Agent"])
 api_router.include_router(tool_router.router, tags=["Tool"])
-api_router.include_router(conversation_router.router, tags=["Conversation"])
-api_router.include_router(playground_router.router, tags=["Playground"])
+api_router.include_router(
+    playground_conversation_router.router, tags=["Conversation"])
 
 # Admin
 api_router.include_router(tool_admin_router.router, tags=["Admin | Tool"])

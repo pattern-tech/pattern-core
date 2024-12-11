@@ -34,3 +34,4 @@ class ToolService:
         tools, total_count = self.repository.search_tools(
             db_session, query, active, limit, offset)
         return (tools, total_count)
+
