@@ -79,6 +79,10 @@ class UserModel(ParentBase):
         "Project", back_populates="user", cascade="all, delete-orphan"
     )
 
+    conversations = relationship(
+        "Conversation", back_populates="user", cascade="all, delete-orphan"
+    )
+
 
 class Workspace(ParentBase):
     __tablename__ = "workspaces"
@@ -145,6 +149,13 @@ class Project(ParentBase):
         secondary=project_tools_association,
         back_populates="projects",
         lazy="dynamic"
+    )
+
+    # One-to-Many Relationship with Conversations
+    conversations = relationship(
+        "Conversation",
+        back_populates="project",
+        cascade="all, delete-orphan"
     )
 
 
@@ -312,6 +323,27 @@ class Tool(ParentBase):
         back_populates="tools",
         lazy="dynamic"
     )
+
+
+class Conversation(ParentBase):
+    __tablename__ = "conversations"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    name = Column(String, nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        "users.id"), nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(
+        "projects.id"), nullable=False)
+
+    # Relationships
+    project = relationship("Project", back_populates="conversations")
+    user = relationship("UserModel", back_populates="conversations")
 
 
 class TaskUsage(ParentBase):

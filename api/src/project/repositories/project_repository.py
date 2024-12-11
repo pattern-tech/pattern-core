@@ -129,11 +129,17 @@ class ProjectRepository(BaseRepository[Project]):
         if not project:
             raise ValueError(f"Project with id {project_id} not found.")
 
-        tools = project.tools.offset(offset).limit(limit).all()
+        if offset is None or limit is None:
+            tools = project.tools.all()
+        else:
+            tools = project.tools.offset(offset).limit(limit).all()
 
         tools_count = project.tools.count()
 
-        return [{"id": tool.id, "name": tool.name, "description": tool.description} for tool in tools], tools_count
+        return [{"id": tool.id,
+                 "function_name": tool.function_name,
+                 "name": tool.name,
+                 "description": tool.description} for tool in tools], tools_count
 
     def modify_project_tools(self, db_session: Session, project_id: UUID, tools_id: Set[UUID]) -> None:
         """
