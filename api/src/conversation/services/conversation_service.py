@@ -173,9 +173,17 @@ class ConversationService:
 
         result = agent.ask(message)
 
+        intermediate_steps = []
+        for step in result["intermediate_steps"]:
+            intermediate_steps.append({
+                "function_name": step[0].tool,
+                "arguments": step[0].tool_input,
+                "output": step[1]
+            })
+
         return {
             "response": result["output"],
-            "intermediate_steps": result["intermediate_steps"]
+            "intermediate_steps": intermediate_steps
         }
 
     def get_history(
