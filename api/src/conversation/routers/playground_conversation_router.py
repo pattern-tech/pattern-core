@@ -148,8 +148,9 @@ def update_conversation(
         ConversationOutput: The updated conversation data.
     """
     try:
+        # TODO: fix update conversation
         updated_conversation = service.update_conversation(
-            db, conversation_id, input.dict(), input.project_id
+            db, conversation_id, input.dict(), user_id
         )
         return global_response(updated_conversation)
     except Exception as e:
@@ -176,8 +177,7 @@ def delete_conversation(
         None
     """
     try:
-        service.delete_conversation(db, conversation_id, project_id)
-        return global_response({"detail": "Conversation deleted successfully."})
+        service.delete_conversation(db, conversation_id, user_id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
