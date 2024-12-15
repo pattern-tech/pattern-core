@@ -16,7 +16,7 @@ class ToolService:
         self.project_repository = ProjectRepository()
 
     def get_all_tools(
-        self, db_session: Session, project_id: UUID, query: str, active: bool, limit: int, offset: int
+        self, db_session: Session, project_id: UUID, query: str, active: bool, limit: int = None, offset: int = None
     ):
         """
         Search for tools based on query parameters.

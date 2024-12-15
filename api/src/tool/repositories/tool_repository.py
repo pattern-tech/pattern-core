@@ -14,7 +14,7 @@ class ToolRepository(BaseRepository[Tool]):
     """
 
     def get_all(
-        self, db_session: Session, query: str, active: Optional[bool], limit: int, offset: int
+        self, db_session: Session, query: str, active: Optional[bool], limit: int = None, offset: int = None
     ) -> Tuple[List[Tool], int]:
         """
         Get all tools based on the query and optional filters.
@@ -49,8 +49,11 @@ class ToolRepository(BaseRepository[Tool]):
         # Get total count before applying pagination
         tools_count = search_query.count()
 
-        # Apply pagination
-        tools = search_query.offset(offset).limit(limit).all()
+        if limit is None or offset is None:
+            tools = search_query.all()
+        else:
+            # Apply pagination
+            tools = search_query.offset(offset).limit(limit).all()
 
         return (tools, tools_count)
 
