@@ -13,11 +13,11 @@ class ToolRepository(BaseRepository[Tool]):
     Repository class for handling CRUD operations on the Tool model.
     """
 
-    def search_tools(
+    def get_all(
         self, db_session: Session, query: str, active: Optional[bool], limit: int, offset: int
     ) -> Tuple[List[Tool], int]:
         """
-        Searches for tools based on the query and optional filters.
+        Get all tools based on the query and optional filters.
 
         Args:
             db_session (Session): The database session.
@@ -27,10 +27,9 @@ class ToolRepository(BaseRepository[Tool]):
             offset (int): Number of items to skip.
 
         Returns:
-            tuple: A tuple containing the list of tools and total count.
+            tuple: A tuple containing (list of tools, total count).
         """
         # Base query
-
         if (query.strip() != ""):
             search_query = db_session.query(Tool).filter(
                 or_(
@@ -56,9 +55,6 @@ class ToolRepository(BaseRepository[Tool]):
         return (tools, tools_count)
 
     def get_by_id(self, db_session: Session, id: UUID) -> Optional[Tool]:
-        pass
-
-    def get_all(self, db_session: Session, limit: int, offset: int) -> List[Tool]:
         pass
 
     def create(self, db_session: Session, tool: Tool) -> Tool:

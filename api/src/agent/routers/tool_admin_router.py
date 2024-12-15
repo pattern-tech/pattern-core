@@ -115,12 +115,9 @@ def search_tools(
     try:
         tools, total_count = service.search_tools(
             db_session, query, active, limit, offset)
-        return global_response({
-            "items": tools,
-            "total_count": total_count,
-            "limit": limit,
-            "offset": offset,
-        })
+        metadata = {"total_count": total_count,
+                    "limit": limit, "offset": offset}
+        return global_response(content=tools, metadata=metadata)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
