@@ -39,8 +39,9 @@ class ToolOutput(BaseModel):
         orm_mode = True
 
 
-@router.get("/")
-def search_tools(
+@router.get("/{project_id}")
+def get_all_tools(
+    project_id: UUID,
     query: Optional[str] = "",
     active: Optional[bool] = None,
     limit: int = 10,  # Default number of items per page
@@ -61,17 +62,11 @@ def search_tools(
     Returns:
         dict: A list of tools matching the search query, with pagination.
     """
-    # try:
-    tools, total_count = service.search_tools(
-        db_session, query, active, limit, offset)
-    return global_response({
-        "items": tools,
+    tools, total_count = service.get_all_tools(
+        db_session, project_id, query, active, limit, offset)
+    metadata = {
         "total_count": total_count,
         "limit": limit,
         "offset": offset,
-    })
-
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-    #     )
+    }
+    return global_response(tools, metadata)

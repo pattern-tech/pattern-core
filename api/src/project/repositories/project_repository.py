@@ -102,8 +102,8 @@ class ProjectRepository(BaseRepository[Project]):
         self,
         db_session: Session,
         project_id: UUID,
-        limit: int,
-        offset: int
+        limit: int = None,
+        offset: int = None,
     ) -> List[Tool]:
         """
         Retrieves a paginated list of tools associated with a project.

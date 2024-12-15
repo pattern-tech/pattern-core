@@ -79,8 +79,9 @@ def create_conversation(
         )
 
 
-@router.get("/{conversation_id}", response_model=ConversationOutput)
+@router.get("/{project_id}/{conversation_id}", response_model=ConversationOutput)
 def get_conversation(
+    project_id: UUID,
     conversation_id: UUID,
     db: Session = Depends(get_db),
     service: ConversationService = Depends(get_conversation_service),
@@ -108,7 +109,7 @@ def get_conversation(
         )
 
 
-@router.get("", response_model=List[ConversationOutput])
+@router.get("/{project_id}", response_model=List[ConversationOutput])
 def get_all_conversations(
     project_id: UUID,
     db: Session = Depends(get_db),
@@ -128,8 +129,9 @@ def get_all_conversations(
     return global_response(conversations)
 
 
-@router.put("/{conversation_id}", response_model=ConversationOutput)
+@router.put("/{project_id}/{conversation_id}", response_model=ConversationOutput)
 def update_conversation(
+    project_id: UUID,
     conversation_id: UUID,
     input: CreateConversationInput,
     db: Session = Depends(get_db),
@@ -156,10 +158,10 @@ def update_conversation(
         )
 
 
-@router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}/{conversation_id}")
 def delete_conversation(
-    conversation_id: UUID,
     project_id: UUID,
+    conversation_id: UUID,
     db: Session = Depends(get_db),
     service: ConversationService = Depends(get_conversation_service),
     user_id: UUID = Depends(authenticate_user),
@@ -182,9 +184,10 @@ def delete_conversation(
         )
 
 
-@router.post("/{conversation_id}/chat")
+@router.post("/{project_id}/{conversation_id}/chat")
 def send_message(
     input: MessageInput,
+    project_id: UUID,
     conversation_id: UUID,
     db: Session = Depends(get_db),
     service: ConversationService = Depends(get_conversation_service),
