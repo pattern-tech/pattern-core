@@ -49,7 +49,6 @@ class MessageType(str, Enum):
 
 
 class MessageInput(BaseModel):
-    conversation_id: str
     message: str
     message_type: MessageType = MessageType.TEXT
 
@@ -76,7 +75,8 @@ def create_conversation(
         )
         return global_response(conversation)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/{project_id}/{conversation_id}", response_model=ConversationOutput)
@@ -100,10 +100,12 @@ def get_conversation(
         HTTPException: If conversation is not found or user is not authorized.
     """
     try:
-        conversation, history = service.get_conversation(db, conversation_id, user_id)
+        conversation, history = service.get_conversation(
+            db, conversation_id, user_id)
         return global_response(content=conversation, metadata={"history": history})
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get("/{project_id}", response_model=List[ConversationOutput])
@@ -151,7 +153,8 @@ def update_conversation(
         )
         return global_response(updated_conversation)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/{project_id}/{conversation_id}")
@@ -174,12 +177,15 @@ def delete_conversation(
     try:
         service.delete_conversation(db, conversation_id, user_id)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.post("/chat")
+@router.post("/{project_id}/{conversation_id}/chat")
 def send_message(
     input: MessageInput,
+    conversation_id: UUID,
+    project_id: UUID,
     db: Session = Depends(get_db),
     service: ConversationService = Depends(get_conversation_service),
     user_id: UUID = Depends(authenticate_user),
@@ -194,14 +200,19 @@ def send_message(
         MessageOutput: The message data.
     """
     try:
+        print(input.message,
+              user_id,
+              conversation_id,
+              input.message_type)
         response = service.send_message(
             db,
             input.message,
             user_id,
-            input.conversation_id,
+            conversation_id,
             input.message_type,
         )
         metadata = {"intermediate_steps": response["intermediate_steps"]}
         return global_response(content=response["response"], metadata=metadata)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
