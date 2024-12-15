@@ -167,6 +167,13 @@ class ConversationService:
 
         tools = [tool for tool in tool_function_index if tool.name in tool_names]
 
+        # add default tool (get_current_datetime)
+        if len(tools) == 0:
+            get_current_datetime_tool = next(
+                (tool for tool in tool_function_index if tool.name == "get_current_datetime"), None)
+            if get_current_datetime_tool:
+                tools.append(get_current_datetime_tool)
+
         memory = self.memory_service.get_memory(conversation_id)
 
         agent = DataProviderAgentService(tools, memory)
