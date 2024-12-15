@@ -44,8 +44,8 @@ def get_all_tools(
     project_id: UUID,
     query: Optional[str] = "",
     active: Optional[bool] = None,
-    limit: int = 10,  # Default number of items per page
-    offset: int = 0,  # Default starting point
+    limit: int = None,
+    offset: int = None,
     db_session: Session = Depends(get_db),
     service: ToolService = Depends(get_tool_service),
     _: UUID = Depends(authenticate_user),
@@ -64,8 +64,6 @@ def get_all_tools(
     """
     tools, total_count = service.get_all_tools(
         db_session, project_id, query, active, limit, offset)
-
-    tools, total_count = service.search_tools(db_session, query, active, limit, offset)
 
     metadata = {
         "total_count": total_count,
