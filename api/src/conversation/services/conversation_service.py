@@ -82,7 +82,7 @@ class ConversationService:
         return self.repository.get_all(db_session, project_id)
 
     def update_conversation(
-        self, db_session: Session, conversation_id: UUID, data: dict, project_id: UUID
+        self, db_session: Session, conversation_id: UUID, data: dict, user_id: UUID
     ) -> Conversation:
         """
         Updates a conversation with the given data.
@@ -91,7 +91,7 @@ class ConversationService:
             db_session (Session): The database session.
             conversation_id (UUID): The ID of the conversation to update.
             data (dict): A dictionary containing the fields to update.
-            project_id (UUID): The ID of the project the conversation belongs to.
+            user_id (UUID): The ID of the user updating the conversation.
 
         Returns:
             Conversation: The updated conversation instance.
@@ -99,10 +99,10 @@ class ConversationService:
         Raises:
             Exception: If the conversation is not found.
         """
-        return self.repository.update(db_session, conversation_id, data, project_id)
+        return self.repository.update(db_session, conversation_id, data, user_id)
 
     def delete_conversation(
-        self, db_session: Session, conversation_id: UUID, project_id: UUID
+        self, db_session: Session, conversation_id: UUID, user_id: UUID
     ) -> None:
         """
         Deletes a conversation.
@@ -110,12 +110,12 @@ class ConversationService:
         Args:
             db_session (Session): The database session.
             conversation_id (UUID): The ID of the conversation to delete.
-            project_id (UUID): The ID of the project the conversation belongs to.
+            user_id (UUID): The ID of the user deleting the conversation.
 
         Returns:
             None
         """
-        self.repository.delete(db_session, conversation_id, project_id)
+        self.repository.delete(db_session, conversation_id, user_id)
 
     def get_project_associated_with_conversation(self, db_session: Session, conversation_id: UUID) -> UUID:
         """

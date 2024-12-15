@@ -58,7 +58,7 @@ class ConversationRepository(BaseRepository[Conversation]):
         db_session.refresh(conversation)
         return conversation
 
-    def update(self, db_session: Session, id: UUID, conversation_data: dict, project_id: UUID) -> Conversation:
+    def update(self, db_session: Session, id: UUID, conversation_data: dict, user_id: UUID) -> Conversation:
         """
         Updates an existing conversation.
 
@@ -66,7 +66,7 @@ class ConversationRepository(BaseRepository[Conversation]):
             db_session (Session): The database session to use.
             id (UUID): The unique identifier of the conversation to update.
             conversation_data (dict): A dictionary of fields to update.
-            project_id (UUID): The ID of the project associated with the conversation.
+            user_id (UUID): The ID of the user who owns the conversation.
 
         Returns:
             Conversation: The updated conversation instance.
@@ -74,7 +74,7 @@ class ConversationRepository(BaseRepository[Conversation]):
         Raises:
             Exception: If the conversation is not found.
         """
-        conversation = self.get_by_id(db_session, id, project_id)
+        conversation = self.get_by_id(db_session, id, user_id)
         if not conversation:
             raise Exception("Conversation not found")
         for key, value in conversation_data.items():
@@ -83,19 +83,19 @@ class ConversationRepository(BaseRepository[Conversation]):
         db_session.refresh(conversation)
         return conversation
 
-    def delete(self, db_session: Session, id: UUID, project_id: UUID) -> None:
+    def delete(self, db_session: Session, id: UUID, user_id: UUID) -> None:
         """
-        Deletes a conversation by its ID and project ID.
+        Deletes a conversation by its ID and user ID.
 
         Args:
             db_session (Session): The database session to use.
             id (UUID): The unique identifier of the conversation to delete.
-            project_id (UUID): The ID of the project associated with the conversation.
+            user_id (UUID): The ID of the user who owns the conversation.
 
         Raises:
             Exception: If the conversation is not found.
         """
-        conversation = self.get_by_id(db_session, id, project_id)
+        conversation = self.get_by_id(db_session, id, user_id)
         if not conversation:
             raise Exception("Conversation not found")
 
@@ -116,5 +116,3 @@ class ConversationRepository(BaseRepository[Conversation]):
         conversation = db_session.query(Conversation).filter(
             Conversation.id == conversation_id).first()
         return conversation.project_id if conversation else None
-
-    
