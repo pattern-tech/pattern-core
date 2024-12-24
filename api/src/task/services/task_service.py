@@ -6,7 +6,6 @@ from langchain_openai import ChatOpenAI
 
 from src.db.models import Task
 from src.agent.tools.tools_index import get_all_tools
-from src.agent.tools.tools_index import get_tool_by_name
 from src.task.enum.task_status_enum import TaskStatusEnum
 from src.agent.services.tool_service import ToolAdminService
 from src.task.services.sub_task_service import SubTaskService
