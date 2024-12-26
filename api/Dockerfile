@@ -2,13 +2,17 @@ FROM python:3.11.8-slim
 
 WORKDIR /app
 
-COPY ./requirements.txt /app
 RUN apt-get update -y
 RUN apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev
+build-essential \
+libpq-dev
 
-RUN pip install -r requirements.txt
+COPY ./base_requirements.txt /app
+RUN pip install -r base_requirements.txt
+
+COPY ./additional_requirements.txt /app
+RUN pip install -r additional_requirements.txt
+
 COPY . /app
 
 EXPOSE 8000
