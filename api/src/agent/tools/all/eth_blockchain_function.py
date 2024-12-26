@@ -247,7 +247,7 @@ def get_abi_of_event(contract_address: str, event_name: str) -> dict:
     db_session = next(get_db())
     api_key = db_session.execute(
         select(Tool.api_key).where(Tool.function_name ==
-                                   "fetch_contract_abi")
+                                   inspect.currentframe().f_code.co_name)
     ).scalar_one_or_none()
 
     if api_key is None:
@@ -288,7 +288,7 @@ def get_contract_events(
     db_session = next(get_db())
     api_key = db_session.execute(
         select(Tool.api_key).where(Tool.function_name ==
-                                   "fetch_contract_abi")
+                                   inspect.currentframe().f_code.co_name)
     ).scalar_one_or_none()
 
     if api_key is None:
@@ -370,9 +370,22 @@ def get_contract_transactions(contract_address: str, from_block: int, to_block: 
             - function_name: Name of the contract function called
             - function_params: Parameters passed to the function
     """
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    abi = fetch_contract_abi(
+        contract_address, api_key_decrypted)
+
     w3 = Web3(Web3.HTTPProvider(os.getenv("ETH_RPC")))
     contract = w3.eth.contract(
-        address=contract_address, abi=get_contract_abi(contract_address))
+        address=contract_address, abi=abi)
 
     result = []
     for x in range(from_block, to_block):
@@ -406,7 +419,7 @@ def convert_timestamp_to_block_number(timestamp: int) -> int:
     db_session = next(get_db())
     api_key = db_session.execute(
         select(Tool.api_key).where(Tool.function_name ==
-                                   "fetch_contract_abi")
+                                   inspect.currentframe().f_code.co_name)
     ).scalar_one_or_none()
 
     if api_key is None:
