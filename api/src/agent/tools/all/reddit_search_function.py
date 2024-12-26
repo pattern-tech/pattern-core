@@ -42,7 +42,7 @@ def get_reddit_posts(query: str, api_key: str) -> dict:
                    "nsfw": "0"}
 
     headers = {
-        "x-rapidapi-key": os.getenv("REDDIT_SEARCH_API_KEY"),
+        "x-rapidapi-key": api_key,
         "x-rapidapi-host": "reddit-scraper2.p.rapidapi.com"
     }
 

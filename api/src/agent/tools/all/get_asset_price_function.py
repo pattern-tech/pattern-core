@@ -1,4 +1,3 @@
-from typing import Any
 from langchain_core.tools import tool
 
 @tool
