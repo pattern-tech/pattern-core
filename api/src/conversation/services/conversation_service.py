@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from src.db.models import Conversation
 from langchain_core.messages.human import HumanMessage
-from src.agent.tools.tools_index import tool_function_index
+from src.agent.tools.tools_index import get_all_tools
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.agent.services.agent_service import DataProviderAgentService
@@ -165,12 +165,12 @@ class ConversationService:
 
         tool_names = [tool["function_name"] for tool in tools]
 
-        tools = [tool for tool in tool_function_index if tool.name in tool_names]
+        tools = [tool for tool in get_all_tools() if tool.name in tool_names]
 
         # add default tool (get_current_datetime)
         if len(tools) == 0:
             get_current_datetime_tool = next(
-                (tool for tool in tool_function_index if tool.name == "get_current_datetime"), None)
+                (tool for tool in get_all_tools() if tool.name == "get_current_datetime"), None)
             if get_current_datetime_tool:
                 tools.append(get_current_datetime_tool)
 
