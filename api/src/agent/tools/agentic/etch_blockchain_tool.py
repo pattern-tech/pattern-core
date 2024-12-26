@@ -48,7 +48,9 @@ def ethereum_blockchain_tool(query: str):
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
-        return_intermediate_steps=True,
+        return_intermediate_steps=False,
         verbose=True)
 
-    return agent_executor.invoke({"input": query})
+    response = agent_executor.invoke({"input": query})
+
+    return response["output"]
