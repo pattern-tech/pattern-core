@@ -354,6 +354,38 @@ def get_latest_eth_block_number() -> int:
 @tool
 @handle_exceptions
 @timeout(seconds=10)
+def convert_timestamp_to_block_number(timestamp: int) -> int:
+    """Convert Ethereum timestamp to nearest block number.
+
+    Args:
+        timestamp (int): Unix timestamp to query
+
+    Returns:
+        int: Block number closest to the given timestamp
+    """
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        raise Exception(
+            f"converting block number to timestamp failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}")
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    return timestamp_to_block_number(timestamp, api_key_decrypted)
+
+
+# used GoldRush API instead
+# -----------------------------------
+'''
+@tool
+@handle_exceptions
+@timeout(seconds=10)
 def get_contract_transactions(contract_address: str, from_block: int, to_block: int) -> list:
     """
     Get all transactions for a given contract address between specified block range.
@@ -402,19 +434,23 @@ def get_contract_transactions(contract_address: str, from_block: int, to_block: 
                     "block_number": transaction['blockNumber']
                 })
     return result
+'''
 
 
+# GOLDRUSH APIs
+# --------------------------
 @tool
 @handle_exceptions
 @timeout(seconds=10)
-def convert_timestamp_to_block_number(timestamp: int) -> int:
-    """Convert Ethereum timestamp to nearest block number.
+def get_wallet_activity(wallet_address: str) -> str:
+    """
+    Fetches the wallet activity for a given wallet address using the Covalent API.
 
     Args:
-        timestamp (int): Unix timestamp to query
+        wallet_address (str): The wallet address to retrieve activity for.
 
     Returns:
-        int: Block number closest to the given timestamp
+        str: The response text containing wallet activity.
     """
     db_session = next(get_db())
     api_key = db_session.execute(
@@ -423,11 +459,200 @@ def convert_timestamp_to_block_number(timestamp: int) -> int:
     ).scalar_one_or_none()
 
     if api_key is None:
-        raise Exception(
-            f"converting block number to timestamp failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}")
+        return f"getting wallet activity failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
 
     api_key_decrypted = decrypt_message(
         message=api_key,
         password=os.getenv("SECRET_KEY"))
 
-    return timestamp_to_block_number(timestamp, api_key_decrypted)
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/address/{wallet_address}/activity/"
+    headers = {
+        'Authorization': f'Bearer {api_key_decrypted}'
+    }
+    response = requests.get(url, headers=headers)
+    return json.loads(response.text)["data"]["items"]
+
+
+@tool
+@handle_exceptions
+@timeout(seconds=10)
+def get_balance_for_address(wallet_address: str, no_spam: bool = True, currency: str = "USD") -> str:
+    """
+    Fetches the balance for a given wallet address on a specific chain using the Covalent API.
+
+    Args:
+        wallet_address (str): The wallet address to retrieve balance for.
+        currency (str): The quote currency for balance conversion. available options : ["USD", "CAD", "EUR", "SGD", "INR", "JPY", "VND",
+                        "CNY", "KRW", "RUB", "TRY", "NGN", "ARS", "AUD", "CHF", "GBP"]. Default is USD.
+
+    Returns:
+        str: The balance in the specified currency.
+    """
+    valid_currencies = ["USD", "CAD", "EUR", "SGD", "INR", "JPY", "VND",
+                        "CNY", "KRW", "RUB", "TRY", "NGN", "ARS", "AUD", "CHF", "GBP"]
+    if currency not in valid_currencies:
+        raise ValueError(
+            f"Invalid currency. Please choose from: {', '.join(valid_currencies)}")
+
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        return f"getting balance for wallet failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    chain_name = "eth-mainnet"
+    no_spam = "true" if no_spam else "false"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/balances_v2/?quote-currency={currency}&no-spam={no_spam}"
+    headers = {
+        'Authorization': f'Bearer {api_key_decrypted}'
+    }
+    response = requests.get(url, headers=headers)
+    return json.loads(response.text)["data"]["items"][0]['pretty_quote']
+
+
+@tool
+@handle_exceptions
+@timeout(seconds=15)
+def get_all_transactions(wallet_address: str, page: int) -> dict:
+    """
+    Fetches all transactions for a given wallet address on a specific chain using the Covalent API.
+
+    Args:
+        wallet_address (str): The wallet address to retrieve transactions for.
+        page (int): The page number of transactions to retrieve, starting at 0 and incrementing until an empty result is returned.
+
+    Returns:
+        dict: The transactions data for the specified page. The result is paginated.
+    """
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        return f"getting all transactions for wallet failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    chain_name = "eth-mainnet"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/transactions_v3/page/{page}/"
+    headers = {
+        'Authorization': f'Bearer {api_key_decrypted}'
+    }
+    response = requests.get(url, headers=headers)
+    return json.loads(response.text)["data"]["items"]
+
+
+@tool
+@handle_exceptions
+@timeout(seconds=10)
+def get_transactions_summary(wallet_address: str) -> dict:
+    """
+    Fetches the earliest and latest transaction for a given wallet address on a specific chain using the Covalent API.
+
+    Args:
+        wallet_address (str): The wallet address to retrieve transactions summary for.
+
+    Returns:
+        dict: The transactions summary data.
+    """
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        return f"getting transaction summary for wallet failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    chain_name = "eth-mainnet"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/transactions_summary/"
+    headers = {
+        'Authorization': f'Bearer {api_key_decrypted}'
+    }
+    response = requests.get(url, headers=headers)
+    return json.loads(response.text)["data"]["items"]
+
+
+@tool
+@handle_exceptions
+@timeout(seconds=10)
+def get_transaction_detail(tx_hash: str) -> dict:
+    """
+    Fetches the details of a specific transaction using the Covalent API.
+
+    Args:
+        tx_hash (str): The hash of the transaction to retrieve details for.
+
+    Returns:
+        dict: The transaction details data.
+    """
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        return f"getting transaction detail for wallet failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    chain_name = "eth-mainnet"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/transaction_v2/{tx_hash}/"
+    headers = {
+        'Authorization': f'Bearer {api_key_decrypted}'
+    }
+    response = requests.get(url, headers=headers)
+    return json.loads(response.text)["data"]["items"]
+
+
+@tool
+@handle_exceptions
+@timeout(seconds=10)
+def get_token_approvals(wallet_address: str) -> dict:
+    """
+    get a list of approvals across all token contracts categorized by spenders for a wallet’s assets.
+
+    Args:
+        wallet_address (str): The wallet address to retrieve token approvals for.
+
+    Returns:
+        dict: The token approvals data.
+    """
+    db_session = next(get_db())
+    api_key = db_session.execute(
+        select(Tool.api_key).where(Tool.function_name ==
+                                   inspect.currentframe().f_code.co_name)
+    ).scalar_one_or_none()
+
+    if api_key is None:
+        return f"getting token approvals for wallet failed. {FunctionsErrorCodeEnum.API_KEY_NOT_EXIST.value}"
+
+    api_key_decrypted = decrypt_message(
+        message=api_key,
+        password=os.getenv("SECRET_KEY"))
+
+    chain_name = "eth-mainnet"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/approvals/{wallet_address}/"
+    headers = {
+        'Authorization': f'Bearer {api_key_decrypted}'
+    }
+    response = requests.get(url, headers=headers)
+    return json.loads(response.text)["data"]["items"]

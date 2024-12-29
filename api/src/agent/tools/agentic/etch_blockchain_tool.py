@@ -36,7 +36,7 @@ def ethereum_blockchain_tool(query: str):
         ValueError: If the query cannot be parsed or contract address is invalid
     """
 
-    llm = ChatOpenAI(model="gpt-4o-mini")
+    llm = ChatOpenAI(model="gpt-4o")
     prompt = hub.pull("pattern-agent/eth-agent")
     tools = get_all_tools(tools_path="eth_blockchain_function")
 
@@ -48,9 +48,10 @@ def ethereum_blockchain_tool(query: str):
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
-        return_intermediate_steps=False,
+        return_intermediate_steps=True,
         verbose=True)
 
     response = agent_executor.invoke({"input": query})
 
-    return response["output"]
+    return {"tool_response": response["output"],
+            "intermediate_steps": response["intermediate_steps"]}
