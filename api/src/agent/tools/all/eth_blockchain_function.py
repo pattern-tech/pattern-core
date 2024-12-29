@@ -465,7 +465,7 @@ def get_wallet_activity(wallet_address: str) -> str:
         message=api_key,
         password=os.getenv("SECRET_KEY"))
 
-    url = f"https://api.covalenthq.com/v1/address/{wallet_address}/activity/"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/address/{wallet_address}/activity/"
     headers = {
         'Authorization': f'Bearer {api_key_decrypted}'
     }
@@ -508,7 +508,7 @@ def get_balance_for_address(wallet_address: str, no_spam: bool = True, currency:
 
     chain_name = "eth-mainnet"
     no_spam = "true" if no_spam else "false"
-    url = f"https://api.covalenthq.com/v1/{chain_name}/address/{wallet_address}/balances_v2/?quote-currency={currency}&no-spam={no_spam}"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/balances_v2/?quote-currency={currency}&no-spam={no_spam}"
     headers = {
         'Authorization': f'Bearer {api_key_decrypted}'
     }
@@ -544,7 +544,7 @@ def get_all_transactions(wallet_address: str, page: int) -> dict:
         password=os.getenv("SECRET_KEY"))
 
     chain_name = "eth-mainnet"
-    url = f"https://api.covalenthq.com/v1/{chain_name}/address/{wallet_address}/transactions_v3/page/{page}/"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/transactions_v3/page/{page}/"
     headers = {
         'Authorization': f'Bearer {api_key_decrypted}'
     }
@@ -579,7 +579,7 @@ def get_transactions_summary(wallet_address: str) -> dict:
         password=os.getenv("SECRET_KEY"))
 
     chain_name = "eth-mainnet"
-    url = f"https://api.covalenthq.com/v1/{chain_name}/address/{wallet_address}/transactions_summary/"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/transactions_summary/"
     headers = {
         'Authorization': f'Bearer {api_key_decrypted}'
     }
@@ -614,7 +614,7 @@ def get_transaction_detail(tx_hash: str) -> dict:
         password=os.getenv("SECRET_KEY"))
 
     chain_name = "eth-mainnet"
-    url = f"https://api.covalenthq.com/v1/{chain_name}/transaction_v2/{tx_hash}/"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/transaction_v2/{tx_hash}/"
     headers = {
         'Authorization': f'Bearer {api_key_decrypted}'
     }
@@ -649,7 +649,7 @@ def get_token_approvals(wallet_address: str) -> dict:
         password=os.getenv("SECRET_KEY"))
 
     chain_name = "eth-mainnet"
-    url = f"https://api.covalenthq.com/v1/{chain_name}/approvals/{wallet_address}/"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/approvals/{wallet_address}/"
     headers = {
         'Authorization': f'Bearer {api_key_decrypted}'
     }
