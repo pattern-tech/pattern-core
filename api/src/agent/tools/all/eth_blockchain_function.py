@@ -482,7 +482,8 @@ def get_balance_for_address(wallet_address: str, no_spam: bool = True, currency:
 
     Args:
         wallet_address (str): The wallet address to retrieve balance for.
-        currency (str): The quote currency for balance conversion. Default is USD.
+        currency (str): The quote currency for balance conversion. available options : ["USD", "CAD", "EUR", "SGD", "INR", "JPY", "VND",
+                        "CNY", "KRW", "RUB", "TRY", "NGN", "ARS", "AUD", "CHF", "GBP"]. Default is USD.
 
     Returns:
         str: The balance in the specified currency.

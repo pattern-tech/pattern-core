@@ -25,7 +25,7 @@ def web_search_tool(query: str):
     Returns:
         str: Response containing the requested web search results.
     """
-    llm = ChatOpenAI(model="gpt-4o-mini")
+    llm = ChatOpenAI(model="gpt-4o")
     prompt = hub.pull("web-search-agent")
 
     tools = get_all_tools(tools_path="web_search_function")
@@ -38,11 +38,12 @@ def web_search_tool(query: str):
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
-        return_intermediate_steps=False,
+        return_intermediate_steps=True,
         verbose=True)
 
     input = f"utilize all available tools to provide a comprehensive response to the following query: {query}"
 
     response = agent_executor.invoke({"input": input})
 
-    return response["output"]
+    return {"tool_response": response["output"],
+            "intermediate_steps": response["intermediate_steps"]}
