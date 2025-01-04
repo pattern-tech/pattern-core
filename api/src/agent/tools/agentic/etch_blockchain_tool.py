@@ -10,7 +10,7 @@ from src.agent.tools.tools_index import get_all_tools
 
 @tool
 @handle_exceptions
-@timeout(seconds=60)
+# @timeout(seconds=60)
 def ethereum_blockchain_tool(query: str):
     """
     A tool for handling Ethereum blockchain-related queries and tasks. This function can:
@@ -54,4 +54,5 @@ def ethereum_blockchain_tool(query: str):
     response = agent_executor.invoke({"input": query})
 
     return {"tool_response": response["output"],
-            "intermediate_steps": response["intermediate_steps"]}
+    # "intermediate_steps": response["intermediate_steps"]
+    }
