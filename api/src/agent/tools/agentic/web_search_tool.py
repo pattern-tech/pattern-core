@@ -41,9 +41,8 @@ def web_search_tool(query: str):
         return_intermediate_steps=True,
         verbose=True)
 
-    input = f"utilize all available tools to provide a comprehensive response to the following query: {query}"
-
-    response = agent_executor.invoke({"input": input})
+    response = agent_executor.invoke({"input": query})
 
     return {"tool_response": response["output"],
-            "intermediate_steps": response["intermediate_steps"]}
+            # "intermediate_steps": response["intermediate_steps"]
+            }
