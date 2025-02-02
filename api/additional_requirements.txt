@@ -4,3 +4,4 @@ beautifulsoup4
 dateparser==1.2.0
 web3==7.6.1
 moralis==0.1.49
+scalar_fastapi==1.0.3
