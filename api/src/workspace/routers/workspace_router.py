@@ -2,11 +2,10 @@ from uuid import UUID
 from typing import List
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, status
-
 from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
+from fastapi import APIRouter, Depends, HTTPException, status
 from src.workspace.services.workspace_service import WorkspaceService
 
 router = APIRouter(prefix="/workspace")
@@ -63,7 +62,8 @@ def create_workspace(
         workspace = service.create_workspace(db, input.name, user_id)
         return global_response(workspace)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceOutput)
@@ -89,7 +89,8 @@ def get_workspace(
         workspace = service.get_workspace(db, workspace_id, user_id)
         return global_response(workspace)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get("", response_model=List[WorkspaceOutput])
@@ -134,7 +135,8 @@ def update_workspace(
         )
         return global_response(workspace)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -160,4 +162,5 @@ def delete_workspace(
         workspace = service.delete_workspace(db, workspace_id, user_id)
         return global_response(workspace)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
