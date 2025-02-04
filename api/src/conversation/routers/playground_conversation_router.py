@@ -1,3 +1,4 @@
+from fastapi.responses import StreamingResponse
 from uuid import UUID
 from enum import Enum
 from typing import List
@@ -15,6 +16,9 @@ database = Database()
 
 
 def get_db():
+    """
+    Dependency to get a SQLAlchemy database session.
+    """
     db = database.SessionLocal()
     try:
         yield db
@@ -23,10 +27,16 @@ def get_db():
 
 
 def get_conversation_service() -> ConversationService:
+    """
+    Dependency to instantiate the ConversationService.
+    """
     return ConversationService()
 
 
 class CreateConversationInput(BaseModel):
+    """
+    Schema for creating a conversation.
+    """
     name: str
     project_id: UUID
 
@@ -35,6 +45,9 @@ class CreateConversationInput(BaseModel):
 
 
 class ConversationOutput(BaseModel):
+    """
+    Schema for conversation output.
+    """
     id: UUID
     name: str
     project_id: UUID
@@ -44,16 +57,28 @@ class ConversationOutput(BaseModel):
 
 
 class MessageType(str, Enum):
+    """
+    Enum representing the type of a message.
+    """
     TEXT = "text"
     AUDIO = "audio"
 
 
 class MessageInput(BaseModel):
+    """
+    Schema for sending a message.
+    """
     message: str
     message_type: MessageType = MessageType.TEXT
 
 
-@router.post("", response_model=ConversationOutput)
+@router.post(
+    "",
+    response_model=ConversationOutput,
+    summary="Create Conversation",
+    description="Creates a new conversation for the authenticated user.",
+    response_description="The created conversation data."
+)
 def create_conversation(
     input: CreateConversationInput,
     db: Session = Depends(get_db),
@@ -61,25 +86,33 @@ def create_conversation(
     user_id: UUID = Depends(authenticate_user),
 ):
     """
-    Creates a new conversation.
+    Create a new conversation.
 
-    Args:
-        input (CreateConversationInput): The conversation creation input.
+    - **input**: The conversation creation input containing the conversation name and project ID.
+    - **db**: Database session.
+    - **service**: Conversation service handling business logic.
+    - **user_id**: The authenticated user's ID.
 
     Returns:
         ConversationOutput: The created conversation data.
     """
     try:
         conversation = service.create_conversation(
-            db, input.name, input.project_id, user_id
-        )
+            db, input.name, input.project_id, user_id)
         return global_response(conversation)
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
 
 
-@router.get("/{project_id}/{conversation_id}", response_model=ConversationOutput)
+@router.get(
+    "/{project_id}/{conversation_id}",
+    response_model=ConversationOutput,
+    summary="Get Conversation",
+    description="Retrieves a conversation by its ID for the authenticated user along with chat history metadata.",
+    response_description="The conversation data with chat history metadata."
+)
 def get_conversation(
     project_id: UUID,
     conversation_id: UUID,
@@ -88,16 +121,16 @@ def get_conversation(
     user_id: UUID = Depends(authenticate_user),
 ):
     """
-    Retrieves a conversation by its ID.
+    Retrieve a conversation by its ID.
 
-    Args:
-        conversation_id (UUID): The conversation ID.
+    - **project_id**: The project ID associated with the conversation.
+    - **conversation_id**: The ID of the conversation to retrieve.
+    - **db**: Database session.
+    - **service**: Conversation service handling business logic.
+    - **user_id**: The authenticated user's ID.
 
     Returns:
-        ConversationOutput: The conversation data and chat history metadata.
-
-    Raises:
-        HTTPException: If conversation is not found or user is not authorized.
+        ConversationOutput: The conversation data with chat history metadata.
     """
     try:
         conversation, history = service.get_conversation(
@@ -105,10 +138,17 @@ def get_conversation(
         return global_response(content=conversation, metadata={"history": history})
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        )
 
 
-@router.get("/{project_id}", response_model=List[ConversationOutput])
+@router.get(
+    "/{project_id}",
+    response_model=List[ConversationOutput],
+    summary="List All Conversations",
+    description="Lists all conversations for a specific project for the authenticated user.",
+    response_description="A list of all conversations for the project."
+)
 def get_all_conversations(
     project_id: UUID,
     db: Session = Depends(get_db),
@@ -116,19 +156,27 @@ def get_all_conversations(
     user_id: UUID = Depends(authenticate_user),
 ):
     """
-    Lists all conversations for a specific project.
+    List all conversations for a specific project.
 
-    Args:
-        project_id (UUID): The ID of the project to retrieve conversations for.
+    - **project_id**: The ID of the project for which to list conversations.
+    - **db**: Database session.
+    - **service**: Conversation service handling business logic.
+    - **user_id**: The authenticated user's ID.
 
     Returns:
-        List[ConversationOutput]: List of all conversations for the project.
+        List[ConversationOutput]: A list of all conversations for the project.
     """
     conversations = service.get_all_conversations(db, project_id)
     return global_response(conversations)
 
 
-@router.put("/{project_id}/{conversation_id}", response_model=ConversationOutput)
+@router.put(
+    "/{project_id}/{conversation_id}",
+    response_model=ConversationOutput,
+    summary="Update Conversation",
+    description="Updates an existing conversation by its ID for the authenticated user.",
+    response_description="The updated conversation data."
+)
 def update_conversation(
     project_id: UUID,
     conversation_id: UUID,
@@ -138,26 +186,35 @@ def update_conversation(
     user_id: UUID = Depends(authenticate_user),
 ):
     """
-    Updates an existing conversation by its ID.
+    Update an existing conversation.
 
-    Args:
-        conversation_id (UUID): The conversation ID.
+    - **project_id**: The project ID associated with the conversation.
+    - **conversation_id**: The ID of the conversation to update.
+    - **input**: The conversation update input containing the new conversation name and project ID.
+    - **db**: Database session.
+    - **service**: Conversation service handling business logic.
+    - **user_id**: The authenticated user's ID.
 
     Returns:
         ConversationOutput: The updated conversation data.
     """
     try:
-        # TODO: fix update conversation
+        # TODO: fix update conversation if necessary
         updated_conversation = service.update_conversation(
-            db, conversation_id, input.dict(), user_id
-        )
+            db, conversation_id, input.dict(), user_id)
         return global_response(updated_conversation)
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
 
 
-@router.delete("/{project_id}/{conversation_id}")
+@router.delete(
+    "/{project_id}/{conversation_id}",
+    summary="Delete Conversation",
+    description="Deletes a conversation by its ID for the authenticated user.",
+    response_description="No content if the conversation is successfully deleted."
+)
 def delete_conversation(
     project_id: UUID,
     conversation_id: UUID,
@@ -166,22 +223,31 @@ def delete_conversation(
     user_id: UUID = Depends(authenticate_user),
 ):
     """
-    Deletes a conversation by its ID.
+    Delete a conversation by its ID.
 
-    Args:
-        conversation_id (UUID): The conversation ID.
+    - **project_id**: The project ID associated with the conversation.
+    - **conversation_id**: The ID of the conversation to delete.
+    - **db**: Database session.
+    - **service**: Conversation service handling business logic.
+    - **user_id**: The authenticated user's ID.
 
     Returns:
-        None
+        None: If the conversation is successfully deleted.
     """
     try:
         service.delete_conversation(db, conversation_id, user_id)
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
 
 
-@router.post("/{project_id}/{conversation_id}/chat")
+@router.post(
+    "/{project_id}/{conversation_id}/chat",
+    summary="Send Message",
+    description="Sends a message in the conversation chat for the authenticated user.",
+    response_description="The message response data along with intermediate steps metadata."
+)
 def send_message(
     input: MessageInput,
     conversation_id: UUID,
@@ -191,13 +257,17 @@ def send_message(
     user_id: UUID = Depends(authenticate_user),
 ):
     """
-    Sends a message in the chat.
+    Send a message in a conversation chat.
 
-    Args:
-        input (MessageInput): The message input.
+    - **input**: The message input containing the message content and message type.
+    - **conversation_id**: The ID of the conversation.
+    - **project_id**: The project ID associated with the conversation.
+    - **db**: Database session.
+    - **service**: Conversation service handling business logic.
+    - **user_id**: The authenticated user's ID.
 
     Returns:
-        MessageOutput: The message data.
+        dict: A dictionary containing the message response and metadata (e.g., intermediate steps).
     """
     try:
         response = service.send_message(
@@ -211,4 +281,5 @@ def send_message(
         return global_response(content=response["response"], metadata=metadata)
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )

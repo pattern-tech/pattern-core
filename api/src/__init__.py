@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from src.auth.routers import auth_router
 from src.user.routers import user_router
 from src.task.routers import task_router
@@ -14,7 +15,7 @@ api_router.include_router(auth_router.router, tags=["Auth"])
 api_router.include_router(user_router.router, tags=["User"])
 api_router.include_router(workspace_router.router, tags=["Workspace"])
 api_router.include_router(project_router.router, tags=["Project"])
-api_router.include_router(task_router.router, tags=["Task"])
+# api_router.include_router(task_router.router, tags=["Task"])
 api_router.include_router(agent_router.router, tags=["Agent"])
 api_router.include_router(tool_router.router, tags=["Tool"])
 api_router.include_router(
