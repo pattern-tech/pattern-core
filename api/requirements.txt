@@ -16,3 +16,10 @@ langchain-postgres==0.0.12
 psycopg==3.2.3
 psycopg-pool==3.2.4
 psycopg2-binary==2.9.10 
+newsapi-python==0.2.7
+cryptography==44.0.0
+beautifulsoup4==4.12.3
+dateparser==1.2.0
+web3==7.6.1
+moralis==0.1.49
+scalar_fastapi==1.0.3
