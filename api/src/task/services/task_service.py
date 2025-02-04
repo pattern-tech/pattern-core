@@ -2,8 +2,6 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
-from langchain_openai import ChatOpenAI
-
 from src.db.models import Task
 from src.agent.tools.tools_index import get_all_tools
 from src.task.enum.task_status_enum import TaskStatusEnum
@@ -34,7 +32,7 @@ class TaskService:
         task: str,
     ):
 
-        tools = []  # TODO
+        tools = []  
         planner = self.agent_service.planner(tools)
         plan: Plan = planner.invoke(
             {
@@ -109,7 +107,7 @@ class TaskService:
 
         tools = get_all_tools()
 
-        session_id, memory = self.memory_service.create_new_memory()
+        _, memory = self.memory_service.create_new_memory()
 
         agent = DataProviderAgentService(tools, memory)
 
@@ -190,29 +188,3 @@ class TaskService:
             None
         """
         self.repository.delete(db_session, task_id, user_id)
-
-
-##### Dynamic Tool Picker ######
-# simple_planner = self.agent_service.simple_planner()
-# simple_plan: Plan = simple_planner.invoke(
-#     {
-#         "messages": [
-#             (
-#                 "user",
-#                 task,
-#             )
-#         ]
-#     }
-# )
-
-# tools_name = []
-# for step in simple_plan.steps:
-#     _t = self.tool_service.tools_picker(query=step, k=1)
-#     tools_name.extend(_t)
-# tools_name = list(set(tools_name))
-
-# tools = []
-# for tool_name in tools_name:
-#     _t = get_tool_by_name(tool_name)
-#     tools.append(_t)
-##### Dynamic Tool Picker ######
