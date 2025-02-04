@@ -1,5 +1,4 @@
 import os
-
 from uuid import UUID
 from typing import Optional
 from pydantic import BaseModel
@@ -17,6 +16,9 @@ database = Database()
 
 
 def get_db():
+    """
+    Dependency to get a SQLAlchemy database session.
+    """
     db = database.SessionLocal()
     try:
         yield db
@@ -25,10 +27,16 @@ def get_db():
 
 
 def get_tool_service() -> ToolService:
+    """
+    Dependency to instantiate the ToolService.
+    """
     return ToolService()
 
 
 class ToolOutput(BaseModel):
+    """
+    Schema for tool output.
+    """
     id: UUID
     name: str
     function_name: str
@@ -39,7 +47,15 @@ class ToolOutput(BaseModel):
         orm_mode = True
 
 
-@router.get("/{project_id}")
+@router.get(
+    "/{project_id}",
+    summary="Search Tools",
+    description=(
+        "Searches for tools based on the provided project ID and an optional query string and active status. "
+        "Results are paginated using limit and offset parameters."
+    ),
+    response_description="A paginated list of tools that match the search criteria."
+)
 def get_all_tools(
     project_id: UUID,
     query: Optional[str] = "",
@@ -51,19 +67,25 @@ def get_all_tools(
     _: UUID = Depends(authenticate_user),
 ):
     """
-    Searches for tools based on a query.
+    Search for tools based on a query.
 
-    Args:
-        query (str): The search keyword.
-        active (Optional[bool]): Filter by active status (True/False). Default is no filter.
-        limit (int): Number of items to retrieve (default: 10).
-        offset (int): Number of items to skip (default: 0).
+    - **project_id**: The ID of the project to search tools in.
+    - **query**: The search keyword (default is an empty string).
+    - **active**: Optional filter for active status (True/False). If not provided, no filter is applied.
+    - **limit**: Number of items to retrieve per page (default: 10).
+    - **offset**: Number of items to skip (default: 0).
+    - **db_session**: Database session dependency.
+    - **service**: Tool service handling business logic.
+    - **_**: The authenticated user's ID (not used in the function logic).
 
     Returns:
-        dict: A list of tools matching the search query, with pagination.
+        dict: A dictionary containing:
+            - **content**: List of tools (as defined by ToolOutput) that match the search criteria.
+            - **metadata**: Pagination metadata including total_count, limit, and offset.
     """
     tools, total_count = service.get_all_tools(
-        db_session, project_id, query, active, limit, offset)
+        db_session, project_id, query, active, limit, offset
+    )
 
     metadata = {
         "total_count": total_count,

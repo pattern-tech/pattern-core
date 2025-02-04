@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from dotenv import load_dotenv
+from fastapi.openapi.utils import get_openapi
 from scalar_fastapi.scalar_fastapi import Layout
 from fastapi.middleware.cors import CORSMiddleware
 from scalar_fastapi import get_scalar_api_reference
@@ -28,6 +29,24 @@ async def scalar_html():
         hide_models=True,
         layout=Layout.MODERN
     )
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="Pattern-Core API",
+        version="1.0.0",
+        description="Pattern Core API Documentation for creating user, workspace, project, tool, and conversation.",
+        routes=app.routes,
+    )
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 app.include_router(api_router)
 

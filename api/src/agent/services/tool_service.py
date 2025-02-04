@@ -50,6 +50,8 @@ class ToolAdminService:
 
         self.vector_service.add_documents(documents, [vector_id])
 
+        return tool
+
     def tools_picker(self, query: str, k: int = 3):
         # TODO: Optimize by score
         filter = {"source": "pattern"}
