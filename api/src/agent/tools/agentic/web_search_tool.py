@@ -43,6 +43,4 @@ def web_search_tool(query: str):
 
     response = agent_executor.invoke({"input": query})
 
-    return {"tool_response": response["output"],
-            # "intermediate_steps": response["intermediate_steps"]
-            }
+    return {"tool_response": response["output"]}

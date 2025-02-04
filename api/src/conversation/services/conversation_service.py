@@ -174,7 +174,6 @@ class ConversationService:
         tool_names = [tool["function_name"] for tool in tools]
         tools = [tool for tool in get_all_tools() if tool.name in tool_names]
 
-        # Add a default tool if no tools were provided.
         if len(tools) == 0:
             get_current_datetime_tool = next(
                 (tool for tool in get_all_tools()
