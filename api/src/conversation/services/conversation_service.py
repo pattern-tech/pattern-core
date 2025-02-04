@@ -168,7 +168,6 @@ class ConversationService:
         tools = [tool for tool in get_all_tools() if tool.name in tool_names]
 
         #TODO: this part is invalid while having agents
-        # add default tool (get_current_datetime)
         if len(tools) == 0:
             get_current_datetime_tool = next(
                 (tool for tool in get_all_tools() if tool.name == "get_current_datetime"), None)

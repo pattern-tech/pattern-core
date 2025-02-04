@@ -270,7 +270,6 @@ def send_message(
         dict: A dictionary containing the message response and metadata (e.g., intermediate steps).
     """
     try:
-        print(input.message, user_id, conversation_id, input.message_type)
         response = service.send_message(
             db,
             input.message,

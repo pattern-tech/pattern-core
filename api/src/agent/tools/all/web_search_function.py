@@ -103,7 +103,6 @@ def search_on_web_by_query(query: str) -> list:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def web_search_tavily(query: str, include_domains: list[str] = [], max_results: int = 5) -> list[dict]:
     """
     Searches the web using the Tavily API for a given query.
@@ -146,7 +145,6 @@ def web_search_tavily(query: str, include_domains: list[str] = [], max_results: 
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_content_of_websites(links: list[str]) -> list[dict]:
     """
     Extracts content from a list of website URLs using the Tavily API.
@@ -190,7 +188,6 @@ def get_content_of_websites(links: list[str]) -> list[dict]:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def web_search_perplexity(query: str, include_domains: list[str] = []) -> str:
     """
     Searches the web using the Perplexity API for a given query and returns the content with citations.
@@ -245,7 +242,6 @@ def web_search_perplexity(query: str, include_domains: list[str] = []) -> str:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def web_search_exa(query: str, include_domains: list[str] = [], num_results: int = 5) -> dict:
     """
     Search the web with an Exa prompt-engineered query. Returns a list of links relevant to the query.
@@ -295,7 +291,6 @@ def web_search_exa(query: str, include_domains: list[str] = [], num_results: int
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_content_of_exa_document(content_ids: list[str]) -> str:
     """
     Retrieve contents of documents based on a list of document IDs.
@@ -339,7 +334,6 @@ def get_content_of_exa_document(content_ids: list[str]) -> str:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def find_similar_links(link: str, num_results: int = 5) -> list:
     """
     Searches the Exa API to find links similar to the provided link.

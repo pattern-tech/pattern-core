@@ -30,7 +30,6 @@ def get_db():
 
 
 @handle_exceptions
-# @timeout(seconds=10)
 def fetch_contract_abi(address: str, api_key: str) -> dict:
     """
     Retrieves the ABI of a smart contract from Etherscan API.
@@ -56,7 +55,6 @@ def fetch_contract_abi(address: str, api_key: str) -> dict:
 
 
 @handle_exceptions
-# @timeout(seconds=10)
 def fetch_contract_source_code(address: str, api_key: str) -> dict:
     """
     Retrieves the source code of a smart contract from Etherscan API.
@@ -81,7 +79,6 @@ def fetch_contract_source_code(address: str, api_key: str) -> dict:
 
 
 @handle_exceptions
-# @timeout(seconds=10)
 def get_event_abi(abi: list, event_name: str) -> dict:
     """
     Get the ABI entry for a specific event name.
@@ -100,7 +97,6 @@ def get_event_abi(abi: list, event_name: str) -> dict:
 
 
 @handle_exceptions
-# @timeout(seconds=10)
 def timestamp_to_block_number(timestamp: int, api_key: str) -> int:
     """Convert Ethereum timestamp to nearest block number.
 
@@ -130,7 +126,6 @@ def timestamp_to_block_number(timestamp: int, api_key: str) -> int:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_current_timestamp() -> int:
     """
     Returns the current timestamp in Unix format.
@@ -143,7 +138,6 @@ def get_current_timestamp() -> int:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def convert_to_timestamp(date_str: str) -> int:
     """
     Convert a date string to Unix timestamp.
@@ -168,7 +162,6 @@ def convert_to_timestamp(date_str: str) -> int:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_contract_source_code(contract_address: str) -> str:
     """
     Retrieves the source code of a smart contract from Etherscan API.
@@ -199,7 +192,6 @@ def get_contract_source_code(contract_address: str) -> str:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_contract_abi(contract_address: str) -> dict:
     """
     Retrieves the ABI of a smart contract from Etherscan API.
@@ -230,7 +222,6 @@ def get_contract_abi(contract_address: str) -> dict:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_abi_of_event(contract_address: str, event_name: str) -> dict:
     """
     Retrieves the ABI of a specific event from a smart contract.
@@ -265,7 +256,6 @@ def get_abi_of_event(contract_address: str, event_name: str) -> dict:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_contract_events(
         contract_address: str,
         event_name: str,
@@ -337,7 +327,6 @@ def get_contract_events(
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_latest_eth_block_number() -> int:
     """
     Gets the latest Ethereum block number from the blockchain.
@@ -354,7 +343,6 @@ def get_latest_eth_block_number() -> int:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def convert_timestamp_to_block_number(timestamp: int) -> int:
     """Convert Ethereum timestamp to nearest block number.
 
@@ -380,69 +368,10 @@ def convert_timestamp_to_block_number(timestamp: int) -> int:
 
     return timestamp_to_block_number(timestamp, api_key_decrypted)
 
-
-# used GoldRush API instead
-# -----------------------------------
-'''
-@tool
-@handle_exceptions
-@timeout(seconds=10)
-def get_contract_transactions(contract_address: str, from_block: int, to_block: int) -> list:
-    """
-    Get all transactions for a given contract address between specified block range.
-
-    Args:
-        contract_address (str): Ethereum contract address to query
-        from_block (int): Starting block number
-        to_block (int): Ending block number
-
-    Returns:
-        list: List of dictionaries containing transaction details with fields:
-            - from: Address that sent the transaction
-            - to: Address that received the transaction
-            - function_name: Name of the contract function called
-            - function_params: Parameters passed to the function
-    """
-    db_session = next(get_db())
-    api_key = db_session.execute(
-        select(Tool.api_key).where(Tool.function_name ==
-                                   inspect.currentframe().f_code.co_name)
-    ).scalar_one_or_none()
-
-    api_key_decrypted = decrypt_message(
-        message=api_key,
-        password=os.getenv("SECRET_KEY"))
-
-    abi = fetch_contract_abi(
-        contract_address, api_key_decrypted)
-
-    w3 = Web3(Web3.HTTPProvider(os.getenv("ETH_RPC")))
-    contract = w3.eth.contract(
-        address=contract_address, abi=abi)
-
-    result = []
-    for x in range(from_block, to_block):
-        block = w3.eth.get_block(x, True)
-        for transaction in block.transactions:
-            if transaction['to'] == contract_address or transaction['from'] == contract_address:
-                function, function_params = contract.decode_function_input(
-                    f"0x{transaction.input.hex()}")
-                result.append({
-                    "from": transaction['from'],
-                    "to": transaction['to'],
-                    "function_name": function.name,
-                    "function_params": function_params,
-                    "block_number": transaction['blockNumber']
-                })
-    return result
-'''
-
-
 # GOLDRUSH APIs
 # --------------------------
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_wallet_activity(wallet_address: str) -> str:
     """
     Fetches the wallet activity for a given wallet address using the Covalent API.
@@ -476,7 +405,6 @@ def get_wallet_activity(wallet_address: str) -> str:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_balance_for_address(wallet_address: str, no_spam: bool = True, currency: str = "USD") -> str:
     """
     Fetches the balance for a given wallet address on a specific chain using the Covalent API.
@@ -520,7 +448,6 @@ def get_balance_for_address(wallet_address: str, no_spam: bool = True, currency:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=15)
 def get_wallet_transactions(wallet_address: str, page: int) -> dict:
     """
     Fetches all transactions for a given wallet address on a specific chain using the Covalent API.
@@ -556,7 +483,6 @@ def get_wallet_transactions(wallet_address: str, page: int) -> dict:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_transactions_summary(wallet_address: str) -> dict:
     """
     Fetches the earliest and latest transaction for a given wallet address on a specific chain using the Covalent API.
@@ -591,7 +517,6 @@ def get_transactions_summary(wallet_address: str) -> dict:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_transaction_detail(tx_hash: str) -> dict:
     """
     Fetches the details of a specific transaction using the Covalent API.
@@ -633,7 +558,6 @@ def get_transaction_detail(tx_hash: str) -> dict:
 
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_token_approvals(wallet_address: str) -> dict:
     """
     get a list of approvals across all token contracts categorized by spenders for a wallet’s assets.
@@ -670,7 +594,6 @@ def get_token_approvals(wallet_address: str) -> dict:
 # --------------------------
 @tool
 @handle_exceptions
-# @timeout(seconds=10)
 def get_contract_transactions(contract_address: str):
     """
     Fetch latest transactions for a specified contract address.
@@ -719,7 +642,6 @@ def get_contract_transactions(contract_address: str):
                              'to': result['to_address'],
                              'value': result['value'],
                              'function_name': function_name,
-                             #   'function_params': function_params,
                              })
 
     return final_result[:20]

@@ -39,12 +39,7 @@ def fetch_news_by_query(query: str, api_key: str) -> dict:
 
     all_articles = newsapi.get_everything(q=query,
                                           language='en',
-                                          sort_by='relevancy',
-                                          #   sources='bbc-news,the-verge',
-                                          #   domains='bbc.co.uk,techcrunch.com',
-                                          #   from_param='2024-05-07',
-                                          #   to='2024-06-07',
-                                          #   page=2
+                                          sort_by='relevancy'
                                           )
 
     return all_articles
