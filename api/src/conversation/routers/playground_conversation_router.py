@@ -200,10 +200,6 @@ def send_message(
         MessageOutput: The message data.
     """
     try:
-        print(input.message,
-              user_id,
-              conversation_id,
-              input.message_type)
         response = service.send_message(
             db,
             input.message,
