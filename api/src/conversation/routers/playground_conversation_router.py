@@ -70,6 +70,7 @@ class MessageInput(BaseModel):
     """
     message: str
     message_type: MessageType = MessageType.TEXT
+    stream: bool = True
 
 
 @router.post(
@@ -248,7 +249,7 @@ def delete_conversation(
     description="Sends a message in the conversation chat for the authenticated user.",
     response_description="The message response data along with intermediate steps metadata."
 )
-def send_message(
+async def send_message(
     input: MessageInput,
     conversation_id: UUID,
     project_id: UUID,
@@ -259,7 +260,7 @@ def send_message(
     """
     Send a message in a conversation chat.
 
-    - **input**: The message input containing the message content and message type.
+    - **input**: The message input containing the message content, message type and streaming.
     - **conversation_id**: The ID of the conversation.
     - **project_id**: The project ID associated with the conversation.
     - **db**: Database session.
@@ -267,20 +268,30 @@ def send_message(
     - **user_id**: The authenticated user's ID.
 
     Returns:
-        dict: A dictionary containing the message response and metadata (e.g., intermediate steps).
+        StreamingResponse: If `stream` is true.
+        dict: A JSON response containing the complete message data if `stream` is false.
     """
     try:
-        print(input.message, user_id, conversation_id, input.message_type)
-        response = service.send_message(
-            db,
-            input.message,
-            user_id,
-            conversation_id,
-            input.message_type,
-        )
-        metadata = {"intermediate_steps": response["intermediate_steps"]}
-        return global_response(content=response["response"], metadata=metadata)
+        if input.stream:
+            return StreamingResponse(
+                service.send_message(db, input.message, user_id,
+                                     conversation_id, input.message_type, input.stream),
+                media_type="text/plain"
+            )
+        else:
+            response = None
+            async for item in service.send_message(
+                db,
+                input.message,
+                user_id,
+                conversation_id,
+                input.message_type,
+                input.stream
+            ):
+                response = item
+            metadata = {"intermediate_steps": response["intermediate_steps"]}
+            return global_response(content=response["response"], metadata=metadata)
+
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
