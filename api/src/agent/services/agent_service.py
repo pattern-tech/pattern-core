@@ -92,42 +92,6 @@ class AgentService:
         return planner
 
 
-# class DataProviderAgentService:
-
-#     def __init__(self, tools, memory=None):
-#         self.tools = tools
-
-#         self.llm = ChatOpenAI(model="gpt-4o-mini")
-#         self.prompt = hub.pull("pattern-agent/pattern-agent")
-#         self.agent = create_openai_functions_agent(
-#             self.llm,
-#             self.tools,
-#             self.prompt)
-#         self.agent_executor = AgentExecutor(
-#             agent=self.agent,
-#             tools=self.tools,
-#             return_intermediate_steps=True,
-#             verbose=True)
-
-#         self.memory = memory
-
-#         if self.memory:
-#             self.agent_with_chat_history = RunnableWithMessageHistory(
-#                 self.agent_executor,
-#                 lambda session_id: memory,
-#                 input_messages_key="input",
-#                 history_messages_key="chat_history",
-#             )
-
-#     def ask(self, message):
-#         if self.memory:
-#             return self.agent_with_chat_history.invoke(
-#                 input={"input": message},
-#                 config={"configurable": {"session_id": "ـ"}})
-#         else:
-#             return self.agent_executor.invoke({"input": message})
-
-
 class StreamingCallbackHandler(BaseCallbackHandler):
     """
     A callback handler that collects tokens and intermediate events in an asyncio queue.

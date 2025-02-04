@@ -130,69 +130,6 @@ class ConversationService:
         """
         return self.repository.get_project_associated_with_conversation(db_session, conversation_id)
 
-    # def send_message(
-    #     self,
-    #     db_session: Session,
-    #     message: str,
-    #     user_id: UUID,
-    #     conversation_id: UUID,
-    #     message_type: str
-    # ):
-    #     """
-    #     Send a message to the chat and get response from agent.
-
-    #     Args:
-    #         db_session (Session): Database session
-    #         message (str): Message to send to agent
-    #         user_id (UUID): ID of the user sending message
-    #         conversation_id (UUID): ID of the conversation
-    #         message_type (str): Type of message being sent
-
-    #     Returns:
-    #         dict: Dictionary containing:
-    #             - response (str): Output response from agent
-    #             - intermediate_steps (list): Steps taken by agent to generate response
-    #     """
-
-    #     project_id = self.get_project_associated_with_conversation(
-    #         db_session, conversation_id)
-
-    #     if project_id is None:
-    #         raise Exception("Project not found")
-
-    #     tools, num_tools = self.project_service.get_project_tools(
-    #         db_session, project_id)
-
-    #     tool_names = [tool["function_name"] for tool in tools]
-
-    #     tools = [tool for tool in get_all_tools() if tool.name in tool_names]
-
-    #     #TODO: this part is invalid while having agents
-    #     # add default tool (get_current_datetime)
-    #     if len(tools) == 0:
-    #         get_current_datetime_tool = next(
-    #             (tool for tool in get_all_tools() if tool.name == "get_current_datetime"), None)
-    #         if get_current_datetime_tool:
-    #             tools.append(get_current_datetime_tool)
-
-    #     memory = self.memory_service.get_memory(conversation_id)
-
-    #     agent = DataProviderAgentService(tools, memory)
-
-    #     result = agent.ask(message)
-
-    #     intermediate_steps = []
-    #     for step in result["intermediate_steps"]:
-    #         intermediate_steps.append({
-    #             "function_name": step[0].tool,
-    #             "arguments": step[0].tool_input,
-    #             "output": step[1]
-    #         })
-
-    #     return {
-    #         "response": result["output"],
-    #         "intermediate_steps": intermediate_steps
-    #     }
 
     async def send_message(
         self,
@@ -204,7 +141,26 @@ class ConversationService:
         stream: bool
     ):
         """
-        Asynchronously streams the agent’s response token-by-token.
+        Asynchronously processes and sends a message, either streaming the response token-by-token or returning a complete response.
+
+        Args:
+            db_session (Session): Database session for database operations
+            message (str): The message to be processed
+            user_id (UUID): ID of the user sending the message
+            conversation_id (UUID): ID of the conversation the message belongs to
+            message_type (str): Type of the message
+            stream (bool): If True, streams response tokens. If False, returns complete response
+
+        Returns:
+            If stream=True:
+                Generator yielding individual response tokens
+            If stream=False:
+                Dict containing:
+                    - response (str): Complete response text
+                    - intermediate_steps (List[Dict]): List of executed tool steps
+
+        Raises:
+            Exception: If associated project is not found
         """
         # Look up the project associated with the conversation.
         project_id = self.get_project_associated_with_conversation(
