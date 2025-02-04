@@ -1,27 +1,87 @@
 from uuid import UUID
+from typing import List
 from sqlalchemy.orm import Session
-from src.db.models import UserModel
-from src.db.sql_alchemy import Database
-from sqlalchemy import select
 
-database = Database()
+from src.workspace.services.workspace_service import WorkspaceService
+from src.db.models import UserModel
+from src.user.repositories.user_repository import UserRepository
 
 
 class UserService:
-    def get_user_by_id(
-        self,
-        user_id: UUID,
-        db: Session,
-    ):
-        """
-        Fetch a user by their ID.
+    def __init__(self):
+        self.repository = UserRepository()
 
-        :param session: SQLAlchemy session object.
-        :param user_id: UUID of the user.
-        :return: A dictionary containing user details (excluding the password) or None if not found.
+    def create_user(self, db_session: Session, email: str, password: str) -> UserModel:
         """
-        stmt = select(UserModel.id, UserModel.email).where(UserModel.id == user_id)
-        result = db.execute(stmt).one_or_none()
-        if result:
-            return {"id": str(result.id), "email": result.email}
-        return None
+        Creates a new user.
+
+        Args:
+            db_session (Session): The database session.
+            email (str): The email of the user.
+            password (str): The password of the user.
+
+        Returns:
+            UserModel: The created user instance.
+        """
+        _user = UserModel(email=email, password=password)
+        user = self.repository.create(db_session, _user)
+
+        return user
+
+    def get_user(self, db_session: Session, user_id: UUID) -> UserModel:
+        """
+        Retrieves a user by their ID.
+
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user to retrieve.
+
+        Returns:
+            UserModel: The User instance.
+
+        Raises:
+            Exception: If the user is not found.
+        """
+        user = self.repository.get_by_id(db_session, user_id)
+        if not user:
+            raise Exception("User not found")
+        return user
+
+    def list_users(self, db_session: Session) -> List[UserModel]:
+        """
+        Lists all users.
+
+        Args:
+            db_session (Session): The database session.
+
+        Returns:
+            List[UserModel]: A list of User instances.
+        """
+        return self.repository.get_all(db_session)
+
+    def update_user(self, db_session: Session, user_id: UUID, data: dict) -> UserModel:
+        """
+        Updates a user with the given data.
+
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user to update.
+            data (dict): A dictionary containing the fields to update.
+
+        Returns:
+            UserModel: The updated User instance.
+        """
+        return self.repository.update(db_session, user_id, data)
+
+    def delete_user(self, db_session: Session, user_id: UUID) -> None:
+        """
+        Deletes a user.
+
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user to delete.
+
+        Returns:
+            None
+        """
+        self.repository.delete(db_session, user_id)

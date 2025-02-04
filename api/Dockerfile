@@ -1,0 +1,22 @@
+FROM python:3.11.8-slim
+
+WORKDIR /app
+
+RUN apt-get update -y
+RUN apt-get install -y --no-install-recommends \
+build-essential \
+libpq-dev
+
+COPY ./base_requirements.txt /app
+RUN pip install -r base_requirements.txt
+
+COPY ./additional_requirements.txt /app
+RUN pip install -r additional_requirements.txt
+
+COPY . /app
+
+EXPOSE 8000
+
+ENV MODULE_NAME="src.main"
+
+CMD ["sh", "-c", "uvicorn $MODULE_NAME:app --host 0.0.0.0"]
