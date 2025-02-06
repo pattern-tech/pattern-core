@@ -7,11 +7,8 @@ RUN apt-get install -y --no-install-recommends \
 build-essential \
 libpq-dev
 
-COPY ./base_requirements.txt /app
-RUN pip install -r base_requirements.txt
-
-COPY ./additional_requirements.txt /app
-RUN pip install -r additional_requirements.txt
+COPY ./requirements.txt /app
+RUN pip install -r requirements.txt
 
 COPY . /app
 

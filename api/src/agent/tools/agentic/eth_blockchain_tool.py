@@ -52,4 +52,12 @@ def ethereum_blockchain_tool(query: str):
 
     response = agent_executor.invoke({"input": query})
 
-    return {"tool_response": response["output"]}
+    try:
+        tool_steps = {}
+        for step in response["intermediate_steps"]:
+            tool_steps["function_name"] = step[0].tool
+            tool_steps["function_args"] = step[0].tool_input
+            tool_steps["function_output"] = step[-1]
+        return {"tool_response": response["output"], "tool_steps": tool_steps}
+    except:
+        return {"tool_response": response["output"]}
