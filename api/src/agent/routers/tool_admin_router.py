@@ -1,6 +1,7 @@
 import io
 import os
 import csv
+import asyncio
 
 from uuid import UUID
 from pydantic import BaseModel
@@ -166,6 +167,9 @@ async def upload_csv_tools(
             tool = service.create_tool(
                 db, name, description, function_name, api_key)
             created_tools.append({"name": tool.name, "id": tool.id})
+
+            #add one second delay for Openai API rate limit 
+            await asyncio.sleep(0.5)
 
         return global_response(content=created_tools)
     except Exception as e:
