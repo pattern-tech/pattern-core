@@ -11,7 +11,6 @@ from src.agent.tools.tools_index import get_all_tools
 
 @tool
 @handle_exceptions
-@timeout(seconds=70)
 def web_search_tool(query: str):
     """
     A tool for searching the web using online and indexed search engines.
@@ -25,7 +24,7 @@ def web_search_tool(query: str):
     Returns:
         str: Response containing the requested web search results.
     """
-    llm = ChatOpenAI(model="gpt-4o")
+    llm = ChatOpenAI(model="gpt-4o-mini")
     prompt = hub.pull("web-search-agent")
 
     tools = get_all_tools(tools_path="web_search_function")
@@ -43,4 +42,12 @@ def web_search_tool(query: str):
 
     response = agent_executor.invoke({"input": query})
 
-    return {"tool_response": response["output"]}
+    try:
+        tool_steps = {}
+        for step in response["intermediate_steps"]:
+            tool_steps["function_name"] = step[0].tool
+            tool_steps["function_args"] = step[0].tool_input
+            tool_steps["function_output"] = step[-1]
+        return {"tool_response": response["output"], "tool_steps": tool_steps}
+    except:
+        return {"tool_response": response["output"]}
