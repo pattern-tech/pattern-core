@@ -135,48 +135,48 @@ async def upload_csv_tools(
     Returns:
         A dictionary containing the list of created tools (name and id).
     """
-    # try:
-    secret_key = os.getenv("SECRET_KEY")
-    if secret_key is None:
+    try:
+        secret_key = os.getenv("SECRET_KEY")
+        if secret_key is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Secret key not found"
+            )
+
+        contents = await file.read()
+        decoded_contents = contents.decode("utf-8")
+        csv_reader = csv.DictReader(io.StringIO(decoded_contents))
+
+        created_tools: List = []
+        for row in csv_reader:
+            name = row.get("name")
+            description = row.get("description")
+            function_name = row.get("function_name")
+            api_key_raw = row.get("api_key")
+
+            # Skip creation if a tool with the same function_name already exists.
+            existing_tool = service.get_tool_by_function_name(
+                db, function_name)
+            if existing_tool:
+                continue
+
+            api_key = None
+            if api_key_raw and api_key_raw.strip():
+                api_key = encrypt_message(
+                    message=api_key_raw.strip(), password=secret_key)
+
+            tool = service.create_tool(
+                db, name, description, function_name, api_key)
+            created_tools.append({"name": tool.name, "id": tool.id})
+
+            #add one second delay for Openai API rate limit 
+            await asyncio.sleep(0.5)
+
+        return global_response(content=created_tools)
+    except Exception as e:
+        print(e)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Secret key not found"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         )
-
-    contents = await file.read()
-    decoded_contents = contents.decode("utf-8")
-    csv_reader = csv.DictReader(io.StringIO(decoded_contents))
-
-    created_tools: List = []
-    for row in csv_reader:
-        name = row.get("name")
-        description = row.get("description")
-        function_name = row.get("function_name")
-        api_key_raw = row.get("api_key")
-
-        # Skip creation if a tool with the same function_name already exists.
-        existing_tool = service.get_tool_by_function_name(
-            db, function_name)
-        if existing_tool:
-            continue
-
-        api_key = None
-        if api_key_raw and api_key_raw.strip():
-            api_key = encrypt_message(
-                message=api_key_raw.strip(), password=secret_key)
-
-        tool = service.create_tool(
-            db, name, description, function_name, api_key)
-        created_tools.append({"name": tool.name, "id": tool.id})
-
-        #add one second delay for Openai API rate limit 
-        await asyncio.sleep(0.5)
-
-    return global_response(content=created_tools)
-    # except Exception as e:
-    #     print(e)
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-    #     )
 
 
 @router.get(
