@@ -61,7 +61,7 @@ jobs:
             docker run -d \
               --name pattern-core-api \
               --network pattern_core_network \
-              -p 5001:3000 \
+              -p 5001:8000 \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
               -e POSTGRES_HOST=api-postgres-1 \
               -e POSTGRES_PORT=5432 \
