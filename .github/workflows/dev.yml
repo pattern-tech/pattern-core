@@ -63,7 +63,7 @@ jobs:
               --network pattern_core_network \
               -p 5001:3000 \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-              -e POSTGRES_HOST=postgres \
+              -e POSTGRES_HOST=api-postgres-1 \
               -e POSTGRES_PORT=5432 \
               -e POSTGRES_DB=pattern-core \
               -e POSTGRES_USERNAME=${{ secrets.POSTGRES_USERNAME }} \
