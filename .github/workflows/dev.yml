@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - develop
-    # Only trigger if changes occur in the 'api' folder
-    paths:
-      - "api/**"
+    # # Only trigger if changes occur in the 'api' folder
+    # paths:
+    #   - "api/**"
 
 jobs:
   build-and-push:
