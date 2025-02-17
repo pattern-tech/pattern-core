@@ -7,8 +7,7 @@ services:
     volumes:
       - /root/qdrant:/qdrant/storage
     networks:
-      - app_network
-
+      - pattern_core_network
     ports:
       - 6333:6333
 
@@ -22,7 +21,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
-      - app_network
+      - pattern_core_network
     ports:
       - "5432:5432"
 
@@ -39,7 +38,7 @@ services:
       - "9000:9000"
       - "9001:9001"
     networks:
-      - app_network
+      - pattern_core_network
 
   api:
     build: .
@@ -65,11 +64,12 @@ services:
     ports:
       - "0.0.0.0:8000:8000"
     networks:
-      - app_network
+      - pattern_core_network
 
 volumes:
   pg_data:
   minio_data:
 
 networks:
-  app_network:
+  pattern_core_network:
+    external: true
