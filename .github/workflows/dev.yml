@@ -60,6 +60,7 @@ jobs:
             echo "Starting a new container with environment variables..."
             docker run -d \
               --name pattern-core-api \
+              --network pattern_core_network \
               -p 5001:3000 \
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
               -e POSTGRES_HOST=postgres \
