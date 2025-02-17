@@ -1,0 +1,93 @@
+name: Dev Build, Push and Deploy
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: patterntechnology/pattern-core-api:latest
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST_DEV }}
+          username: ${{ secrets.SERVER_USER_DEV }}
+          key: ${{ secrets.SERVER_SSH_KEY_DEV }}
+          port: ${{ secrets.SERVER_SSH_PORT_DEV }}
+          script: |
+            echo "Pulling the latest Docker image..."
+            docker pull patterntechnology/pattern-core-api:latest
+
+            echo "Stopping and removing the old container (if exists)..."
+            docker stop pattern-core-api || true
+            docker rm pattern-core-api || true
+
+            echo "Starting a new container with environment variables..."
+            docker run -d \
+              --name pattern-core-api \
+              -p 5001:3000 \
+              -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+              -e POSTGRES_HOST=postgres \
+              -e POSTGRES_PORT=5432 \
+              -e POSTGRES_DB=pattern-core \
+              -e POSTGRES_USERNAME=${{ secrets.POSTGRES_USERNAME }} \
+              -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+              -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
+              -e QDRANT_HOST=http://qdrant:6333 \
+              -e QDRANT_COLLECTION=pattern-core \
+              -e LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }} \
+              -e GOOGLE_SEARCH_URL=https://google.serper.dev/search \
+              -e REDDIT_SEARCH_URL=https://reddit-scraper2.p.rapidapi.com/search_posts \
+              -e LINKEDIN_SEARCH_URL=https://linkedin-data-api.p.rapidapi.com/search-posts \
+              -e WEATHER_URL=https://api.weatherapi.com/v1/current.json \
+              -e ETH_RPC=https://ethereum-rpc.publicnode.com \
+              -e GOLDRUSH_URL=https://api.covalenthq.com \
+              -e EXA_URL=https://api.exa.ai \
+              -e PERPLEXITY_URL=https://api.perplexity.ai \
+              -e TAVILY_URL=https://api.tavily.com \
+              -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
+              # Add additional environment variables as needed
+              patterntechnology/pattern-core-api:latest
+
+            # Wait a few seconds to give the container time to start
+            sleep 5
+
+            # Verify if the container is running
+            if docker ps | grep -q pattern-core-api; then
+              echo "Container is running successfully. Removing unused images..."
+              docker image prune -f
+            else
+              echo "Container failed to start. Skipping image cleanup."
+            fi
