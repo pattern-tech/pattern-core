@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - develop
+    # Only trigger if changes occur in the 'api' folder
+    paths:
+      - "api/**"
 
 jobs:
   build-and-push:
@@ -27,8 +30,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./api
+          file: ./api/Dockerfile
           push: true
           tags: patterntechnology/pattern-core-api:latest
           platforms: linux/amd64
@@ -78,7 +81,6 @@ jobs:
               -e PERPLEXITY_URL=https://api.perplexity.ai \
               -e TAVILY_URL=https://api.tavily.com \
               -e SECRET_KEY=${{ secrets.SECRET_KEY }} \
-              # Add additional environment variables as needed
               patterntechnology/pattern-core-api:latest
 
             # Wait a few seconds to give the container time to start
