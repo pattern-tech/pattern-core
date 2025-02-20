@@ -1,16 +1,22 @@
+import os
 import json
 import asyncio
 
 from typing import List
 from langchain import hub
 from pydantic import BaseModel, Field
+from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_react_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain.agents import AgentExecutor, create_openai_functions_agent
+from langchain.agents import (AgentExecutor,
+                              create_openai_functions_agent,
+                              create_tool_calling_agent)
+
+from src.agent.tools.shared_tools import init_llm
 
 
 class PlanStep(BaseModel):
@@ -127,20 +133,28 @@ class DataProviderAgentService:
         # Set up the streaming callback if streaming is enabled.
         if streaming:
             self.streaming_handler = StreamingCallbackHandler()
-            self.llm = ChatOpenAI(
-                model="gpt-4o-mini",
-                streaming=True,
-                callbacks=[self.streaming_handler]
-            )
-        else:
-            self.llm = ChatOpenAI(model="gpt-4o-mini")
 
-        self.prompt = hub.pull("pattern-agent/pattern-agent")
-        self.agent = create_openai_functions_agent(
-            self.llm,
-            self.tools,
-            self.prompt
-        )
+        self.llm = init_llm(service=os.environ["LLM_SERVICE"],
+                            model_name=os.environ["LLM_MODEL"],
+                            api_key=os.environ["LLM_API_KEY"],
+                            stream=streaming,
+                            callbacks=[self.streaming_handler])
+
+        if isinstance(self.llm, ChatOpenAI):
+            self.prompt = hub.pull("pattern-agent/pattern-agent")
+
+            self.agent = create_openai_functions_agent(
+                self.llm, self.tools, self.prompt)
+        elif isinstance(self.llm, ChatOllama):
+            self.prompt = hub.pull("hwchase17/react")
+
+            self.agent = create_react_agent(
+                llm=self.llm, tools=self.tools, prompt=self.prompt)
+        else:
+            self.prompt = hub.pull("pattern-agent/pattern-agent")
+
+            self.agent = create_tool_calling_agent(
+                llm=self.llm, tools=self.tools, prompt=self.prompt)
 
         if streaming:
             self.agent_executor = AgentExecutor(
@@ -168,7 +182,19 @@ class DataProviderAgentService:
 
     async def stream(self, message: str):
         """
-        Asynchronously stream the agent’s response token-by-token.
+        Args:
+            message (str): The input message to be processed by the agent.
+
+        Yields:
+            str: Tokens of the agent's response as they become available.
+
+        Raises:
+            asyncio.TimeoutError: If waiting for a token from the queue times out.
+
+        Notes:
+            - If memory is enabled, the agent's response is invoked synchronously using `run_in_executor`.
+            - If memory is not enabled, the agent's response is invoked asynchronously using `arun`.
+            - The method clears any leftover tokens in the queue before starting to stream the response.
         """
         # Clear any leftover tokens.
         while not self.streaming_handler.queue.empty():
@@ -200,6 +226,18 @@ class DataProviderAgentService:
         result = await task
 
     def ask(self, message: str):
+        """
+        Sends a message to the agent and returns the response.
+
+        Args:
+            message (str): The message to send to the agent.
+
+        Returns:
+            The response from the agent.
+
+        If the agent has memory, it uses the agent with chat history to invoke the response.
+        Otherwise, it uses the agent executor to invoke the response.
+        """
         if self.memory:
             return self.agent_with_chat_history.invoke(
                 input={"input": message},

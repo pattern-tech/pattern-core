@@ -1,11 +1,17 @@
-from langchain.tools import tool
+import os
 
 from langchain import hub
+from langchain.tools import tool
+from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from langchain.agents import AgentExecutor, create_openai_functions_agent
+from langchain.agents import (
+    AgentExecutor,
+    create_openai_functions_agent,
+    create_tool_calling_agent)
 
-from src.agent.tools.shared_tools import handle_exceptions, timeout
+from src.agent.tools.shared_tools import init_llm
 from src.agent.tools.tools_index import get_all_tools
+from src.agent.tools.shared_tools import handle_exceptions, timeout
 
 
 @tool
@@ -35,14 +41,29 @@ def ethereum_blockchain_tool(query: str):
         ValueError: If the query cannot be parsed or contract address is invalid
     """
 
-    llm = ChatOpenAI(model="gpt-4o-mini")
-    prompt = hub.pull("pattern-agent/eth-agent")
+    llm = init_llm(service=os.environ["LLM_SERVICE"],
+                   model_name=os.environ["LLM_MODEL"],
+                   api_key=os.environ["LLM_API_KEY"],
+                   stream=False)
+
     tools = get_all_tools(tools_path="eth_blockchain_function")
 
-    agent = create_openai_functions_agent(
-        llm,
-        tools,
-        prompt)
+    if isinstance(llm, ChatOpenAI):
+        prompt = hub.pull("pattern-agent/eth-agent")
+
+        agent = create_openai_functions_agent(
+            llm, tools, prompt)
+    elif isinstance(llm, ChatOllama):
+        prompt = hub.pull("hwchase17/react")
+
+        agent = create_react_agent(
+            llm=llm, tools=tools, prompt=prompt)
+    else:
+        prompt = hub.pull("pattern-agent/eth-agent")
+
+        agent = create_tool_calling_agent(
+            llm=llm, tools=tools, prompt=prompt)
+
 
     agent_executor = AgentExecutor(
         agent=agent,
