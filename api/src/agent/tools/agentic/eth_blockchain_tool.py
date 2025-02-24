@@ -18,12 +18,13 @@ from src.agent.tools.shared_tools import handle_exceptions, timeout
 @handle_exceptions
 def ethereum_blockchain_tool(query: str):
     """
-    A tool for handling Ethereum blockchain-related queries and tasks. This function can:
+    An tool for answering Ethereum blockchain-related queries and tasks. This function can:
     - Retrieve smart contract source code
     - Fetch contract ABIs (Application Binary Interface)
     - Get contract events and their details
     - Query contract transactions
     - Convert between timestamps and block numbers
+    - Fetch wallet activities and transactions
 
     Args:
         query (str): Natural language query about Ethereum blockchain tasks.
@@ -64,7 +65,6 @@ def ethereum_blockchain_tool(query: str):
         agent = create_tool_calling_agent(
             llm=llm, tools=tools, prompt=prompt)
 
-
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
@@ -74,11 +74,13 @@ def ethereum_blockchain_tool(query: str):
     response = agent_executor.invoke({"input": query})
 
     try:
-        tool_steps = {}
+        agent_steps = []
         for step in response["intermediate_steps"]:
-            tool_steps["function_name"] = step[0].tool
-            tool_steps["function_args"] = step[0].tool_input
-            tool_steps["function_output"] = step[-1]
-        return {"tool_response": response["output"], "tool_steps": tool_steps}
+            agent_steps.append({
+                "function_name": step[0].tool,
+                "function_args": step[0].tool_input,
+                "function_output": step[-1]
+            })
+        return {"agent_steps": agent_steps}
     except:
-        return {"tool_response": response["output"]}
+        return "no tools called inside agent"

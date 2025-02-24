@@ -372,15 +372,25 @@ def convert_timestamp_to_block_number(timestamp: int) -> int:
 # --------------------------
 @tool
 @handle_exceptions
-def get_wallet_activity(wallet_address: str) -> str:
+def get_wallet_activity(wallet_address: str, output_include: list[str]) -> List[dict[str, Any]]:
     """
-    Fetches the wallet activity for a given wallet address using the Covalent API.
+    Fetch wallet activity for a given address, returning only specified fields.
 
     Args:
-        wallet_address (str): The wallet address to retrieve activity for.
+        wallet_address (str):
+            The wallet address to retrieve activity for.
+        output_include (list[str]):
+            A list of field names to include in output.
 
     Returns:
-        str: The response text containing wallet activity.
+        List[dict[str, Any]]:
+            A list of dictionaries where each dictionary only contains the keys 
+            listed in `output_include` (if they exist in the source data). 
+            Possible fields include:
+
+            - name, chain_id, is_testnet, db_schema_name, label, category_label,
+              logo_url, black_logo_url, white_logo_url, color_theme, is_appchain,
+              appchain_of.
     """
     db_session = next(get_db())
     api_key = db_session.execute(
@@ -396,27 +406,42 @@ def get_wallet_activity(wallet_address: str) -> str:
         password=os.getenv("SECRET_KEY"))
 
     url = f"{os.getenv('GOLDRUSH_URL')}/v1/address/{wallet_address}/activity/"
-    headers = {
-        'Authorization': f'Bearer {api_key_decrypted}'
-    }
+    headers = {'Authorization': f'Bearer {api_key_decrypted}'}
     response = requests.get(url, headers=headers)
-    return json.loads(response.text)["data"]["items"]
+    results = json.loads(response.text)["data"]["items"]
+
+    final_result = []
+    for result in results:
+        final_result.append({key: result[key]
+                             for key in result if key in output_include})
+
+    return final_result
 
 
 @tool
 @handle_exceptions
-def get_balance_for_address(wallet_address: str, no_spam: bool = True, currency: str = "USD") -> str:
+def get_balance_for_address(wallet_address: str, output_include: list[str], chain_name: str = "eth-mainnet") -> list[dict]:
     """
-    Fetches the balance for a given wallet address on a specific chain using the Covalent API.
+    fetch the native, fungible (ERC20), and non-fungible (ERC721 & ERC1155) tokens held by an address
 
     Args:
         wallet_address (str): The wallet address to retrieve balance for.
-        currency (str): The quote currency for balance conversion. available options : ["USD", "CAD", "EUR", "SGD", "INR", "JPY", "VND",
-                        "CNY", "KRW", "RUB", "TRY", "NGN", "ARS", "AUD", "CHF", "GBP"]. Default is USD.
+        chain_name (str): The chain name to retrieve balance for. Default is eth-mainnet.
+        output_include (list[str]):
+            A list of field names to include in output.
 
     Returns:
-        str: The balance in the specified currency.
+        List[dict[str, Any]]:
+            A list of dictionaries where each dictionary only contains the keys
+            listed in `output_include` (if they exist in the source data).
+            Possible fields include:
+
+            - contract_decimals, contract_name, contract_ticker_symbol, contract_address, contract_display_name,
+              supports_erc, logo_url, logo_urls, last_transferred_at, native_token, type, is_spam, balance, balance_24h,
+              quote_rate, quote_rate_24h, quote, quote_24h, pretty_quote, pretty_quote_24h, protocol_metadata.
     """
+    currency = "USD"  # TODO: hardcoded for now
+
     valid_currencies = ["USD", "CAD", "EUR", "SGD", "INR", "JPY", "VND",
                         "CNY", "KRW", "RUB", "TRY", "NGN", "ARS", "AUD", "CHF", "GBP"]
     if currency not in valid_currencies:
@@ -436,28 +461,42 @@ def get_balance_for_address(wallet_address: str, no_spam: bool = True, currency:
         message=api_key,
         password=os.getenv("SECRET_KEY"))
 
-    chain_name = "eth-mainnet"
-    no_spam = "true" if no_spam else "false"
-    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/balances_v2/?quote-currency={currency}&no-spam={no_spam}"
+    url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/balances_v2/?quote-currency={currency}"
     headers = {
         'Authorization': f'Bearer {api_key_decrypted}'
     }
     response = requests.get(url, headers=headers)
-    return json.loads(response.text)["data"]["items"][0]['pretty_quote']
+    results = json.loads(response.text)["data"]["items"]
+
+    final_result = []
+    for result in results:
+        final_result.append({key: result[key]
+                             for key in result if key in output_include})
+
+    return final_result
 
 
 @tool
 @handle_exceptions
-def get_wallet_transactions(wallet_address: str, page: int) -> dict:
+def get_wallet_transactions(wallet_address: str, output_include: list[str], page: int = 0) -> dict:
     """
-    Fetches all transactions for a given wallet address on a specific chain using the Covalent API.
+    Fetch the transactions involving an address including the decoded log events in a paginated fashion.
 
     Args:
         wallet_address (str): The wallet address to retrieve transactions for.
-        page (int): The page number of transactions to retrieve, starting at 0 and incrementing until an empty result is returned.
+        output_include (list[str]): A list of field names to include in output.
+        page (int): The page number to retrieve transactions for. starting from 0 and incrementing by 1 until get empty result.
 
     Returns:
-        dict: The transactions data for the specified page. The result is paginated.
+        List[dict[str, Any]]:
+            A list of dictionaries where each dictionary only contains the keys
+            listed in `output_include` (if they exist in the source data).
+            Possible fields include:
+
+            - block_signed_at, block_height, block_hash, tx_hash, tx_offset, successful, from_address, miner_address,
+                from_address_label, to_address, to_address_label, value, value_quote, pretty_value_quote, gas_metadata,
+                gas_offered, gas_spent, gas_price, fees_paid, gas_quote, pretty_gas_quote, gas_quote_rate, explorers,
+                log_events
     """
     db_session = next(get_db())
     api_key = db_session.execute(
@@ -475,23 +514,37 @@ def get_wallet_transactions(wallet_address: str, page: int) -> dict:
     chain_name = "eth-mainnet"
     url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/transactions_v3/page/{page}/"
     headers = {
-        'Authorization': f'Bearer {api_key_decrypted}'
+        'Authorization': f'Bearer {api_key_decrypted}',
+        "no-logs": "true"
     }
     response = requests.get(url, headers=headers)
-    return json.loads(response.text)["data"]["items"][:10]
+    # TODO : limit to 10 for now
+    results = json.loads(response.text)["data"]["items"][:10]
+
+    final_result = []
+    for result in results:
+        final_result.append({key: result[key]
+                             for key in result if key in output_include})
+
+    return final_result
 
 
 @tool
 @handle_exceptions
-def get_transactions_summary(wallet_address: str) -> dict:
+def get_transactions_summary(wallet_address: str, chain_name: str = "eth-mainnet", with_gas: bool = False) -> dict[list]:
     """
-    Fetches the earliest and latest transaction for a given wallet address on a specific chain using the Covalent API.
+    Commonly used to fetch the earliest and latest transactions, and the transaction count for a wallet.
+    Calculate the age of the wallet and the time it has been idle and quickly gain insights into their engagement with web3
 
     Args:
         wallet_address (str): The wallet address to retrieve transactions summary for.
+        chain_name (str): The chain name to retrieve transactions summary for. Default is eth-mainnet.
+        with_gas (bool): Whether to include gas data in the output.
 
     Returns:
-        dict: The transactions summary data.
+        List[dict[str, Any]]:
+            Output include earliest, latest and count of transactions.
+
     """
     db_session = next(get_db())
     api_key = db_session.execute(
@@ -506,26 +559,43 @@ def get_transactions_summary(wallet_address: str) -> dict:
         message=api_key,
         password=os.getenv("SECRET_KEY"))
 
-    chain_name = "eth-mainnet"
     url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/address/{wallet_address}/transactions_summary/"
     headers = {
-        'Authorization': f'Bearer {api_key_decrypted}'
+        'Authorization': f'Bearer {api_key_decrypted}',
+        'with-gas': with_gas
     }
     response = requests.get(url, headers=headers)
-    return json.loads(response.text)["data"]["items"]
+    results = json.loads(response.text)["data"]["items"]
+
+    final_result = []
+    for result in results:
+        final_result.append({key: result[key]
+                             for key in result if key in output_include})
+
+    return final_result
 
 
 @tool
 @handle_exceptions
-def get_transaction_detail(tx_hash: str) -> dict:
+def get_transaction_detail(tx_hash: str, output_include: list[str], chain_name: str = "eth-mainnet") -> dict[list]:
     """
-    Fetches the details of a specific transaction using the Covalent API.
+    Fetch and render a single transaction including its decoded event logs.
 
     Args:
-        tx_hash (str): The hash of the transaction to retrieve details for.
+        tx_hash (str): The transaction hash to retrieve details for.
+        output_include (list[str]): A list of field names to include in output.
+        chain_name (str): The chain name to retrieve transaction detail for. Default is eth-mainnet.
 
     Returns:
-        dict: The transaction details data.
+        List[dict[str, Any]]:
+            A list of dictionaries where each dictionary only contains the keys
+            listed in `output_include` (if they exist in the source data).
+            Possible fields include:
+
+            - block_signed_at, block_height, block_hash, tx_hash, tx_offset, successful, from_address, miner_address,
+                from_address_label, to_address, to_address_label, value, value_quote, pretty_value_quote, gas_metadata,
+                gas_offered, gas_spent, gas_price, fees_paid, gas_quote, pretty_gas_quote, gas_quote_rate, explorers,
+                log_events, internal_transfers, state_changes, input_data.
     """
     db_session = next(get_db())
     api_key = db_session.execute(
@@ -543,30 +613,38 @@ def get_transaction_detail(tx_hash: str) -> dict:
     chain_name = "eth-mainnet"
     url = f"{os.getenv('GOLDRUSH_URL')}/v1/{chain_name}/transaction_v2/{tx_hash}/"
     headers = {
-        'Authorization': f'Bearer {api_key_decrypted}'
+        'Authorization': f'Bearer {api_key_decrypted}',
+        'no-logs': "true"
     }
     response = requests.get(url, headers=headers)
+    results = json.loads(response.text)["data"]["items"]
+
     final_result = []
-    for result in json.loads(response.text)["data"]["items"]:
-        for event in result['log_events']:
-            final_result.append({
-                "function_name": event['decoded']['name'],
-                "function_params": event['decoded']['params'],
-            })
+    for result in results:
+        final_result.append({key: result[key]
+                             for key in result if key in output_include})
+
     return final_result
 
 
 @tool
 @handle_exceptions
-def get_token_approvals(wallet_address: str) -> dict:
+def get_token_approvals(wallet_address: str, chain_name: str = 'eth-mainnet') -> dict:
     """
-    get a list of approvals across all token contracts categorized by spenders for a wallet’s assets.
+    Fetch a list of approvals across all token contracts categorized by spenders for a wallet’s assets.
 
     Args:
         wallet_address (str): The wallet address to retrieve token approvals for.
+        chain_name (str): The chain name to retrieve token approvals for. Default is eth-mainnet.
 
     Returns:
-        dict: The token approvals data.
+        List[dict[str, Any]]:
+            A list of dictionaries where each dictionary only contains the keys
+            listed in `output_include` (if they exist in the source data).
+            Possible fields include:
+
+            - token_address, token_address_label, ticker_symbol, contract_decimals, logo_url, quote_rate, balance, balance_quote,
+                pretty_balance_quote, value_at_risk, value_at_risk_quote, pretty_value_at_risk_quote, spenders.
     """
     db_session = next(get_db())
     api_key = db_session.execute(
@@ -587,7 +665,14 @@ def get_token_approvals(wallet_address: str) -> dict:
         'Authorization': f'Bearer {api_key_decrypted}'
     }
     response = requests.get(url, headers=headers)
-    return json.loads(response.text)["data"]["items"]
+    results = json.loads(response.text)["data"]["items"]
+
+    final_result = []
+    for result in results:
+        final_result.append({key: result[key]
+                             for key in result if key in output_include})
+
+    return final_result
 
 
 # MORALIS APIs
