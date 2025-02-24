@@ -7,7 +7,7 @@ from langchain_core.messages.human import HumanMessage
 from src.agent.tools.tools_index import get_all_tools
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
-from src.agent.services.agent_service import DataProviderAgentService
+from src.agent.services.agent_service import RouterAgentService
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
 
@@ -186,7 +186,7 @@ class ConversationService:
         memory = self.memory_service.get_memory(conversation_id)
 
         # Create the agent service with streaming enabled.
-        agent = DataProviderAgentService(tools, memory, streaming=stream)
+        agent = RouterAgentService(tools, memory, streaming=stream)
 
         if stream:
             # Stream tokens as they become available.

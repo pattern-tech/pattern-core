@@ -55,7 +55,7 @@ def find_tool_functions(directory: str, file_name: Optional[str] = None):
     return tool_functions
 
 
-def get_all_tools(tools_path: str = None) -> list[Callable]:
+def get_all_tools(tools_path: str) -> list[Callable]:
     """
     Retrieves all tool functions from the specified directory.
 
@@ -65,11 +65,6 @@ def get_all_tools(tools_path: str = None) -> list[Callable]:
     Returns:
         list[Callable]: A list of callable tool function references.
     """
-    if tools_path is not None:
-        tools_root_path = os.path.join(os.getcwd(), "src", "agent", "tools", "all")
-        functions = find_tool_functions(tools_root_path, f"{tools_path}.py")
-        return functions
-    else:
-        tools_root_path = os.path.join(os.getcwd(), "src", "agent", "tools", "agentic")
-        functions = find_tool_functions(tools_root_path)
+    tools_root_path = os.path.join(os.getcwd(), "agentflow", "providers")
+    functions = find_tool_functions(tools_root_path, f"{tools_path}.py")
     return functions

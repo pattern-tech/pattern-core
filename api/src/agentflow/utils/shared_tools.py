@@ -1,5 +1,9 @@
+import os
 import re
+import functools
+import threading
 
+from typing import Any
 from typing import TypeVar
 from functools import wraps
 from langchain_groq import ChatGroq
@@ -35,7 +39,7 @@ def text_post_process(text):
     return text
 
 
-def timeout(seconds):
+def timeout(seconds: int):
     """
     Decorator to enforce a timeout on the execution of the decorated function.
 
@@ -95,6 +99,45 @@ def timeout(seconds):
     return decorator
 
 
+def time_limit(seconds: int):
+    """
+    Decorator that attempts to time out a function after 'seconds' using threading.
+    This approach is cross-platform, including Windows. However, it cannot
+    interrupt certain low-level system or C calls.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # A container to store the result (or exception) from the thread
+            result_container = {"result": None, "exception": None}
+
+            def target():
+                try:
+                    result_container["result"] = func(*args, **kwargs)
+                except Exception as e:
+                    result_container["exception"] = e
+
+            # Start the function in a separate thread
+            thread = threading.Thread(target=target)
+            thread.start()
+            thread.join(seconds)
+
+            # If the thread is still active, we consider it timed out
+            if thread.is_alive():
+                # (Optional) attempt to stop the thread politely if you have a cooperative approach
+                # Forcibly stopping threads in Python is tricky and not recommended
+                raise TimeoutError(
+                    f"Function '{func.__name__}' timed out after {seconds} seconds.")
+
+            # If the thread raised an exception, raise it in the main thread
+            if result_container["exception"] is not None:
+                raise result_container["exception"]
+
+            return result_container["result"]
+        return wrapper
+    return decorator
+
+
 def handle_exceptions(func: callable) -> callable:
     """
     Decorator to catch exceptions in the decorated function
@@ -143,6 +186,15 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
     Raises:
         NotImplementedError: If the specified service is not supported.
     """
+    if not os.environ["LLM_PROVIDER"]:
+        raise Exception("No language model provider specified")
+    if not os.environ["LLM_MODEL"]:
+        raise Exception("No language model specified")
+    if not os.environ["LLM_API_KEY"] and os.environ["LLM_PROVIDER"] not in ["ollama", "huggingface"]:
+        raise Exception("No language model API key specified")
+    if os.environ["LLM_PROVIDER"] == "ollama" and not os.environ["OLLAMA_HOST"] and not os.environ["OLLAMA_MODELS"]:
+        raise Exception("Ollama host and model path should be specified")
+
     if service == "openai":
         return ChatOpenAI(
             model=model_name,
@@ -199,3 +251,26 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
         )
     else:
         raise NotImplementedError(f"Service {service} is not supported.")
+
+
+def init_agent_and_prompt(llm):
+    """
+    Initialize an agent and prompt based on the specified language model.
+
+    Args:
+        llm: The language model instance to use.
+
+    Returns:
+        tuple: A tuple containing the agent and prompt for the specified language model.
+    """
+    if isinstance(llm, ChatOpenAI):
+        prompt = hub.pull("pattern-agent/eth-agent")
+        agent = create_openai_functions_agent(llm, tools, prompt)
+    elif isinstance(llm, ChatOllama):
+        prompt = hub.pull("hwchase17/react")
+        agent = create_react_agent(llm=llm, tools=tools, prompt=prompt)
+    else:
+        prompt = hub.pull("pattern-agent/eth-agent")
+        agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
+
+    return agent, prompt
