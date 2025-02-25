@@ -2,10 +2,8 @@ from fastapi import APIRouter
 
 from src.auth.routers import auth_router
 from src.user.routers import user_router
-from src.tool.routers import tool_router
 from src.agent.routers import agent_router
 from src.project.routers import project_router
-from src.agent.routers import tool_admin_router
 from src.workspace.routers import workspace_router
 from src.conversation.routers import playground_conversation_router
 
@@ -15,9 +13,5 @@ api_router.include_router(user_router.router, tags=["User"])
 api_router.include_router(workspace_router.router, tags=["Workspace"])
 api_router.include_router(project_router.router, tags=["Project"])
 api_router.include_router(agent_router.router, tags=["Agent"])
-api_router.include_router(tool_router.router, tags=["Tool"])
 api_router.include_router(
     playground_conversation_router.router, tags=["Conversation"])
-
-# Admin
-api_router.include_router(tool_admin_router.router, tags=["Admin | Tool"])

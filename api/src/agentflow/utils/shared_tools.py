@@ -4,6 +4,7 @@ import functools
 import threading
 
 from typing import Any
+from langchain import hub
 from typing import TypeVar
 from functools import wraps
 from langchain_groq import ChatGroq
@@ -12,8 +13,12 @@ from langchain_ollama import ChatOllama
 from multiprocessing import Process, Queue
 from langchain_together import ChatTogether
 from langchain_fireworks import ChatFireworks
+from langchain.agents import tool_calling_agent
+from langchain.agents import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.agents import create_openai_functions_agent
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
+
 
 T = TypeVar('T')
 
@@ -253,24 +258,23 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
         raise NotImplementedError(f"Service {service} is not supported.")
 
 
-def init_agent_and_prompt(llm):
+def init_agent(llm, tools , prompt):
     """
     Initialize an agent and prompt based on the specified language model.
 
     Args:
         llm: The language model instance to use.
+        tools: The tools to use with the agent.
+        prompt: The prompt to use with the agent.
 
     Returns:
         tuple: A tuple containing the agent and prompt for the specified language model.
     """
     if isinstance(llm, ChatOpenAI):
-        prompt = hub.pull("pattern-agent/eth-agent")
         agent = create_openai_functions_agent(llm, tools, prompt)
     elif isinstance(llm, ChatOllama):
-        prompt = hub.pull("hwchase17/react")
         agent = create_react_agent(llm=llm, tools=tools, prompt=prompt)
     else:
-        prompt = hub.pull("pattern-agent/eth-agent")
         agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
 
-    return agent, prompt
+    return agent

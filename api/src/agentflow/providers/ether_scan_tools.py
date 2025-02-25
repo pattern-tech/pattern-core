@@ -44,7 +44,7 @@ def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
         "chainid": "1",
         "module": "contract",
         "action": "getabi",
-        "address": address,
+        "address": contract_address,
         "apikey": _get_api_key()
     }
     response = requests.get(url, params=params)
@@ -73,8 +73,8 @@ def fetch_contract_source_code(contract_address: str, api_key: str) -> str:
         "chainid": "1",
         "module": "contract",
         "action": "getsourcecode",
-        "address": address,
-        "apikey": _get_api_key
+        "address": contract_address,
+        "apikey": _get_api_key()
     }
     response = requests.get(url, params=params)
     return response.json()["result"][0]["SourceCode"]
@@ -117,7 +117,7 @@ def timestamp_to_block_number(timestamp: int, api_key: str) -> int:
         "action": "getblocknobytime",
         "timestamp": timestamp,
         "closest": "before",
-        "apikey": _get_api_key
+        "apikey": _get_api_key()
     }
     response = requests.get(url, params=params)
     return int(response.json()["result"])

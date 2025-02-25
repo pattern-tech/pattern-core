@@ -1,9 +1,9 @@
-from fastapi.responses import StreamingResponse
 from uuid import UUID
 from enum import Enum
 from typing import List
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
@@ -275,8 +275,12 @@ async def send_message(
 
         if input.stream:
             return StreamingResponse(
-                service.send_message(db, input.message, user_id,
-                                     conversation_id, input.message_type, input.stream),
+                service.send_message(db,
+                                     input.message,
+                                     user_id,
+                                     conversation_id,
+                                     input.message_type,
+                                     input.stream),
                 media_type="text/plain"
             )
         else:

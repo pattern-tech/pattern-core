@@ -9,25 +9,26 @@ from langchain.agents import (
     create_openai_functions_agent,
     create_tool_calling_agent)
 
-from src.agent.tools.tools_index import get_all_tools
+from src.agentflow.utils.tools_index import get_all_tools
 from src.agentflow.utils.shared_tools import handle_exceptions, timeout
-from src.agentflow.utils.shared_tools import init_llm, init_agent_and_prompt
+from src.agentflow.utils.shared_tools import init_llm, init_agent
 
 
 @tool
 @handle_exceptions
 def etherscan_agent(query: str):
     """
-    An agent for handling Ethereum blockchain-related queries and tasks. This agent has access to these tools:
+    An agent for handling Ethereum blockchain-related queries and tasks.
+    This agent can perform the following tasks:
 
-    - get_current_timestamp : Get the current Unix timestamp
-    - convert_to_timestamp : Convert a natural language date string into a Unix timestamp
-    - get_contract_source_code : Retrieve the source code of a smart contract
-    - get_contract_abi : Retrieve the ABI of a smart contract
-    - get_abi_of_event : Retrieve the ABI of a specific event from a smart contract
-    - get_contract_events : Fetch events for a given smart contract event within a block range
-    - get_latest_eth_block_number : Retrieve the latest Ethereum block number
-    - convert_timestamp_to_block_number : Convert a Unix timestamp to the nearest Ethereum block number
+    - Get the current Unix timestamp
+    - Convert a natural language date string into a Unix timestamp
+    - Retrieve the source code of a smart contract
+    - Retrieve the ABI of a smart contract
+    - Retrieve the ABI of a specific event from a smart contract
+    - Fetch events for a given smart contract event within a block range
+    - Retrieve the latest Ethereum block number
+    - Convert a Unix timestamp to the nearest Ethereum block number
 
     Args:
         query (str): query about Ethereum blockchain tasks.
@@ -42,7 +43,9 @@ def etherscan_agent(query: str):
 
     tools = get_all_tools(tools_path="ether_scan_tools")
 
-    agent, prompt = init_agent_and_prompt(llm)
+    prompt = hub.pull("pattern-agent/eth-agent")
+
+    agent = init_agent(llm, tools , prompt)
 
     agent_executor = AgentExecutor(
         agent=agent,

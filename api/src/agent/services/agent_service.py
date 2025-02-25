@@ -16,7 +16,7 @@ from langchain.agents import (AgentExecutor,
                               create_openai_functions_agent,
                               create_tool_calling_agent)
 
-from src.agentflow.utils.shared_tools import init_llm, init_agent_and_prompt
+from src.agentflow.utils.shared_tools import init_llm, init_agent
 
 
 class StreamingCallbackHandler(BaseCallbackHandler):
@@ -47,8 +47,8 @@ class RouterAgentService:
     and returning the response.
     """
 
-    def __init__(self, tools, memory=None, streaming: bool = True):
-        self.tools = tools
+    def __init__(self, sub_agents, memory=None, streaming: bool = True):
+        self.sub_agents = sub_agents
         self.memory = memory
         self.streaming = streaming
 
@@ -60,14 +60,15 @@ class RouterAgentService:
                             model_name=os.environ["LLM_MODEL"],
                             api_key=os.environ["LLM_API_KEY"],
                             stream=streaming,
-                            callbacks=[self.streaming_handler])
+                            callbacks=[self.streaming_handler] if self.streaming else None)
 
-        self.agent, self.prompt = init_agent_and_prompt(self.llm)
+        self.prompt = hub.pull("pattern-agent/pattern-agent")
+        self.agent = init_agent(self.llm, self.sub_agents, self.prompt)
 
         if streaming:
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.tools,
+                tools=self.sub_agents,
                 return_intermediate_steps=True,
                 verbose=True,
                 callbacks=[self.streaming_handler]
@@ -75,7 +76,7 @@ class RouterAgentService:
         else:
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.tools,
+                tools=self.sub_agents,
                 return_intermediate_steps=True,
                 verbose=True
             )

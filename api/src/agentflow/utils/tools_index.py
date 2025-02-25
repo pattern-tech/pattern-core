@@ -65,6 +65,7 @@ def get_all_tools(tools_path: str) -> list[Callable]:
     Returns:
         list[Callable]: A list of callable tool function references.
     """
-    tools_root_path = os.path.join(os.getcwd(), "agentflow", "providers")
+    tools_root_path = os.path.join(
+        os.getcwd(), "src", "agentflow", "providers")
     functions = find_tool_functions(tools_root_path, f"{tools_path}.py")
     return functions
