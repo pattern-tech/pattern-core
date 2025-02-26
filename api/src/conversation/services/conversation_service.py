@@ -9,6 +9,7 @@ from src.agentflow.utils.tools_index import get_all_tools
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.agent.services.agent_service import RouterAgentService
+from src.agentflow.utils.shared_tools import agent_health_check
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
 
@@ -162,14 +163,16 @@ class ConversationService:
         Raises:
             Exception: If associated project is not found
         """
-        sub_agents = [AgentHub.ETHER_SCAN_AGENT, AgentHub.GOLDRUSH_AGENT]
+        sub_agents = [AgentHub.ETHER_SCAN, AgentHub.GOLDRUSH]
+
+        agent_health_check([sub_agent.name for sub_agent in sub_agents])
 
         # Retrieve conversation memory.
         memory = self.memory_service.get_memory(conversation_id)
 
         # Create the agent service with streaming enabled.
         agent = RouterAgentService(
-            sub_agents=sub_agents, memory=memory, streaming=stream)
+            sub_agents=[sub_agent.reference for sub_agent in sub_agents], memory=memory, streaming=stream)
 
         if stream:
             # Stream tokens as they become available.

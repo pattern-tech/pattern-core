@@ -45,7 +45,7 @@ def etherscan_agent(query: str):
 
     prompt = hub.pull("pattern-agent/eth-agent")
 
-    agent = init_agent(llm, tools , prompt)
+    agent = init_agent(llm, tools, prompt)
 
     agent_executor = AgentExecutor(
         agent=agent,

@@ -3,7 +3,7 @@ import re
 import functools
 import threading
 
-from typing import Any
+from typing import Any, List
 from langchain import hub
 from typing import TypeVar
 from functools import wraps
@@ -258,7 +258,7 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
         raise NotImplementedError(f"Service {service} is not supported.")
 
 
-def init_agent(llm, tools , prompt):
+def init_agent(llm, tools, prompt):
     """
     Initialize an agent and prompt based on the specified language model.
 
@@ -278,3 +278,31 @@ def init_agent(llm, tools , prompt):
         agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
 
     return agent
+
+
+def agent_health_check(agents: List[str]):
+    """
+    Perform a health check for a list of agents by verifying the presence of
+    required environment variables for each agent.
+
+    Args:
+        agents (List[str]): A list of agent names for which the health check
+                            needs to be performed.
+
+    Raises:
+        EnvironmentError: If the required environment variables for any agent
+                          are not found.
+    """
+
+    for service in agents:
+        service_api_key = os.getenv(f"{service}_API_KEY")
+        if not service_api_key:
+            # Raise an error if the environment variable is not found
+            raise EnvironmentError(
+                f"Health Check Failed: {service}_API_KEY not found in environment variables.")
+
+        service_url = os.getenv(f"{service}_URL")
+        if not service_url:
+            # Raise an error if the environment variable is not found
+            raise EnvironmentError(
+                f"Health Check Failed: {service}_URL not found in environment variables.")
