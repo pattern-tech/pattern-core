@@ -5,6 +5,7 @@ from src.workspace.services.workspace_service import WorkspaceService
 from src.auth.utils.bcrypt_helper import hash_password, verify_password
 from src.db.models import UserModel
 from src.db.sql_alchemy import Database
+from siwe import SiweMessage
 
 database = Database()
 
@@ -28,6 +29,15 @@ class LoginInput(BaseModel):
         ...,
         example="securepassword123",
         description="The password for the user account",
+    )
+
+
+class VerifyInput(BaseModel):
+    message: str = Field(
+        ..., example="0x0...", description="The SIWE message"
+    )
+    signature: str = Field(
+        ..., example="0x0...", description="User's signature for a message"
     )
 
 
@@ -91,3 +101,34 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Incorrect email or password")
 
         return user
+
+    def verify_signature(self, message: str, signature: str):
+        """
+        Verify a signature according to SIWE spec
+
+        Args:
+            message (str): A SIWE message
+            signature (str): User's signature for the message
+
+        Returns:
+            VerificationResult: The result of the verification, containing the address and chain id of the signing wallet
+
+        Raises:
+            HTTPException: If message cannot be parsed or verified
+        """
+
+        try:
+            siwe_message = SiweMessage.from_message(message)
+            siwe_message.verify(signature)
+        except ValueError:
+            # ValueError is raised if message is invalid according to SIWE
+            raise HTTPException(
+                status_code=400, detail="The provided message is not a valid SIWE message")
+        except:
+            raise HTTPException(
+                status_code=401, detail="Signature is not valid")
+
+        return {
+            "chain_id": siwe_message.chain_id,
+            "address": siwe_message.address,
+        }
