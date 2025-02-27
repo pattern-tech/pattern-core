@@ -16,6 +16,7 @@ from langchain.agents import (AgentExecutor,
                               create_openai_functions_agent,
                               create_tool_calling_agent)
 
+from src.util.configuration import parse_config
 from src.agentflow.utils.shared_tools import init_llm, init_agent
 
 
@@ -56,9 +57,11 @@ class RouterAgentService:
         if streaming:
             self.streaming_handler = StreamingCallbackHandler()
 
-        self.llm = init_llm(service=os.environ["LLM_PROVIDER"],
-                            model_name=os.environ["LLM_MODEL"],
-                            api_key=os.environ["LLM_API_KEY"],
+        config = parse_config("config.json")
+
+        self.llm = init_llm(service=config["llm"]["provider"],
+                            model_name=config["llm"]["model"],
+                            api_key=config["llm"]["api_key"],
                             stream=streaming,
                             callbacks=[self.streaming_handler] if self.streaming else None)
 

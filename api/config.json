@@ -1,0 +1,42 @@
+{
+    "services": [
+        {
+            "name": "etherscan",
+            "url": "https://api.etherscan.io/v2/api",
+            "api_key": "CJ4H36FCASG7XRPVFDRM9EWCTSWKKW86UY"
+        },
+        {
+            "name": "goldrush",
+            "url": "https://api.covalenthq.com",
+            "api_key": "cqt_rQ9TymWrqXC9mWfpQdTgbCkmBYqC"
+        },
+        {
+            "name": "exa",
+            "url": "https://api.exa.ai",
+            "api_key": "f8536344-8b59-4d94-867f-acae935e9f3e"
+        },
+        {
+            "name": "perplexity",
+            "url": "https://api.perplexity.ai",
+            "api_key": "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"
+        },
+        {
+            "name": "tavily",
+            "url": "https://api.tavily.com",
+            "api_key": "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"
+        }
+    ],
+    "llm": {
+        "provider": "openaii",
+        "model": "gpt-4o-mini",
+        "api_key": "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",
+        "extra_params": {
+            "host": "localhost:5000",
+            "models": ""
+        }
+    },
+    "agents": [
+        "etherscan",
+        "goldrush"
+    ]
+}
