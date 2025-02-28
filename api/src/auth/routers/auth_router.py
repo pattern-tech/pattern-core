@@ -3,6 +3,7 @@ from src.auth.services.auth_service import (
     AuthService,
     LoginInput,
     RegisterInput,
+    VerifyInput
 )
 from src.db.sql_alchemy import Database
 from src.util.response import global_response
@@ -19,6 +20,7 @@ auth = AuthService()
     "/register",
     summary="User Registration",
     description="Register a new user with email and password.",
+    deprecated=True
 )
 def register(input: RegisterInput, db: Session = Depends(database.get_db)):
     """
@@ -42,6 +44,7 @@ def register(input: RegisterInput, db: Session = Depends(database.get_db)):
     "/login",
     summary="User Login",
     description="Authenticate a user with email and password.",
+    deprecated=True,
 )
 def login(input: LoginInput, db: Session = Depends(database.get_db)):
     """
@@ -53,6 +56,32 @@ def login(input: LoginInput, db: Session = Depends(database.get_db)):
     user = auth.authenticate_user(input.email.lower(), input.password, db)
 
     payload = {"id": str(user.id)}
+    token = generate_access_token(data=payload)
+    return global_response(
+        {
+            "access_token": token,
+        }
+    )
+
+
+@router.post(
+    "/verify",
+    summary="Verify a Signature",
+    description="Verify a signature according to SIWE spec",
+)
+def verify(input: VerifyInput):
+    """
+    Verify a signature according to SIWE spec and return an access token
+
+    - **message**: A SIWE message
+    - **signature**: User's signature for the message
+    """
+    verification_result = auth.verify_signature(
+        input.message, input.signature)
+
+    payload = {"id": "{}:{}".format(
+        verification_result.chain_id, verification_result.address)}
+
     token = generate_access_token(data=payload)
     return global_response(
         {
