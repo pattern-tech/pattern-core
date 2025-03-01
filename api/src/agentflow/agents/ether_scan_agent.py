@@ -9,10 +9,10 @@ from langchain.agents import (
     create_openai_functions_agent,
     create_tool_calling_agent)
 
+from src.util.configuration import parse_config
 from src.agentflow.utils.tools_index import get_all_tools
-from src.agentflow.utils.shared_tools import handle_exceptions, timeout
 from src.agentflow.utils.shared_tools import init_llm, init_agent
-
+from src.agentflow.utils.shared_tools import handle_exceptions, timeout
 
 @tool
 @handle_exceptions
@@ -36,10 +36,12 @@ def etherscan_agent(query: str):
     Returns:
         str: Response containing the requested Ethereum blockchain information
     """
-    llm = init_llm(service=os.environ["LLM_PROVIDER"],
-                   model_name=os.environ["LLM_MODEL"],
-                   api_key=os.environ["LLM_API_KEY"],
-                   stream=False)
+    config = parse_config("config.json")
+
+    llm = init_llm(service=config["llm"]["provider"],
+                        model_name=config["llm"]["model"],
+                        api_key=config["llm"]["api_key"],
+                        stream=False)
 
     tools = get_all_tools(tools_path="ether_scan_tools")
 

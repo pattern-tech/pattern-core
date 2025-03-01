@@ -9,22 +9,15 @@ from langchain.tools import tool
 from typing import List, Any, Optional, Dict
 
 from src.agentflow.utils.shared_tools import handle_exceptions
+from src.util.configuration import parse_config, get_service_config
 
 
-def _get_api_key() -> str:
-    """
-    Retrieve the API key from the environment.
+def _get_config() -> dict:
+    return parse_config("config.json")
 
-    Returns:
-        str: The API key.
-
-    Raises:
-        Exception: If the API key is not found.
-    """
-    api_key = os.getenv("ETHER_SCAN_API_KEY")
-    if not api_key:
-        raise Exception("No API key found for etherscan.")
-    return api_key
+_config = _get_config()
+_eth_rpc_config = get_service_config(_config, "eth_rpc")
+_ether_scan_config = get_service_config(_config, "etherscan")
 
 
 @handle_exceptions
@@ -39,13 +32,13 @@ def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
     Returns:
         Dict: A dictionary representing the contract ABI.
     """
-    url = os.environ["ETHER_SCAN_URL"]
+    url = _ether_scan_config["url"]
     params = {
         "chainid": "1",
         "module": "contract",
         "action": "getabi",
         "address": contract_address,
-        "apikey": _get_api_key()
+        "apikey": api_key
     }
     response = requests.get(url, params=params)
 
@@ -68,13 +61,13 @@ def fetch_contract_source_code(contract_address: str, api_key: str) -> str:
     Returns:
         str: The contract source code.
     """
-    url = os.environ["ETHER_SCAN_URL"]
+    url = _ether_scan_config["url"]
     params = {
         "chainid": "1",
         "module": "contract",
         "action": "getsourcecode",
         "address": contract_address,
-        "apikey": _get_api_key()
+        "apikey": api_key
     }
     response = requests.get(url, params=params)
     return response.json()["result"][0]["SourceCode"]
@@ -110,14 +103,14 @@ def timestamp_to_block_number(timestamp: int, api_key: str) -> int:
     Returns:
         int: The closest block number.
     """
-    url = os.environ["ETHER_SCAN_URL"]
+    url = _ether_scan_config["url"]
     params = {
         "chainid": "1",
         "module": "block",
         "action": "getblocknobytime",
         "timestamp": timestamp,
         "closest": "before",
-        "apikey": _get_api_key()
+        "apikey": api_key
     }
     response = requests.get(url, params=params)
     return int(response.json()["result"])
@@ -169,7 +162,7 @@ def get_contract_source_code(contract_address: str) -> str:
     Returns:
         str: The contract source code.
     """
-    api_key = _get_api_key()
+    api_key = _ether_scan_config["api_key"]
     return fetch_contract_source_code(contract_address, api_key)
 
 
@@ -185,7 +178,7 @@ def get_contract_abi(contract_address: str) -> Dict:
     Returns:
         Dict: The contract ABI.
     """
-    api_key = _get_api_key()
+    api_key = _ether_scan_config["api_key"]
     return fetch_contract_abi(contract_address, api_key)
 
 
@@ -205,7 +198,7 @@ def get_abi_of_event(contract_address: str, event_name: str) -> Dict:
     Raises:
         Exception: If the API key is not found or the event is not in the contract ABI.
     """
-    api_key = _get_api_key()
+    api_key = _ether_scan_config["api_key"]
     abi = fetch_contract_abi(contract_address, api_key)
     event_abi = get_event_abi(abi, event_name)
     if event_abi is None:
@@ -236,10 +229,10 @@ def get_contract_events(
     Raises:
         Exception: If the event is not found in the contract's ABI.
     """
-    api_key = _get_api_key()
+    api_key = _ether_scan_config["api_key"]
     abi = fetch_contract_abi(contract_address, api_key)
 
-    web3 = Web3(Web3.HTTPProvider(os.getenv("ETH_RPC")))
+    web3 = Web3(Web3.HTTPProvider(_eth_rpc_config["url"]))
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
     # Resolve the actual event name case-insensitively
@@ -272,7 +265,7 @@ def get_latest_eth_block_number() -> int:
     Returns:
         int: The current block number on the Ethereum mainnet.
     """
-    web3 = Web3(Web3.HTTPProvider(os.getenv("ETH_RPC")))
+    web3 = Web3(Web3.HTTPProvider(_eth_rpc_config["url"]))
     return web3.eth.block_number
 
 
@@ -288,5 +281,5 @@ def convert_timestamp_to_block_number(timestamp: int) -> int:
     Returns:
         int: The block number closest to the provided timestamp.
     """
-    api_key = _get_api_key()
+    api_key = _ether_scan_config["api_key"]
     return timestamp_to_block_number(timestamp, api_key)

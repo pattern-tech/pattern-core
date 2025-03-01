@@ -6,22 +6,15 @@ from langchain.tools import tool
 from typing import Any, Dict, List, Optional
 
 from src.agentflow.utils.shared_tools import handle_exceptions
+from src.util.configuration import parse_config, get_service_config
 
 
-def _get_api_key() -> str:
-    """
-    Retrieve the API key from the environment.
+def _get_config() -> dict:
+    return parse_config("config.json")
 
-    Returns:
-        str: The API key.
 
-    Raises:
-        Exception: If the API key is not found.
-    """
-    api_key = os.getenv("GOLDRUSH_API_KEY")
-    if not api_key:
-        raise Exception("No API key found for Goldrush.")
-    return api_key
+_config = _get_config()
+_goldrush_config = get_service_config(_config, "goldrush")
 
 
 def _call_goldrush_api(url: str, params: Optional[Dict[str, Any]] = None) -> Dict:
@@ -35,7 +28,7 @@ def _call_goldrush_api(url: str, params: Optional[Dict[str, Any]] = None) -> Dic
     Returns:
         Dict: Parsed JSON response.
     """
-    api_key = _get_api_key()
+    api_key = _goldrush_config["api_key"]
     headers = {'Authorization': f'Bearer {api_key}'}
     response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
@@ -54,7 +47,7 @@ def get_wallet_activity(wallet_address: str) -> List[Dict]:
     Returns:
         List[Dict]: List of wallet activity items.
     """
-    base_url = os.getenv("GOLDRUSH_URL")
+    base_url = _goldrush_config["url"]
     url = f"{base_url}/v1/address/{wallet_address}/activity/"
     data = _call_goldrush_api(url)
     return data["data"]["items"]
@@ -90,7 +83,7 @@ def get_balance_for_address(
             f"Invalid currency. Please choose from: {', '.join(valid_currencies)}"
         )
 
-    base_url = os.getenv("GOLDRUSH_URL")
+    base_url = _goldrush_config["url"]
     chain_name = "eth-mainnet"
     no_spam_param = "true" if no_spam else "false"
     url = (
@@ -115,7 +108,7 @@ def get_wallet_transactions(wallet_address: str, page: int) -> List[Dict]:
     Returns:
         List[Dict]: A paginated list of transaction items (first 10 items of the page).
     """
-    base_url = os.getenv("GOLDRUSH_URL")
+    base_url = _goldrush_config["url"]
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/address/{wallet_address}/transactions_v3/page/{page}/"
     data = _call_goldrush_api(url)
@@ -134,7 +127,7 @@ def get_transactions_summary(wallet_address: str) -> Dict:
     Returns:
         Dict: The transactions summary data.
     """
-    base_url = os.getenv("GOLDRUSH_URL")
+    base_url = _goldrush_config["url"]
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/address/{wallet_address}/transactions_summary/"
     data = _call_goldrush_api(url)
@@ -153,7 +146,7 @@ def get_transaction_detail(tx_hash: str) -> List[Dict]:
     Returns:
         List[Dict]: A list of decoded log events containing function names and parameters.
     """
-    base_url = os.getenv("GOLDRUSH_URL")
+    base_url = _goldrush_config["url"]
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/transaction_v2/{tx_hash}/"
     data = _call_goldrush_api(url)
@@ -181,7 +174,7 @@ def get_token_approvals(wallet_address: str) -> Dict:
     Returns:
         Dict: The token approvals data.
     """
-    base_url = os.getenv("GOLDRUSH_URL")
+    base_url = _goldrush_config["url"]
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/approvals/{wallet_address}/"
     data = _call_goldrush_api(url)

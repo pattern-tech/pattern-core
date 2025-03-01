@@ -54,3 +54,21 @@ def check_config(config: dict):
     for agent in config['agents']:
         if agent not in [service for service in service_names]:
             raise ItemNotFoundError(f"agent {agent} not found in services")
+
+
+def get_service_config(config: dict, service_name: str) -> dict:
+    """
+    Get the configuration for a specific service from the configuration file.
+
+    Args:
+        config (dict): The configuration dictionary.
+        service_name (str): The name of the service to get the configuration for.
+
+    Returns:
+        dict: The configuration for the specified service.
+    """
+    for service in config["services"]:
+        if service["name"] == service_name:
+            return service
+    raise ItemNotFoundError(
+        f"Service {service_name} not found in configuration file.")
