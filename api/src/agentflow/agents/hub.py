@@ -1,4 +1,4 @@
-from src.agentflow.agents import ether_scan_agent, goldrush_agent
+from src.agentflow.agents import ether_scan_agent, goldrush_agent, moralis_agent
 from typing import Any, List
 
 
@@ -17,7 +17,8 @@ class AgentHub:
     def __init__(self):
         self.agents = {
             "etherscan": ether_scan_agent.etherscan_agent,
-            "goldrush": goldrush_agent.goldrush_agent
+            "goldrush": goldrush_agent.goldrush_agent,
+            "moralis": moralis_agent.moralis_agent
         }
 
     def get_agents(self, agent_names: List[str]) -> List[Any]:
