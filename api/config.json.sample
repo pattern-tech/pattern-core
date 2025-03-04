@@ -11,6 +11,16 @@
             "api_key": ""
         },
         {
+            "name": "moralis",
+            "url": "https://deep-index.moralis.io/api/v2",
+            "api_key": ""
+        },
+        {
+            "name": "eth_rpc",
+            "url": "https://eth.llamarpc.com",
+            "api_key": ""
+        },
+        {
             "name": "exa",
             "url": "https://api.exa.ai",
             "api_key": ""
@@ -24,7 +34,7 @@
             "name": "tavily",
             "url": "https://api.tavily.com",
             "api_key": ""
-        }
+        },
     ],
     "llm": {
         "provider": "openai",
@@ -37,6 +47,7 @@
     },
     "agents": [
         "etherscan",
-        "goldrush"
+        "goldrush",
+        "moralis"
     ]
 }

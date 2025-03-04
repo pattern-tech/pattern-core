@@ -14,12 +14,12 @@ def goldrush_agent(query: str):
     An agent for handling Ethereum blockchain-related queries and tasks.
     This agent can perform the following tasks:
 
-    - Fetch wallet activity for a given address
+    - Get activity across all chains for address
     - fetch the native, fungible (ERC20), and non-fungible (ERC721 & ERC1155) tokens held by an address
-    - Fetch the transactions involving an address including the decoded log events in a paginated fashion
-    - Commonly used to fetch the earliest and latest transactions, and the transaction count for a wallet
-    - Fetch and render a single transaction including its decoded event logs
-    - Fetch a list of approvals across all token contracts categorized by spenders for a wallet’s assets
+    - Fetch transactions for a given wallet address (paginated)
+    - Fetch a summary of transactions (earliest and latest) for a given wallet address.
+    - Fetch a single transaction including its decoded event logs
+    - Fetch list of approvals across all token contracts categorized by spenders for a wallet’s assets
 
     Args:
         query (str): query about Ethereum blockchain tasks.
