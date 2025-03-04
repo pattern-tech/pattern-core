@@ -1,26 +1,24 @@
-import os
 import re
 import functools
 import threading
 
-from typing import Any, List
-from langchain import hub
-from typing import TypeVar
 from functools import wraps
+from typing import Any, TypeVar
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 from multiprocessing import Process, Queue
 from langchain_together import ChatTogether
 from langchain_fireworks import ChatFireworks
-from langchain.agents import tool_calling_agent
 from langchain.agents import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import create_openai_functions_agent
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
+from langchain.agents import (
+    create_openai_functions_agent, create_tool_calling_agent, create_react_agent)
 
 from src.share.logging import Logging
-from src.util.configuration import parse_config, check_config
+from src.util.configuration import Config
+from src.agentflow.utils.enum import AgentType, Prompt
 
 T = TypeVar('T')
 
@@ -197,9 +195,7 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
     Raises:
         NotImplementedError: If the specified service is not supported.
     """
-    config = parse_config("config.json")
-
-    check_config(config)
+    config = Config.get_config()
 
     service = config["llm"]["provider"]
 
@@ -276,8 +272,28 @@ def init_agent(llm, tools, prompt):
     if isinstance(llm, ChatOpenAI):
         agent = create_openai_functions_agent(llm, tools, prompt)
     elif isinstance(llm, ChatOllama):
-        agent = create_react_agent(llm=llm, tools=tools, prompt=prompt)
+        agent = create_react_agent(llm, tools, prompt)
     else:
-        agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
+        agent = create_tool_calling_agent(llm, tools, prompt)
 
     return agent
+
+
+def init_prompt(llm: Any, agent_type: AgentType):
+    """
+    Initialize a prompt based on the specified language model and agent type.
+
+    Args:
+        llm: The language model instance to use.
+        agent_type: The type of agent to use.
+
+    Returns:
+        Prompt: The prompt to use with the agent.
+    """
+    if isinstance(llm, ChatOllama):
+        return Prompt.REACT_AGENT
+    else:
+        if agent_type == AgentType.ROUTER_AGENT:
+            return Prompt.ROUTER_AGENT
+        else:
+            return Prompt.BLOCKCHAIN_AGENT

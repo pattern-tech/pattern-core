@@ -86,3 +86,5 @@ def get_contract_transactions(contract_address: str) -> List[Dict[str, Any]]:
         })
 
     return decoded_transactions[:20]
+
+

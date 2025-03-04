@@ -1,23 +1,13 @@
-import os
 import json
 import asyncio
 
-from typing import List
-from langchain import hub
-from pydantic import BaseModel, Field
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-from langchain.agents import create_react_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain.agents import (AgentExecutor,
-                              create_openai_functions_agent,
-                              create_tool_calling_agent)
 
-from src.util.configuration import parse_config
-from src.agentflow.utils.shared_tools import init_llm, init_agent
+from src.util.configuration import Config
+from src.agentflow.utils.enum import AgentType
+from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
 
 
 class StreamingCallbackHandler(BaseCallbackHandler):
@@ -57,7 +47,7 @@ class RouterAgentService:
         if streaming:
             self.streaming_handler = StreamingCallbackHandler()
 
-        config = parse_config("config.json")
+        config = Config.get_config()
 
         self.llm = init_llm(service=config["llm"]["provider"],
                             model_name=config["llm"]["model"],
@@ -65,7 +55,8 @@ class RouterAgentService:
                             stream=streaming,
                             callbacks=[self.streaming_handler] if self.streaming else None)
 
-        self.prompt = hub.pull("pattern-agent/pattern-agent")
+        self.prompt = init_prompt(self.llm, AgentType.ROUTER_AGENT)
+
         self.agent = init_agent(self.llm, self.sub_agents, self.prompt)
 
         if streaming:

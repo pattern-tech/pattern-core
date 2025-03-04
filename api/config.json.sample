@@ -31,7 +31,7 @@
         "model": "gpt-4o-mini",
         "api_key": "",
         "extra_params": {
-            "host": "localhost:5000",
+            "host": "",
             "models": ""
         }
     },

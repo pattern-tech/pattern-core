@@ -54,26 +54,6 @@ class ProjectOutput(BaseModel):
         orm_mode = True
 
 
-class ToolOutput(BaseModel):
-    """
-    Schema for tool output.
-    """
-    id: UUID
-    function_name: str
-    description: str
-
-    class Config:
-        orm_mode = True
-
-
-class ModifyToolInput(BaseModel):
-    """
-    Schema for modifying project tools.
-    """
-    project_id: UUID
-    tools_id: Set[UUID]
-
-
 @router.post(
     "",
     response_model=ProjectOutput,

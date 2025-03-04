@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from langchain_core.messages.human import HumanMessage
 
 from src.db.models import Conversation
+from src.util.configuration import Config
 from src.agentflow.agents.hub import AgentHub
-from src.util.configuration import parse_config
 from src.agentflow.utils.tools_index import get_all_tools
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
@@ -163,7 +163,7 @@ class ConversationService:
         Raises:
             Exception: If associated project is not found
         """
-        config = parse_config("config.json")
+        config = Config.get_config()
 
         sub_agents = AgentHub().get_agents(config["agents"])
 

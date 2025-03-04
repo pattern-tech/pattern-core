@@ -1,18 +1,15 @@
 import os
 
-from langchain import hub
 from langchain.tools import tool
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-from langchain.agents import (
-    AgentExecutor,
-    create_openai_functions_agent,
-    create_tool_calling_agent)
+from langchain.agents import AgentExecutor
+from langchain_community.callbacks.manager import get_openai_callback
 
-from src.util.configuration import parse_config
+from src.util.configuration import Config
+from src.agentflow.utils.enum import AgentType
 from src.agentflow.utils.tools_index import get_all_tools
-from src.agentflow.utils.shared_tools import init_llm, init_agent
-from src.agentflow.utils.shared_tools import handle_exceptions, timeout
+from src.agentflow.utils.shared_tools import handle_exceptions
+from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
+
 
 @tool
 @handle_exceptions
@@ -36,16 +33,16 @@ def etherscan_agent(query: str):
     Returns:
         str: Response containing the requested Ethereum blockchain information
     """
-    config = parse_config("config.json")
+    config = Config.get_config()
 
     llm = init_llm(service=config["llm"]["provider"],
-                        model_name=config["llm"]["model"],
-                        api_key=config["llm"]["api_key"],
-                        stream=False)
+                   model_name=config["llm"]["model"],
+                   api_key=config["llm"]["api_key"],
+                   stream=False)
 
     tools = get_all_tools(tools_path="ether_scan_tools")
 
-    prompt = hub.pull("pattern-agent/eth-agent")
+    prompt = init_prompt(llm, AgentType.BLOCKCHAIN_AGENT)
 
     agent = init_agent(llm, tools, prompt)
 
@@ -53,7 +50,8 @@ def etherscan_agent(query: str):
         agent=agent,
         tools=tools,
         return_intermediate_steps=True,
-        verbose=True)
+        verbose=True,
+        stream_runnable=False)
 
     response = agent_executor.invoke({"input": query})
 

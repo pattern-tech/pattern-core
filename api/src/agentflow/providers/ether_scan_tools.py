@@ -9,15 +9,12 @@ from langchain.tools import tool
 from typing import List, Any, Optional, Dict
 
 from src.agentflow.utils.shared_tools import handle_exceptions
-from src.util.configuration import parse_config, get_service_config
+from src.util.configuration import Config
 
 
-def _get_config() -> dict:
-    return parse_config("config.json")
-
-_config = _get_config()
-_eth_rpc_config = get_service_config(_config, "eth_rpc")
-_ether_scan_config = get_service_config(_config, "etherscan")
+_config = Config.get_config()
+_eth_rpc_config = Config.get_service_config(_config, "eth_rpc")
+_ether_scan_config = Config.get_service_config(_config, "etherscan")
 
 
 @handle_exceptions

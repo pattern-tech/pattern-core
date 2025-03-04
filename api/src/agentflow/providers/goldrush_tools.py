@@ -6,15 +6,11 @@ from langchain.tools import tool
 from typing import Any, Dict, List, Optional
 
 from src.agentflow.utils.shared_tools import handle_exceptions
-from src.util.configuration import parse_config, get_service_config
+from src.util.configuration import Config
 
 
-def _get_config() -> dict:
-    return parse_config("config.json")
-
-
-_config = _get_config()
-_goldrush_config = get_service_config(_config, "goldrush")
+_config = Config.get_config()
+_goldrush_config = Config.get_service_config(_config, "goldrush")
 
 
 def _call_goldrush_api(url: str, params: Optional[Dict[str, Any]] = None) -> Dict:
