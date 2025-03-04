@@ -8,8 +8,8 @@ from web3 import Web3
 from langchain.tools import tool
 from typing import List, Any, Optional, Dict
 
-from src.agentflow.utils.shared_tools import handle_exceptions
 from src.util.configuration import Config
+from src.agentflow.utils.shared_tools import handle_exceptions
 
 
 _config = Config.get_config()
