@@ -1,17 +1,28 @@
 import re
+import functools
+import threading
 
-from typing import TypeVar
 from functools import wraps
+from typing import Any, TypeVar
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
 from multiprocessing import Process, Queue
 from langchain_together import ChatTogether
 from langchain_fireworks import ChatFireworks
+from langchain.agents import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
+from langchain.agents import (
+    create_openai_functions_agent, create_tool_calling_agent, create_react_agent)
+
+from src.share.logging import Logging
+from src.util.configuration import Config
+from src.agentflow.utils.enum import AgentType, Prompt
 
 T = TypeVar('T')
+
+_logger = Logging().get_logger()
 
 
 class TimeoutException(Exception):
@@ -35,7 +46,7 @@ def text_post_process(text):
     return text
 
 
-def timeout(seconds):
+def timeout(seconds: int):
     """
     Decorator to enforce a timeout on the execution of the decorated function.
 
@@ -95,6 +106,45 @@ def timeout(seconds):
     return decorator
 
 
+def time_limit(seconds: int):
+    """
+    Decorator that attempts to time out a function after 'seconds' using threading.
+    This approach is cross-platform, including Windows. However, it cannot
+    interrupt certain low-level system or C calls.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # A container to store the result (or exception) from the thread
+            result_container = {"result": None, "exception": None}
+
+            def target():
+                try:
+                    result_container["result"] = func(*args, **kwargs)
+                except Exception as e:
+                    result_container["exception"] = e
+
+            # Start the function in a separate thread
+            thread = threading.Thread(target=target)
+            thread.start()
+            thread.join(seconds)
+
+            # If the thread is still active, we consider it timed out
+            if thread.is_alive():
+                # (Optional) attempt to stop the thread politely if you have a cooperative approach
+                # Forcibly stopping threads in Python is tricky and not recommended
+                raise TimeoutError(
+                    f"Function '{func.__name__}' timed out after {seconds} seconds.")
+
+            # If the thread raised an exception, raise it in the main thread
+            if result_container["exception"] is not None:
+                raise result_container["exception"]
+
+            return result_container["result"]
+        return wrapper
+    return decorator
+
+
 def handle_exceptions(func: callable) -> callable:
     """
     Decorator to catch exceptions in the decorated function
@@ -121,7 +171,9 @@ def handle_exceptions(func: callable) -> callable:
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            return f"Error: {str(e)}, Class: {e.__class__.__name__}"
+            message = f"Error: {str(e)}, Class: {e.__class__.__name__}"
+            _logger.error(message)
+            return message
     return wrapper
 
 
@@ -143,6 +195,10 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
     Raises:
         NotImplementedError: If the specified service is not supported.
     """
+    config = Config.get_config()
+
+    service = config["llm"]["provider"]
+
     if service == "openai":
         return ChatOpenAI(
             model=model_name,
@@ -199,3 +255,45 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
         )
     else:
         raise NotImplementedError(f"Service {service} is not supported.")
+
+
+def init_agent(llm, tools, prompt):
+    """
+    Initialize an agent and prompt based on the specified language model.
+
+    Args:
+        llm: The language model instance to use.
+        tools: The tools to use with the agent.
+        prompt: The prompt to use with the agent.
+
+    Returns:
+        tuple: A tuple containing the agent and prompt for the specified language model.
+    """
+    if isinstance(llm, ChatOpenAI):
+        agent = create_openai_functions_agent(llm, tools, prompt)
+    elif isinstance(llm, ChatOllama):
+        agent = create_react_agent(llm, tools, prompt)
+    else:
+        agent = create_tool_calling_agent(llm, tools, prompt)
+
+    return agent
+
+
+def init_prompt(llm: Any, agent_type: AgentType):
+    """
+    Initialize a prompt based on the specified language model and agent type.
+
+    Args:
+        llm: The language model instance to use.
+        agent_type: The type of agent to use.
+
+    Returns:
+        Prompt: The prompt to use with the agent.
+    """
+    if isinstance(llm, ChatOllama):
+        return Prompt.REACT_AGENT
+    else:
+        if agent_type == AgentType.ROUTER_AGENT:
+            return Prompt.ROUTER_AGENT
+        else:
+            return Prompt.BLOCKCHAIN_AGENT

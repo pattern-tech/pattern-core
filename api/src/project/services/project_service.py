@@ -1,10 +1,10 @@
 from uuid import UUID
+from typing import Set
 from typing import List
 from sqlalchemy.orm import Session
 
-from src.db.models import Project, Tool
+from src.db.models import Project
 from src.project.repositories.project_repository import ProjectRepository
-from typing import Set
 
 
 class ProjectService:
@@ -101,30 +101,3 @@ class ProjectService:
             None
         """
         self.repository.delete(db_session, project_id, user_id)
-
-    def get_project_tools(self, db_session: Session, project_id: UUID, limit: int = None, offset: int = None) -> List[Tool]:
-        """
-        Retrieves all tools associated with a project.
-
-        Args:
-            db_session (Session): The database session.
-            project_id (UUID): The ID of the project.
-
-        Returns:
-            List[dict]: A list of dictionaries representing the tools associated with the project.
-        """
-        return self.repository.get_tools_for_project(db_session, project_id, limit, offset)
-
-    def modify_project_tools(self, db_session: Session, project_id: UUID, tools_id: Set[UUID]) -> None:
-        """
-        Adds a tool to a project.
-
-        Args:
-            db_session (Session): The database session.
-            project_id (UUID): The ID of the project.
-            tools_id (Set[UUID]): A set of UUIDs representing the tools to add.
-
-        Returns:
-            None
-        """
-        return self.repository.modify_project_tools(db_session, project_id, tools_id)

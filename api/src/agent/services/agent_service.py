@@ -1,101 +1,13 @@
-import os
 import json
 import asyncio
 
-from typing import List
-from langchain import hub
-from pydantic import BaseModel, Field
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
-from langchain.agents import create_react_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain_core.callbacks import StdOutCallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain.agents import (AgentExecutor,
-                              create_openai_functions_agent,
-                              create_tool_calling_agent)
 
-from src.agent.tools.shared_tools import init_llm
-
-
-class PlanStep(BaseModel):
-    """Represents a single step with an action."""
-
-    task: str = Field(description="Task definition")
-    tools: List[str] = []
-    action: str = Field(description="The action to take for this step.")
-
-
-class Plan(BaseModel):
-    """Plan to follow in the future."""
-
-    steps: List[PlanStep] = Field(
-        description="Different steps to follow, should be in sorted order"
-    )
-
-
-class SimplePlan(BaseModel):
-    """Plan to follow in future"""
-
-    steps: List[str] = Field(
-        description="different steps to follow, should be in sorted order"
-    )
-
-
-class AgentService:
-    def __init__(self):
-        pass
-
-    def planner(self, tools: list):
-        planner_prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    f"""
-                    For the given objective, create a clear, step-by-step plan with the following requirements:
-
-                    Each step should outline a specific task that contributes to achieving the final answer.
-                    Avoid unnecessary or redundant steps.
-                    Ensure that each step includes all necessary information to be independently actionable.
-                    The result of the final step should directly provide the solution.
-
-                    You have access to the following tools:
-                    {tools}
-
-                    Use these guidelines to decide the action for each task:
-
-                    If the task requires a tool and the tool is available, set action to `tool_picked` and specify the tools.
-                    If the task can be done without a tool, set action to `no_tool_need`.
-                    If the task cannot be completed without a tool and no suitable tool is available, set action to `no_tool_found`.
-                    """,
-                ),
-                ("placeholder", "{messages}"),
-            ]
-        )
-
-        planner = planner_prompt | ChatOpenAI(
-            model="gpt-4o-mini", temperature=0
-        ).with_structured_output(Plan)
-        return planner
-
-    def simple_planner(self):
-        planner_prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    """For the given objective, come up with a simple step by step plan. \
-        This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps. \
-        The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps.""",
-                ),
-                ("placeholder", "{messages}"),
-            ]
-        )
-
-        planner = planner_prompt | ChatOpenAI(
-            model="gpt-4o-mini", temperature=0
-        ).with_structured_output(SimplePlan)
-        return planner
+from src.util.configuration import Config
+from src.agentflow.utils.enum import AgentType
+from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
 
 
 class StreamingCallbackHandler(BaseCallbackHandler):
@@ -120,13 +32,14 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         self.queue.put_nowait(json.dumps(event) + "\n")
 
 
-class DataProviderAgentService:
+class RouterAgentService:
     """
-    Agent service that uses LangChain to generate responses and streams them token-by-token.
+    RouterAgentService is responsible for routing the input message to the appropriate agent
+    and returning the response.
     """
 
-    def __init__(self, tools, memory=None, streaming: bool = True):
-        self.tools = tools
+    def __init__(self, sub_agents, memory=None, streaming: bool = True):
+        self.sub_agents = sub_agents
         self.memory = memory
         self.streaming = streaming
 
@@ -134,32 +47,22 @@ class DataProviderAgentService:
         if streaming:
             self.streaming_handler = StreamingCallbackHandler()
 
-        self.llm = init_llm(service=os.environ["LLM_SERVICE"],
-                            model_name=os.environ["LLM_MODEL"],
-                            api_key=os.environ["LLM_API_KEY"],
+        config = Config.get_config()
+
+        self.llm = init_llm(service=config["llm"]["provider"],
+                            model_name=config["llm"]["model"],
+                            api_key=config["llm"]["api_key"],
                             stream=streaming,
-                            callbacks=[self.streaming_handler])
+                            callbacks=[self.streaming_handler] if self.streaming else None)
 
-        if isinstance(self.llm, ChatOpenAI):
-            self.prompt = hub.pull("pattern-agent/pattern-agent")
+        self.prompt = init_prompt(self.llm, AgentType.ROUTER_AGENT)
 
-            self.agent = create_openai_functions_agent(
-                self.llm, self.tools, self.prompt)
-        elif isinstance(self.llm, ChatOllama):
-            self.prompt = hub.pull("hwchase17/react")
-
-            self.agent = create_react_agent(
-                llm=self.llm, tools=self.tools, prompt=self.prompt)
-        else:
-            self.prompt = hub.pull("pattern-agent/pattern-agent")
-
-            self.agent = create_tool_calling_agent(
-                llm=self.llm, tools=self.tools, prompt=self.prompt)
+        self.agent = init_agent(self.llm, self.sub_agents, self.prompt)
 
         if streaming:
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.tools,
+                tools=self.sub_agents,
                 return_intermediate_steps=True,
                 verbose=True,
                 callbacks=[self.streaming_handler]
@@ -167,7 +70,7 @@ class DataProviderAgentService:
         else:
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.tools,
+                tools=self.sub_agents,
                 return_intermediate_steps=True,
                 verbose=True
             )

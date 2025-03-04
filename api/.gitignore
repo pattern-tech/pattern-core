@@ -15,6 +15,7 @@ dist/
 
 # Log files
 *.log
+/api_logs
 
 # Package files
 *.jar

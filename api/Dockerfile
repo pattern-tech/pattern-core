@@ -16,4 +16,4 @@ EXPOSE 8000
 
 ENV MODULE_NAME="src.main"
 
-CMD ["sh", "-c", "uvicorn $MODULE_NAME:app --host 0.0.0.0"]
+CMD ["sh", "-c", "make watch prod"]
