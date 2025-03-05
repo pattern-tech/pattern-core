@@ -8,7 +8,6 @@ To install the required dependencies, run:
 
 ```sh
 cp .env.example .env
-cp config.json.example config.json
 pip install -r requirements.txt
 ```
 
