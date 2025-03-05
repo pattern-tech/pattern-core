@@ -8,8 +8,9 @@ from src.util.configuration import Config
 from src.agentflow.utils.shared_tools import handle_exceptions
 
 _config = Config.get_config()
-_moralis_config = Config.get_service_config(_config, "moralis")
+_moralis_config = Config.get_service_config(_config, "MORALIS")
 
+_MORALIS_URL = "https://deep-index.moralis.io/api/v2"
 
 @tool
 @handle_exceptions
@@ -226,7 +227,7 @@ def get_token_approvals(wallet_address: str, output_include: list[str], cursor: 
 
             - block_number, block_timestamp, transaction_hash, value, value_formatted, token, spender
     """
-    base_url = _moralis_config["url"]
+    base_url = _MORALIS_URL
     api_url = f"{base_url}/wallets/{wallet_address}/approvals"
 
     params = {'chain': 'eth'}

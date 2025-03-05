@@ -9,7 +9,9 @@ from src.agentflow.utils.shared_tools import handle_exceptions
 
 
 _config = Config.get_config()
-_goldrush_config = Config.get_service_config(_config, "goldrush")
+_goldrush_config = Config.get_service_config(_config, "GOLDRUSH")
+
+_GOLDRUSH_URL = "https://api.covalenthq.com"
 
 
 def _call_goldrush_api(url: str, params: Optional[Dict[str, Any]] = None) -> Dict:
@@ -49,7 +51,7 @@ def get_wallet_activity(wallet_address: str, output_include: list[str]) -> List[
             - name, chain_id, is_testnet, db_schema_name, label, category_label, logo_url,
               black_logo_url, white_logo_url, color_theme, is_appchain, appchain_of, last_seen_at
     """
-    base_url = _goldrush_config["url"]
+    base_url = _GOLDRUSH_URL
     url = f"{base_url}/v1/address/{wallet_address}/activity/"
     data = _call_goldrush_api(url)
     results = data["data"]["items"]
@@ -82,7 +84,7 @@ def get_balance_for_address(wallet_address: str, output_include: list[str]) -> s
               supports_erc, logo_url, logo_urls, last_transferred_at, native_token, type, is_spam, balance, balance_24h,
               quote_rate, quote_rate_24h, quote, quote_24h, pretty_quote, pretty_quote_24h, protocol_metadata.
     """
-    base_url = _goldrush_config["url"]
+    base_url = _GOLDRUSH_URL
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/address/{wallet_address}/balances_v2/"
     data = _call_goldrush_api(url)
@@ -117,7 +119,7 @@ def get_wallet_transactions(wallet_address: str, output_include: List[str], page
               gas_offered, gas_spent, gas_price, fees_paid, gas_quote, pretty_gas_quote, gas_quote_rate, explorers,
               log_events
     """
-    base_url = _goldrush_config["url"]
+    base_url = _GOLDRUSH_URL
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/address/{wallet_address}/transactions_v3/page/{page}/"
     data = _call_goldrush_api(url)
@@ -142,7 +144,7 @@ def get_transactions_summary(wallet_address: str) -> Dict:
     Returns:
         Dict: The transactions summary data.
     """
-    base_url = _goldrush_config["url"]
+    base_url = _GOLDRUSH_URL
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/address/{wallet_address}/transactions_summary/"
     data = _call_goldrush_api(url)
@@ -170,7 +172,7 @@ def get_transaction_detail(tx_hash: str, output_include: List[str]) -> List[Dict
               gas_offered, gas_spent, gas_price, fees_paid, gas_quote, pretty_gas_quote, gas_quote_rate, explorers,
               log_events, internal_transfers, state_changes, input_data
     """
-    base_url = _goldrush_config["url"]
+    base_url = _GOLDRUSH_URL
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/transaction_v2/{tx_hash}/"
     data = _call_goldrush_api(url)
@@ -203,7 +205,7 @@ def get_token_approvals(wallet_address: str, output_include: List[str]) -> Dict:
               quote_rate, balance, balance_quote, pretty_balance_quote, value_at_risk, value_at_risk_quote,
               pretty_value_at_risk_quote, spenders
     """
-    base_url = _goldrush_config["url"]
+    base_url = _GOLDRUSH_URL
     chain_name = "eth-mainnet"
     url = f"{base_url}/v1/{chain_name}/approvals/{wallet_address}/"
     data = _call_goldrush_api(url)
