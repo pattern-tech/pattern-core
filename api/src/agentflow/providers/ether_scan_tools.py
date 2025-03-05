@@ -16,7 +16,7 @@ _config = Config.get_config()
 _ether_scan_config = Config.get_service_config(_config, "ETHER_SCAN")
 
 _ETHERSCAN_URL = "https://api.etherscan.io/v2/api"
-_ETH_RPC = "https://eth-pokt.nodies.app"
+_ETH_RPC = os.environ["ETH_RPC"]
 
 @handle_exceptions
 def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
