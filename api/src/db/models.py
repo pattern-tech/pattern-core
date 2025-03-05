@@ -4,16 +4,11 @@ import uuid
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 from sqlalchemy.orm import relationship, declared_attr
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import (
-    Table,
-    Boolean,
     Column,
     String,
-    Integer,
-    Float,
-    Text,
     DateTime,
     ForeignKey,
     create_engine,

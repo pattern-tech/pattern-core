@@ -53,7 +53,10 @@ def etherscan_agent(query: str):
         verbose=True,
         stream_runnable=False)
 
-    response = agent_executor.invoke({"input": query})
+    with get_openai_callback() as cb:
+        response = agent_executor.invoke({"input": query})
+
+        print(cb)
 
     try:
         agent_steps = []
@@ -63,6 +66,6 @@ def etherscan_agent(query: str):
                 "function_args": step[0].tool_input,
                 "function_output": step[-1]
             })
-        return {"agent_steps": agent_steps}
+        return {"agent_steps": agent_steps, "token_usage": cb.total_tokens}
     except:
         return "no tools called inside agent"

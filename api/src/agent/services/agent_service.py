@@ -1,6 +1,7 @@
 import json
 import asyncio
 
+from uuid import UUID
 from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
@@ -38,10 +39,11 @@ class RouterAgentService:
     and returning the response.
     """
 
-    def __init__(self, sub_agents, memory=None, streaming: bool = True):
+    def __init__(self, sub_agents, memory=None, streaming: bool = True, conversation_id: UUID = None):
         self.sub_agents = sub_agents
         self.memory = memory
         self.streaming = streaming
+        self.conversation_id = conversation_id
 
         # Set up the streaming callback if streaming is enabled.
         if streaming:
@@ -99,6 +101,7 @@ class RouterAgentService:
             - If memory is not enabled, the agent's response is invoked asynchronously using `arun`.
             - The method clears any leftover tokens in the queue before starting to stream the response.
         """
+
         # Clear any leftover tokens.
         while not self.streaming_handler.queue.empty():
             self.streaming_handler.queue.get_nowait()
@@ -125,8 +128,14 @@ class RouterAgentService:
                 yield token
             except asyncio.TimeoutError:
                 continue
-
         result = await task
+
+        # TODO: function call should be saved in DB
+        for function_call in result["intermediate_steps"][0][1]["agent_steps"]:
+            print(function_call["function_name"])
+
+        print(result["intermediate_steps"][0][1]["token_usage"])
+        print(result["chat_history"])
 
     def ask(self, message: str):
         """
@@ -142,8 +151,17 @@ class RouterAgentService:
         Otherwise, it uses the agent executor to invoke the response.
         """
         if self.memory:
-            return self.agent_with_chat_history.invoke(
+            result = self.agent_with_chat_history.invoke(
                 input={"input": message},
                 config={"configurable": {"session_id": "ـ"}})
         else:
-            return self.agent_executor.invoke({"input": message})
+            result = self.agent_executor.invoke({"input": message})
+
+        # TODO: function call should be saved in DB
+        for function_call in result["intermediate_steps"][0][1]["agent_steps"]:
+            print(function_call["function_name"])
+
+        print(result["intermediate_steps"][0][1]["token_usage"])
+        print(result["chat_history"])
+
+        return result

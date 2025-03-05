@@ -170,7 +170,7 @@ class ConversationService:
         memory = self.memory_service.get_memory(conversation_id)
 
         agent = RouterAgentService(
-            sub_agents=sub_agents, memory=memory, streaming=stream)
+            sub_agents=sub_agents, memory=memory, streaming=stream, conversation_id=conversation_id)
 
         if stream:
             # Stream tokens as they become available.
