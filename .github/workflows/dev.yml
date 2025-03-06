@@ -78,7 +78,7 @@ jobs:
               -e LLM_MODEL=${{ secrets.LLM_MODEL }} \
               -e LLM_API_KEY=${{ secrets.LLM_API_KEY }} \
               -e AGENTS=${{ secrets.AGENTS }} \
-              -e SENTRY_DSN=${{ secrets.SENTRY_DSN }} \
+              -e SENTRY_DNS=${{ secrets.SENTRY_DNS }} \
               patterntechnology/pattern-core-api:latest
 
             # Wait a few seconds to give the container time to start

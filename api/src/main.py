@@ -16,10 +16,10 @@ from src.share.logging import Logging
 load_dotenv()
 _logger = Logging().get_logger()
 
-if os.environ.get("SENTRY_DSN"):
+if os.environ.get("SENTRY_DNS"):
     # Initialize Sentry with your DSN
     sentry_sdk.init(
-        dsn=os.environ.get("SENTRY_DSN"),
+        dsn=os.environ.get("SENTRY_DNS"),
         # Add data like request headers and IP for users,
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=True,
