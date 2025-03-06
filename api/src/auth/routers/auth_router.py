@@ -80,7 +80,7 @@ def verify(input: VerifyInput):
         input.message, input.signature)
 
     payload = {"id": "{}:{}".format(
-        verification_result.chain_id, verification_result.address)}
+        verification_result["chain_id"], verification_result["address"])}
 
     token = generate_access_token(data=payload)
     return global_response(
