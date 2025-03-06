@@ -16,9 +16,9 @@ class AgentHub:
 
     def __init__(self):
         self.agents = {
-            "etherscan": ether_scan_agent.etherscan_agent,
-            "goldrush": goldrush_agent.goldrush_agent,
-            "moralis": moralis_agent.moralis_agent
+            "ETHER_SCAN": ether_scan_agent.etherscan_agent,
+            "GOLDRUSH": goldrush_agent.goldrush_agent,
+            "MORALIS": moralis_agent.moralis_agent
         }
 
     def get_agents(self, agent_names: List[str]) -> List[Any]:

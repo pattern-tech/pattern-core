@@ -8,57 +8,16 @@ To install the required dependencies, run:
 
 ```sh
 cp .env.example .env
-cp config.json.example config.json
 pip install -r requirements.txt
 ```
 
-Note: Fill up the .env and config.json file according to your config
+Note: Fill up the `.env` file according to your config
 
-### Configuration
-Configuration file is in `config.json`. Edit it according to your needs.
 
 Notes:
 - Add your own tool services or use existing ones
-- Add provided agents. (on top of each service tool is an agent so the name of agent should be same as service name)
+- Add provided agents (currently : ``ETHER_SCAN, MORALIS, GOLDRUSH``)
 - Choose the llm provider
-  <table>
-  <thead>
-    <tr>
-      <th>Supported Provider</th>
-      <th>Recommended Model</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>openai</td>
-      <td>gpt-4o-mini</td>
-    </tr>
-    <tr>
-      <td>google</td>
-      <td>gemini-2.0-flash</td>
-    </tr>
-    <tr>
-      <td>together</td>
-      <td>deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free</td>
-    </tr>
-    <tr>
-      <td>ollama</td>
-      <td>llama3.3</td>
-    </tr>
-    <tr>
-      <td>groq</td>
-      <td>llama-3.3-70b-versatile</td>
-    </tr>
-    <tr>
-      <td>firework</td>
-      <td>accounts/fireworks/models/firefunction-v2</td>
-    </tr>
-    <tr>
-      <td>huggingface</td>
-      <td>meta-llama/Llama-3.3-70B-Instruct</td>
-    </tr>
-  </tbody>
-</table>
 
 ### Running the Application
 

@@ -13,9 +13,10 @@ from src.agentflow.utils.shared_tools import handle_exceptions
 
 
 _config = Config.get_config()
-_eth_rpc_config = Config.get_service_config(_config, "eth_rpc")
-_ether_scan_config = Config.get_service_config(_config, "etherscan")
+_ether_scan_config = Config.get_service_config(_config, "ETHER_SCAN")
 
+_ETHERSCAN_URL = "https://api.etherscan.io/v2/api"
+_ETH_RPC = os.environ["ETH_RPC"]
 
 @handle_exceptions
 def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
@@ -29,7 +30,7 @@ def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
     Returns:
         Dict: A dictionary representing the contract ABI.
     """
-    url = _ether_scan_config["url"]
+    url = _ETHERSCAN_URL
     params = {
         "chainid": "1",
         "module": "contract",
@@ -58,7 +59,7 @@ def fetch_contract_source_code(contract_address: str, api_key: str) -> str:
     Returns:
         str: The contract source code.
     """
-    url = _ether_scan_config["url"]
+    url = _ETHERSCAN_URL
     params = {
         "chainid": "1",
         "module": "contract",
@@ -100,7 +101,7 @@ def timestamp_to_block_number(timestamp: int, api_key: str) -> int:
     Returns:
         int: The closest block number.
     """
-    url = _ether_scan_config["url"]
+    url = _ETHERSCAN_URL
     params = {
         "chainid": "1",
         "module": "block",
@@ -229,7 +230,7 @@ def get_contract_events(
     api_key = _ether_scan_config["api_key"]
     abi = fetch_contract_abi(contract_address, api_key)
 
-    web3 = Web3(Web3.HTTPProvider(_eth_rpc_config["url"]))
+    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
     # Resolve the actual event name case-insensitively
@@ -262,7 +263,7 @@ def get_latest_eth_block_number() -> int:
     Returns:
         int: The current block number on the Ethereum mainnet.
     """
-    web3 = Web3(Web3.HTTPProvider(_eth_rpc_config["url"]))
+    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
     return web3.eth.block_number
 
 
