@@ -2,8 +2,7 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
-from src.workspace.services.workspace_service import WorkspaceService
-from src.db.models import UserModel
+from src.db.models import UserModel, WhiteList
 from src.user.repositories.user_repository import UserRepository
 
 
@@ -11,19 +10,25 @@ class UserService:
     def __init__(self):
         self.repository = UserRepository()
 
-    def create_user(self, db_session: Session, email: str, password: str) -> UserModel:
+    def create_user(self, db_session: Session, wallet_address: str, chain_id: int, email: str = None, password: str = None,
+                    ) -> UserModel:
         """
         Creates a new user.
 
         Args:
             db_session (Session): The database session.
+            wallet_address (str): The wallet address of the user.
+            chain_id (int): The chain ID of the user.
             email (str): The email of the user.
             password (str): The password of the user.
 
         Returns:
             UserModel: The created user instance.
         """
-        _user = UserModel(email=email, password=password)
+        if email:
+            email = email.lower()
+        _user = UserModel(wallet_address=wallet_address,
+                          chain_id=chain_id, email=email, password=password)
         user = self.repository.create(db_session, _user)
 
         return user
@@ -46,6 +51,37 @@ class UserService:
         if not user:
             raise Exception("User not found")
         return user
+
+    def get_user_by_wallet_address(self, wallet_address: str, db_session: Session) -> UserModel:
+        """
+        Retrieves a user by their wallet address.
+
+        Args:
+            wallet_address (str): The wallet address of the user.
+            db_session (Session): The database session.
+
+        Returns:
+            UserModel: The User instance.
+
+        Raises:
+            Exception: If the user is not found.
+        """
+        user = self.repository.get_by_wallet_address(
+            db_session, wallet_address)
+
+        return user
+
+    def get_whitelist(self, db_session: Session) -> List[UserModel]:
+        """
+        Retrieves all whitelisted users.
+
+        Args:
+            db_session (Session): The database session.
+
+        Returns:
+            List[UserModel]: A list of whitelisted User instances.
+        """
+        return self.repository.get_whitelist(db_session)
 
     def list_users(self, db_session: Session) -> List[UserModel]:
         """

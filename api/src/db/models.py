@@ -55,8 +55,12 @@ class UserModel(ParentBase):
         unique=True,
         nullable=False,
     )
-    email = Column(String, unique=True, index=True, nullable=False)
+
+    email = Column(String, unique=True, index=True, nullable=True)
     password = Column(String, nullable=True)
+
+    wallet_address = Column(String, unique=True, index=True, nullable=False)
+    chain_id = Column(Integer, nullable=False)
 
     # Relationships
     workspaces = relationship(
@@ -69,6 +73,49 @@ class UserModel(ParentBase):
     conversations = relationship(
         "Conversation", back_populates="user", cascade="all, delete-orphan"
     )
+
+    usages = relationship("QueryUsage", back_populates="user")
+
+
+class UsageSetting(ParentBase):
+    __tablename__ = "usage_settings"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    provider = Column(String, nullable=False)
+    max_query = Column(Integer, nullable=False)
+
+
+class QueryUsage(ParentBase):
+    __tablename__ = "query_usage"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        "users.id"), nullable=False)
+
+    provider = Column(String, nullable=False)
+
+    # Relationships
+    user = relationship("UserModel", back_populates="usages")
+
+
+class WhiteList(ParentBase):
+    __tablename__ = "whitelist"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        "users.id"), primary_key=True, nullable=False)
+    max_query = Column(Integer, nullable=False)
 
 
 class Workspace(ParentBase):

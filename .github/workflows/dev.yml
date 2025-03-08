@@ -73,7 +73,7 @@ jobs:
               -e MORALIS_API_KEY=${{ secrets.MORALIS_API_KEY }} \
               -e ETHER_SCAN_API_KEY=${{ secrets.ETHER_SCAN_API_KEY }} \
               -e GOLDRUSH_API_KEY=${{ secrets.GOLDRUSH_API_KEY }} \
-              -e ETH_RPC_URL=${{ secrets.ETH_RPC_URL }} \
+              -e ETH_RPC=${{ secrets.ETH_RPC }} \
               -e LLM_PROVIDER=${{ secrets.LLM_PROVIDER }} \
               -e LLM_MODEL=${{ secrets.LLM_MODEL }} \
               -e LLM_API_KEY=${{ secrets.LLM_API_KEY }} \

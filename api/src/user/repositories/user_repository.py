@@ -1,8 +1,8 @@
 from uuid import UUID
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
-from src.db.models import UserModel
+from src.db.models import UserModel, WhiteList
 from src.share.base_repository import BaseRepository
 
 
@@ -11,20 +11,39 @@ class UserRepository(BaseRepository[UserModel]):
     Repository class for handling CRUD operations on the UserModel.
     """
 
-    def get_by_id(self, db_session: Session, id: UUID, user_id: UUID = None) -> Optional[UserModel]:
+    def get_by_id(self, db_session: Session, user_id: UUID = None) -> Optional[UserModel]:
         """
         Retrieves a user by their ID.
 
         Args:
             db_session (Session): The database session to use.
-            id (UUID): The unique identifier of the user.
+            user_id (UUID): The unique identifier of the user.
 
         Returns:
             Optional[UserModel]: The user if found, otherwise None.
         """
-        return db_session.query(UserModel).filter(UserModel.id == id).first()
+        return db_session.query(UserModel).options(
+            load_only(UserModel.id, UserModel.wallet_address,
+                      UserModel.email, UserModel.chain_id)
+        ).filter(UserModel.id == user_id).first()
 
-    def get_all(self, db_session: Session, user_id: UUID = None) -> list[UserModel]:
+    def get_by_wallet_address(self, db_session: Session, wallet_address: str) -> Optional[UserModel]:
+        """
+        Retrieves a user by their wallet address.
+
+        Args:
+            db_session (Session): The database session to use.
+            wallet_address (str): The wallet address of the user.
+
+        Returns:
+            Optional[UserModel]: The user if found, otherwise None.
+        """
+        return db_session.query(UserModel).options(
+            load_only(UserModel.id, UserModel.wallet_address,
+                      UserModel.email, UserModel.chain_id)
+        ).filter(UserModel.wallet_address == wallet_address).first()
+
+    def get_all(self, db_session: Session) -> list[UserModel]:
         """
         Retrieves all users.
 
@@ -34,7 +53,9 @@ class UserRepository(BaseRepository[UserModel]):
         Returns:
             List[UserModel]: A list of all users.
         """
-        return db_session.query(UserModel).all()
+        return db_session.query(UserModel).options(
+            load_only(UserModel.id, UserModel.wallet_address,
+                      UserModel.email, UserModel.chain_id)).all()
 
     def create(self, db_session: Session, user: UserModel) -> UserModel:
         """
@@ -52,19 +73,19 @@ class UserRepository(BaseRepository[UserModel]):
         db_session.refresh(user)
         return user
 
-    def update(self, db_session: Session, id: UUID, user_data: dict, user_id: UUID = None) -> UserModel:
+    def update(self, db_session: Session, user_id: UUID, user_data: dict) -> UserModel:
         """
         Updates an existing user.
 
         Args:
             db_session (Session): The database session to use.
-            id (UUID): The unique identifier of the user to update.
+            user_id (UUID): The unique identifier of the user to update.
             user_data (dict): A dictionary of fields to update.
 
         Returns:
             UserModel: The updated user instance.
         """
-        user = self.get_by_id(db_session, id)
+        user = self.get_by_id(db_session, user_id)
         if not user:
             raise Exception("User not found")
         for key, value in user_data.items():
@@ -73,19 +94,31 @@ class UserRepository(BaseRepository[UserModel]):
         db_session.refresh(user)
         return user
 
-    def delete(self, db_session: Session, id: UUID, user_id: UUID = None) -> None:
+    def delete(self, db_session: Session, user_id: UUID = None) -> None:
         """
         Deletes a user by their ID.
 
         Args:
             db_session (Session): The database session to use.
-            id (UUID): The unique identifier of the user to delete.
+            user_id (UUID): The unique identifier of the user to delete.
 
         Raises:
             Exception: If the user is not found.
         """
-        user = self.get_by_id(db_session, id)
+        user = self.get_by_id(db_session, user_id)
         if not user:
             raise Exception("User not found")
         db_session.delete(user)
         db_session.commit()
+
+    def get_whitelist(self, db_session: Session) -> list[WhiteList]:
+        """
+        Retrieves all whitelisted users.
+
+        Args:
+            db_session (Session): The database session to use.
+
+        Returns:
+            List[WhiteList]: A list of all whitelisted users.
+        """
+        return db_session.query(WhiteList).all()
