@@ -272,6 +272,8 @@ async def send_message(
         dict: A JSON response containing the complete message data if `stream` is false.
     """
     try:
+        service.check_user_eligibility(db, user_id)
+
         if input.stream:
             return StreamingResponse(
                 service.send_message(db,

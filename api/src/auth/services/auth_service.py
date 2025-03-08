@@ -82,20 +82,19 @@ class AuthService:
         if existing_user:
             raise HTTPException(status_code=400, detail="User already exists")
 
-        # Hash the user's password and create a new user record
-        if input.email:
-            hashed_password = hash_password(input.password)
-            new_user = UserModel(email=input.email.lower(),
-                                 password=hashed_password,
-                                 wallet_address=input.wallet_address,
-                                 chain_id=input.chain_id)
-        else:
-            new_user = UserModel(
-                wallet_address=input.wallet_address,
-                chain_id=input.chain_id
-            )
-        db.add(new_user)
-        db.commit()
+        # # Create a new user record
+        if input.email and input.password:
+            existing_user = db.query(UserModel).filter_by(
+                email=input.email.lower()).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=400, detail="This email is already exists")
+
+        if input.password:
+            input.password = hash_password(input.password)
+
+        new_user = self.user_service.create_user(
+            db, input.wallet_address, input.chain_id, input.email, input.password, )
 
         self.workspace_service.create_workspace(db, "Default", new_user.id)
 
@@ -116,6 +115,7 @@ class AuthService:
         """
         # Fetch the user from the database using the provided email
         user = db.query(UserModel).filter_by(email=email).first()
+        print(password, user.password)
         if not user:
             raise HTTPException(
                 status_code=401, detail="Incorrect email or password")

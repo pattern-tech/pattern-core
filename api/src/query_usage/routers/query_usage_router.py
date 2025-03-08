@@ -54,7 +54,6 @@ class QueryUsageOutput(BaseModel):
         orm_mode = True
 
 
-
 @router.get(
     "/{query_usage_id}",
     response_model=QueryUsageOutput,
@@ -96,7 +95,7 @@ def get_query_usage(
 )
 def get_all_query_usages(
     provider: Optional[str] = None,
-    duration: Optional[datetime] = timedelta(minutes=5),
+    duration: Optional[timedelta] = timedelta(hours=24),
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),
     service: QueryUsageService = Depends(get_query_usage_service),

@@ -50,6 +50,6 @@ def get_user_staked_tokens(wallet_address: str, provider: str) -> List[Dict[str,
         for holder in holders:
             if holder["address"] == wallet_address:
                 return holder["staked"]
-        raise NotFoundError(f"No User found with address: {wallet_address}")
+        return 0
     else:
         raise NotImplementedError(f"{provider} not implemented")

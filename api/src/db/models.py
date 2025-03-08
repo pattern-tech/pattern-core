@@ -110,6 +110,14 @@ class QueryUsage(ParentBase):
     user = relationship("UserModel", back_populates="usages")
 
 
+class WhiteList(ParentBase):
+    __tablename__ = "whitelist"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey(
+        "users.id"), primary_key=True, nullable=False)
+    max_query = Column(Integer, nullable=False)
+
+
 class Workspace(ParentBase):
     __tablename__ = "workspaces"
 

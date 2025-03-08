@@ -2,6 +2,7 @@ from uuid import UUID
 from typing import List
 from datetime import timedelta
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
 from langchain_core.messages.human import HumanMessage
 
 from src.util.configuration import Config
@@ -137,6 +138,56 @@ class ConversationService:
         """
         return self.repository.get_project_associated_with_conversation(db_session, conversation_id)
 
+    def check_user_eligibility(self, db_session: Session, user_id: UUID) -> bool:
+        """
+        Checks if a user is eligible to use the service by checking their payment status.
+
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user to check.
+
+        Returns:
+            bool: True if the user is eligible, False otherwise.
+
+        Raises:
+            Exception: If the user is not eligible, an exception is raised with a message explaining why.
+        """
+        user = self.user_service.get_user(db_session, user_id)
+
+        whitelist = self.user_service.get_whitelist(db_session)
+
+        # check user payment
+        for wl in whitelist:
+            if str(user_id) == str(wl.user_id):
+                max_allowed_query = wl.max_query
+                break
+        else:
+            staked_morpheus = get_user_staked_tokens(
+                wallet_address=user.wallet_address, provider="morpheus")
+
+            if staked_morpheus == 0:
+                raise Exception(
+                    "You need to stake Morpheus tokens to use this service")
+
+            usage_setting = self.query_usage_service.get_usage_setting(
+                db_session)
+            max_allowed_query = 0
+            for setting in usage_setting:
+                if setting.provider == "morpheus":
+                    max_allowed_query = setting.max_query * \
+                        (int(staked_morpheus) / 1e18)
+
+        user_query_usage_until_previous_24h = self.query_usage_service.get_all_query_usages(
+            db_session, user_id, "morpheus",
+            timedelta(hours=24))
+
+        if len(user_query_usage_until_previous_24h) >= max_allowed_query:
+            raise Exception(
+                "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
+            )
+
+        return True
+
     async def send_message(
         self,
         db_session: Session,
@@ -169,28 +220,6 @@ class ConversationService:
             Exception: If associated project is not found
         """
 
-        user = self.user_service.get_user(db_session, user_id)
-
-        # check user payment
-        staked_morpheus = get_user_staked_tokens(
-            wallet_address=user.wallet_address, provider="morpheus")
-
-        usage_setting = self.query_usage_service.get_usage_setting(db_session)
-        max_allowed_query = 0
-        for setting in usage_setting:
-            if setting.provider == "morpheus":
-                max_allowed_query = setting.max_query * \
-                    (int(staked_morpheus) / 1e18)
-
-        user_query_usage_until_previous_24h = self.query_usage_service.get_all_query_usages(
-            db_session, user_id, "morpheus",
-            timedelta(hours=24))
-
-        if len(user_query_usage_until_previous_24h) >= max_allowed_query:
-            raise Exception(
-                "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
-            )
-
         config = Config.get_config()
 
         sub_agents = AgentHub().get_agents(config["agents"])
@@ -201,9 +230,14 @@ class ConversationService:
             sub_agents=sub_agents, memory=memory, streaming=stream)
 
         if stream:
-            # Stream tokens as they become available.
-            async for token in agent.stream(message):
-                yield token
+            try:
+                # Stream tokens as they become available.
+                async for token in agent.stream(message):
+                    yield token
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+                )
         else:
             result = agent.ask(message)
 
@@ -224,7 +258,8 @@ class ConversationService:
             user_id=user_id,
             provider="morpheus",
         )
-        self.query_usage_service.create_query_usage(db_session, query_usage)
+        self.query_usage_service.create_query_usage(
+            db_session, query_usage)
 
     def get_history(
         self,
