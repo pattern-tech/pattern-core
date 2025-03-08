@@ -77,6 +77,7 @@ def verify(input: VerifyInput, db: Session = Depends(database.get_db)):
     - **message**: A SIWE message
     - **signature**: User's signature for the message
     """
+
     user = auth.verify_signature(
         input.message, input.signature, db)
 
