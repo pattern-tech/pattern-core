@@ -24,6 +24,19 @@ class UserRepository(BaseRepository[UserModel]):
         """
         return db_session.query(UserModel).filter(UserModel.id == id).first()
 
+    def get_by_wallet_address(self, db_session: Session, wallet_address: str) -> Optional[UserModel]:
+        """
+        Retrieves a user by their wallet address.
+
+        Args:
+            db_session (Session): The database session to use.
+            wallet_address (str): The wallet address of the user.
+
+        Returns:
+            Optional[UserModel]: The user if found, otherwise None.
+        """
+        return db_session.query(UserModel).filter(UserModel.wallet_address == wallet_address).first()
+
     def get_all(self, db_session: Session, user_id: UUID = None) -> list[UserModel]:
         """
         Retrieves all users.

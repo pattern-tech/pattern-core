@@ -1,14 +1,16 @@
+from siwe import SiweMessage
 from fastapi import HTTPException
-from pydantic import BaseModel, Field, EmailStr
 from sqlalchemy.orm import Session
-from src.workspace.services.workspace_service import WorkspaceService
-from src.auth.utils.bcrypt_helper import hash_password, verify_password
+from pydantic import BaseModel, Field, EmailStr
+
 from src.db.models import UserModel
 from src.db.sql_alchemy import Database
-from siwe import SiweMessage
+from src.share.base_types import WalletAddress
+from src.user.services.user_service import UserService
+from src.workspace.services.workspace_service import WorkspaceService
+from src.auth.utils.bcrypt_helper import hash_password, verify_password
 
 database = Database()
-
 
 class RegisterInput(BaseModel):
     email: EmailStr = Field(
@@ -18,6 +20,16 @@ class RegisterInput(BaseModel):
         ...,
         example="securepassword123",
         description="The password for the user account",
+    )
+    wallet_address: WalletAddress = Field(
+        ...,
+        example="0x0...",
+        description="The wallet address of the user"
+    )
+    chain_id: int = Field(
+        ...,
+        example="1",
+        description="The chain id of the user"
     )
 
 
@@ -47,7 +59,8 @@ class AuthService:
     """
 
     def __init__(self):
-        self.workspace = WorkspaceService()
+        self.workspace_service = WorkspaceService()
+        self.user_service = UserService()
 
     def register(self, input: RegisterInput, db: Session) -> str:
         """
@@ -64,17 +77,21 @@ class AuthService:
             HTTPException: If a user with the same email already exists.
         """
         # Check if the user already exists
-        existing_user = db.query(UserModel).filter_by(email=input.email.lower()).first()
+        existing_user = db.query(UserModel).filter_by(
+            email=input.email.lower()).first()
         if existing_user:
             raise HTTPException(status_code=400, detail="User already exists")
 
         # Hash the user's password and create a new user record
         hashed_password = hash_password(input.password)
-        new_user = UserModel(email=input.email.lower(), password=hashed_password)
+        new_user = UserModel(email=input.email.lower(),
+                             password=hashed_password,
+                             wallet_address=input.wallet_address,
+                             chain_id=input.chain_id)
         db.add(new_user)
         db.commit()
 
-        self.workspace.create_workspace(db, "Default", new_user.id)
+        self.workspace_service.create_workspace(db, "Default", new_user.id)
 
         return new_user
 
@@ -94,15 +111,17 @@ class AuthService:
         # Fetch the user from the database using the provided email
         user = db.query(UserModel).filter_by(email=email).first()
         if not user:
-            raise HTTPException(status_code=401, detail="Incorrect email or password")
+            raise HTTPException(
+                status_code=401, detail="Incorrect email or password")
 
         # Verify the provided password matches the stored hash
         if not verify_password(password, user.password):
-            raise HTTPException(status_code=401, detail="Incorrect email or password")
+            raise HTTPException(
+                status_code=401, detail="Incorrect email or password")
 
         return user
 
-    def verify_signature(self, message: str, signature: str):
+    def verify_signature(self, message: str, signature: str, db: Session):
         """
         Verify a signature according to SIWE spec
 
@@ -116,7 +135,6 @@ class AuthService:
         Raises:
             HTTPException: If message cannot be parsed or verified
         """
-
         try:
             siwe_message = SiweMessage.from_message(message)
             siwe_message.verify(signature)
@@ -128,7 +146,15 @@ class AuthService:
             raise HTTPException(
                 status_code=401, detail="Signature is not valid")
 
-        return {
-            "chain_id": siwe_message.chain_id,
-            "address": siwe_message.address,
-        }
+        # check if not exist create new user
+        user = self.user_service.get_user_by_wallet_address(
+            siwe_message.address)
+        if not user:
+            user = self.register(RegisterInput(
+                email="",
+                password="",
+                wallet_address=siwe_message.address,
+                chain_id=siwe_message.chain_id
+            ), db)
+
+        return user

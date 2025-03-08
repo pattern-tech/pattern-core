@@ -1,15 +1,18 @@
 from uuid import UUID
 from typing import List
+from datetime import timedelta
 from sqlalchemy.orm import Session
 from langchain_core.messages.human import HumanMessage
 
-from src.db.models import Conversation
 from src.util.configuration import Config
 from src.agentflow.agents.hub import AgentHub
-from src.agentflow.utils.tools_index import get_all_tools
+from src.db.models import Conversation, QueryUsage
+from src.user.services.user_service import UserService
+from src.share.staked_tokens import get_user_staked_tokens
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.agent.services.agent_service import RouterAgentService
+from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
 
@@ -22,6 +25,8 @@ class ConversationService:
         self.repository = ConversationRepository()
         self.memory_service = MemoryService()
         self.project_service = ProjectService()
+        self.query_usage_service = QueryUsageService()
+        self.user_service = UserService()
 
     def create_conversation(
         self, db_session: Session, name: str, project_id: UUID, user_id: UUID
@@ -163,6 +168,29 @@ class ConversationService:
         Raises:
             Exception: If associated project is not found
         """
+
+        user = self.user_service.get_user(db_session, user_id)
+
+        # check user payment
+        staked_morpheus = get_user_staked_tokens(
+            wallet_address=user.wallet_address, provider="morpheus")
+
+        usage_setting = self.query_usage_service.get_usage_setting(db_session)
+        max_allowed_query = 0
+        for setting in usage_setting:
+            if setting.provider == "morpheus":
+                max_allowed_query = setting.max_query * \
+                    (int(staked_morpheus) / 1e18)
+
+        user_query_usage_until_previous_24h = self.query_usage_service.get_all_query_usages(
+            db_session, user_id, "morpheus",
+            timedelta(hours=24))
+
+        if len(user_query_usage_until_previous_24h) >= max_allowed_query:
+            raise Exception(
+                "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
+            )
+
         config = Config.get_config()
 
         sub_agents = AgentHub().get_agents(config["agents"])
@@ -191,6 +219,12 @@ class ConversationService:
                 "response": result["output"],
                 "intermediate_steps": intermediate_steps
             }
+
+        query_usage = QueryUsage(
+            user_id=user_id,
+            provider="morpheus",
+        )
+        self.query_usage_service.create_query_usage(db_session, query_usage)
 
     def get_history(
         self,

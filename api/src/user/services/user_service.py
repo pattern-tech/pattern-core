@@ -47,6 +47,26 @@ class UserService:
             raise Exception("User not found")
         return user
 
+    def get_user_by_wallet_address(self, db_session: Session, wallet_address: str) -> UserModel:
+        """
+        Retrieves a user by their wallet address.
+
+        Args:
+            db_session (Session): The database session.
+            wallet_address (str): The wallet address of the user.
+
+        Returns:
+            UserModel: The User instance.
+
+        Raises:
+            Exception: If the user is not found.
+        """
+        user = self.repository.get_by_wallet_address(
+            db_session, wallet_address)
+        if not user:
+            raise Exception("User not found")
+        return user
+
     def list_users(self, db_session: Session) -> List[UserModel]:
         """
         Lists all users.

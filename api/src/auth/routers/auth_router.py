@@ -1,3 +1,5 @@
+from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
 from src.auth.utils.bcrypt_helper import generate_access_token
 from src.auth.services.auth_service import (
     AuthService,
@@ -5,10 +7,9 @@ from src.auth.services.auth_service import (
     RegisterInput,
     VerifyInput
 )
+
 from src.db.sql_alchemy import Database
 from src.util.response import global_response
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth")
 database = Database()
@@ -69,19 +70,17 @@ def login(input: LoginInput, db: Session = Depends(database.get_db)):
     summary="Verify a Signature",
     description="Verify a signature according to SIWE spec",
 )
-def verify(input: VerifyInput):
+def verify(input: VerifyInput, db: Session = Depends(database.get_db)):
     """
     Verify a signature according to SIWE spec and return an access token
 
     - **message**: A SIWE message
     - **signature**: User's signature for the message
     """
-    verification_result = auth.verify_signature(
-        input.message, input.signature)
+    user = auth.verify_signature(
+        input.message, input.signature, db)
 
-    payload = {"id": "{}:{}".format(
-        verification_result.chain_id, verification_result.address)}
-
+    payload = {"id": str(user.id)}
     token = generate_access_token(data=payload)
     return global_response(
         {
