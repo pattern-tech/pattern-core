@@ -1,3 +1,4 @@
+from typing import Optional
 from siwe import SiweMessage
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -12,14 +13,13 @@ from src.auth.utils.bcrypt_helper import hash_password, verify_password
 
 database = Database()
 
+
 class RegisterInput(BaseModel):
-    email: EmailStr = Field(
-        ..., example="user@example.com", description="The email address of the user"
+    email: Optional[EmailStr] = Field(
+        None, example="user@example.com", description="The email address of the user"
     )
-    password: str = Field(
-        ...,
-        example="securepassword123",
-        description="The password for the user account",
+    password: Optional[str] = Field(
+        None, example="securepassword123", description="The password for the user account"
     )
     wallet_address: WalletAddress = Field(
         ...,
@@ -67,27 +67,33 @@ class AuthService:
         Registers a new user by saving their details into the database.
 
         Args:
-            input (RegisterInput): The registration input containing email and password.
+            input (RegisterInput): The registration input .
             db (Session): The database session for executing queries.
 
         Returns:
             str: Success message indicating the user was registered.
 
         Raises:
-            HTTPException: If a user with the same email already exists.
+            HTTPException: If a user with the same wallet_address already exists.
         """
         # Check if the user already exists
         existing_user = db.query(UserModel).filter_by(
-            email=input.email.lower()).first()
+            wallet_address=input.wallet_address).first()
         if existing_user:
             raise HTTPException(status_code=400, detail="User already exists")
 
         # Hash the user's password and create a new user record
-        hashed_password = hash_password(input.password)
-        new_user = UserModel(email=input.email.lower(),
-                             password=hashed_password,
-                             wallet_address=input.wallet_address,
-                             chain_id=input.chain_id)
+        if input.email:
+            hashed_password = hash_password(input.password)
+            new_user = UserModel(email=input.email.lower(),
+                                 password=hashed_password,
+                                 wallet_address=input.wallet_address,
+                                 chain_id=input.chain_id)
+        else:
+            new_user = UserModel(
+                wallet_address=input.wallet_address,
+                chain_id=input.chain_id
+            )
         db.add(new_user)
         db.commit()
 
@@ -148,11 +154,11 @@ class AuthService:
 
         # check if not exist create new user
         user = self.user_service.get_user_by_wallet_address(
-            siwe_message.address)
+            siwe_message.address, db)
         if not user:
             user = self.register(RegisterInput(
-                email="",
-                password="",
+                email=None,
+                password=None,
                 wallet_address=siwe_message.address,
                 chain_id=siwe_message.chain_id
             ), db)

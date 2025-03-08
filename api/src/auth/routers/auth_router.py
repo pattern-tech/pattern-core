@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from src.auth.utils.bcrypt_helper import generate_access_token
 from src.auth.services.auth_service import (
     AuthService,
