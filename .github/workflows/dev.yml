@@ -79,6 +79,10 @@ jobs:
               -e LLM_API_KEY=${{ secrets.LLM_API_KEY }} \
               -e AGENTS=${{ secrets.AGENTS }} \
               -e SENTRY_DNS=${{ secrets.SENTRY_DNS }} \
+              -e APP_NAME=${{ secrets.APP_NAME }} \
+              -e LOG_FILE_PATH=${{ secrets.LOG_FILE_PATH }} \
+              -e LOG_BACKUP_COUNT=${{ secrets.LOG_BACKUP_COUNT }} \
+              -e LOG_MAX_BYTES=${{ secrets.LOG_MAX_BYTES }} \
               patterntechnology/pattern-core-api:latest
 
             # Wait a few seconds to give the container time to start
