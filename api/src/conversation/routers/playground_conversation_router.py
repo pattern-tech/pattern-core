@@ -1,6 +1,6 @@
 from uuid import UUID
 from enum import Enum
-from typing import List
+from typing import List, Dict
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
@@ -59,6 +59,7 @@ class ConversationOutput(BaseModel):
     id: UUID
     name: str
     project_id: UUID
+    chat_history: List[Dict]
 
     class Config:
         from_attributes = True
@@ -255,7 +256,7 @@ def delete_conversation(
     "/{project_id}/{conversation_id}/chat",
     summary="Send Message",
     description="Sends a message in the conversation chat for the authenticated user.",
-    response_description="The message response data along with intermediate steps metadata."
+    response_description="The message response data along with chat history in metadata."
 )
 async def send_message(
     input: MessageInput,
@@ -277,9 +278,13 @@ async def send_message(
     - **service**: Conversation service handling business logic.
     - **user_id**: The authenticated user's ID.
 
+    - **metadata**: The chat history metadata.
+
     Returns:
         StreamingResponse: If `stream` is true.
         dict: A JSON response containing the complete message data if `stream` is false.
+
+        metadata: The chat history metadata.
     """
     try:
 
@@ -298,6 +303,7 @@ async def send_message(
                                                   input.message,
                                                   user_id,
                                                   conversation_id,
+                                                  project_id,
                                                   input.message_type,
                                                   input.stream),
                 media_type="text/plain"
@@ -309,6 +315,7 @@ async def send_message(
                 input.message,
                 user_id,
                 conversation_id,
+                project_id,
                 input.message_type,
                 input.stream
             ):

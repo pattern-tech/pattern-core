@@ -12,6 +12,7 @@ from src.user.services.user_service import UserService
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.agent.services.agent_service import RouterAgentService
+from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
@@ -23,6 +24,7 @@ class ConversationService:
 
     def __init__(self):
         self.repository = ConversationRepository()
+        self.project_repository = ProjectRepository()
         self.memory_service = MemoryService()
         self.project_service = ProjectService()
         self.query_usage_service = QueryUsageService()
@@ -43,6 +45,12 @@ class ConversationService:
         Returns:
             Conversation: The created conversation instance.
         """
+        if name.strip() == "":
+            raise Exception("Name is required")
+
+        if not self.project_repository.get_by_id(db_session, project_id, user_id):
+            raise Exception("Project not exists or not owned by user")
+
         conversation = Conversation(
             name=name, project_id=project_id, user_id=user_id)
         return self.repository.create(db_session, conversation)
@@ -106,6 +114,12 @@ class ConversationService:
         Raises:
             Exception: If the conversation is not found.
         """
+        if data["name"].strip() == "":
+            raise Exception("Name is required")
+
+        if not self.project_repository.get_by_id(db_session, data["project_id"], user_id):
+            raise Exception("Project not exists or not owned by user")
+
         return self.repository.update(db_session, conversation_id, data, user_id)
 
     def delete_conversation(
@@ -143,6 +157,7 @@ class ConversationService:
         message: str,
         user_id: UUID,
         conversation_id: UUID,
+        project_id: UUID,
         message_type: str,
         stream: bool
     ):
@@ -154,6 +169,7 @@ class ConversationService:
             message (str): The message to be processed
             user_id (UUID): ID of the user sending the message
             conversation_id (UUID): ID of the conversation the message belongs to
+            project_id (UUID): ID of the project associated with the conversation
             message_type (str): Type of the message
             stream (bool): If True, streams response tokens. If False, returns complete response
 
@@ -168,6 +184,14 @@ class ConversationService:
         Raises:
             Exception: If associated project is not found
         """
+        conversation = self.repository.get_by_id(
+            db_session, conversation_id, user_id)
+
+        if not conversation:
+            raise Exception("Conversation not found or is not owned by user")
+
+        if conversation.project_id != project_id:
+            raise Exception("Project not found or is not owned by user")
 
         config = Config.get_config()
 
