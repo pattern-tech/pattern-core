@@ -248,6 +248,18 @@ class ConversationService:
         return history
 
     def rename_title(self, db_session: Session, conversation_id: UUID, user_id: UUID, message: str) -> str:
+        """
+        Renames a conversation title using the LLM to generate a title.
+
+        Args:
+            db_session (Session): The database session.
+            conversation_id (UUID): The ID of the conversation to rename.
+            user_id (UUID): The ID of the user renaming the conversation.
+            message (str): The message to generate a title for.
+
+        Returns:
+            str: The new title of the conversation.
+        """
         config = Config.get_config()
         self.llm = init_llm(service=config["llm"]["provider"],
                             model_name=config["llm"]["model"],
