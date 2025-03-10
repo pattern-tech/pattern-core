@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from src.db.sql_alchemy import Database
 from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
+from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.services.conversation_service import ConversationService
 
 router = APIRouter(prefix="/playground/conversation")
@@ -33,6 +34,13 @@ def get_conversation_service() -> ConversationService:
     return ConversationService()
 
 
+def get_query_usage_service() -> QueryUsageService:
+    """
+    Dependency to instantiate the QueryUsageService.
+    """
+    return QueryUsageService()
+
+
 class CreateConversationInput(BaseModel):
     """
     Schema for creating a conversation.
@@ -41,7 +49,7 @@ class CreateConversationInput(BaseModel):
     project_id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ConversationOutput(BaseModel):
@@ -53,7 +61,7 @@ class ConversationOutput(BaseModel):
     project_id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MessageType(str, Enum):
@@ -254,7 +262,9 @@ async def send_message(
     conversation_id: UUID,
     project_id: UUID,
     db: Session = Depends(get_db),
-    service: ConversationService = Depends(get_conversation_service),
+    query_usage_service: QueryUsageService = Depends(get_query_usage_service),
+    conversation_service: ConversationService = Depends(
+        get_conversation_service),
     user_id: UUID = Depends(authenticate_user),
 ):
     """
@@ -272,21 +282,29 @@ async def send_message(
         dict: A JSON response containing the complete message data if `stream` is false.
     """
     try:
-        service.check_user_eligibility(db, user_id)
+
+        max_query_allowance = query_usage_service.get_user_max_query_allowance(
+            db, user_id)
+        is_eligible = query_usage_service.check_user_eligibility(
+            db, user_id, max_query_allowance)
+        if not is_eligible:
+            raise Exception(
+                "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
+            )
 
         if input.stream:
             return StreamingResponse(
-                service.send_message(db,
-                                     input.message,
-                                     user_id,
-                                     conversation_id,
-                                     input.message_type,
-                                     input.stream),
+                conversation_service.send_message(db,
+                                                  input.message,
+                                                  user_id,
+                                                  conversation_id,
+                                                  input.message_type,
+                                                  input.stream),
                 media_type="text/plain"
             )
         else:
             response = None
-            async for item in service.send_message(
+            async for item in conversation_service.send_message(
                 db,
                 input.message,
                 user_id,
