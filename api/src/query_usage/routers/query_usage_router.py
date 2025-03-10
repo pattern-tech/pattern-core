@@ -1,8 +1,8 @@
 from uuid import UUID
+from datetime import timedelta
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
-from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
@@ -40,7 +40,7 @@ class CreateQueryUsageInput(BaseModel):
     provider: str = Field(..., example="morpheus")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class QueryUsageOutput(BaseModel):
@@ -51,7 +51,7 @@ class QueryUsageOutput(BaseModel):
     provider: str = Field(..., example="morpheus")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 @router.get(
@@ -89,11 +89,11 @@ def get_query_usage(
 @router.get(
     "",
     response_model=List[QueryUsageOutput],
-    summary="List All Query Usages",
-    description="Lists all query usage records for the authenticated user.",
-    response_description="A list of all query usage records."
+    summary="Get user query usage",
+    description="Get number of used and total number of allowed query for a user",
+    response_description="Number of used and total number of allowed query for a user"
 )
-def get_all_query_usages(
+def get_user_query_usages(
     provider: Optional[str] = None,
     duration: Optional[timedelta] = timedelta(hours=24),
     user_id: UUID = Depends(authenticate_user),
@@ -101,17 +101,23 @@ def get_all_query_usages(
     service: QueryUsageService = Depends(get_query_usage_service),
 ):
     """
-    List all query usage records for the authenticated user.
+    Get user query usage
 
     - **provider**: Optional filter by provider.
     - **duration**: Optional filter by a specific datetime.
     - **user_id**: The authenticated user's ID.
     - **db**: Database session.
     - **service**: QueryUsage service handling business logic.
+    - **conversation_service**: Conversation service handling business logic.
 
     Returns:
-        List[QueryUsageOutput]: A list of all the user's query usage records.
+        dict: A dictionary containing the number of used and total number of allowed query.
     """
     query_usages = service.get_all_query_usages(
         db, user_id, provider, duration)
-    return global_response(query_usages)
+
+    data = {
+        "query_usages": len(query_usages),
+        "max_query_allowance_per_day": service.get_user_max_query_allowance(db, user_id)
+    }
+    return global_response(data)

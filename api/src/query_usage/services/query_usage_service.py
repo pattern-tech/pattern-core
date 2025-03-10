@@ -1,16 +1,19 @@
 from uuid import UUID
-from datetime import datetime, timedelta
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
 
 from src.db.models import QueryUsage
 from src.share.base_service import BaseService
+from src.user.services.user_service import UserService
+from src.share.staked_tokens import get_user_staked_tokens
 from src.query_usage.repositories.query_usage_repository import QueryUsageRepository
 
 
 class QueryUsageService(BaseService):
     def __init__(self):
         self.repository = QueryUsageRepository()
+        self.user_service = UserService()
 
     def create_query_usage(self, db_session: Session, query_usage: QueryUsage) -> QueryUsage:
         """
@@ -65,3 +68,67 @@ class QueryUsageService(BaseService):
             List[UsageSetting]: A list of all usage settings.
         """
         return self.repository.get_usage_setting(db_session)
+
+    def get_user_max_query_allowance(self, db_session: Session, user_id: UUID) -> int:
+        """
+        Retrieves the maximum number of queries a user is allowed to make.
+
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user.
+
+        Returns:
+            int: The maximum number of queries the user is allowed to make.
+
+        Raises:
+            Exception: If the user has not staked any Morpheus tokens.
+        """
+        user = self.user_service.get_user(db_session, user_id)
+
+        whitelist = self.user_service.get_whitelist(db_session)
+
+        # check user payment
+        for wl in whitelist:
+            if str(user_id) == str(wl.user_id):
+                max_allowed_query = wl.max_query
+                return max_allowed_query
+
+        staked_morpheus = get_user_staked_tokens(
+            wallet_address=user.wallet_address, provider="morpheus")
+
+        if staked_morpheus == 0:
+            raise Exception(
+                "You need to stake Morpheus tokens to use this service")
+
+        usage_setting = self.get_usage_setting(
+            db_session)
+
+        max_allowed_query = 0
+        for setting in usage_setting:
+            if setting.provider == "morpheus":
+                max_allowed_query = setting.max_query * \
+                    (int(staked_morpheus) / 1e18)
+                break
+
+        return max_allowed_query
+
+    def check_user_eligibility(self, db_session: Session, user_id: UUID, max_query_allowance: int) -> bool:
+        """
+        Checks if a user is eligible to make a query based on their daily query limit.
+
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user.
+            max_query_allowance (int): The number of queries the user is allowed to make.
+
+        Returns:
+            bool: True if the user is eligible, False otherwise.
+        """
+        user_query_usage_until_previous_24h = self.get_all_query_usages(
+            db_session, user_id, "morpheus", timedelta(hours=24)
+        )
+
+        if len(user_query_usage_until_previous_24h) >= max_query_allowance:
+            return False
+
+        return True

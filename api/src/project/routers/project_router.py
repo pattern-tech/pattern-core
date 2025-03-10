@@ -39,7 +39,7 @@ class CreateProjectInput(BaseModel):
     workspace_id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ProjectOutput(BaseModel):
@@ -51,7 +51,7 @@ class ProjectOutput(BaseModel):
     workspace_id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 @router.post(

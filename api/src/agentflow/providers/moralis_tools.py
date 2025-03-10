@@ -54,6 +54,7 @@ def get_wallet_active_chains(wallet_address: str, output_include: list[str]) -> 
 def get_wallet_token_balances(wallet_address: str, output_include: list[str], cursor: str = None) -> dict:
     """
     Get token balances for a specific wallet address and their token prices in USD. (paginated)
+    apply decimal conversion for balance
 
     Args:
         wallet_address (str): Ethereum wallet address

@@ -68,6 +68,7 @@ def get_wallet_activity(wallet_address: str, output_include: list[str]) -> List[
 def get_balance_for_address(wallet_address: str, output_include: list[str]) -> str:
     """
      fetch the native, fungible (ERC20), and non-fungible (ERC721 & ERC1155) tokens held by an address
+     apply decimal conversion for balance
 
     Args:
         wallet_address (str): The wallet address to retrieve balance for.

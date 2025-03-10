@@ -1,13 +1,37 @@
-from openai import NotFoundError
-import requests
 import json
+import requests
 
 from typing import List, Dict, Union
 
 
+def aggregate_result(results: List[Dict]) -> List[Dict]:
+    """
+    Merge a list of dictionaries by summing values for common keys.
+
+    Parameters:
+        dict_list (list): A list of dictionaries with numeric values.
+
+    Returns:
+        dict: A merged dictionary with summed values for duplicate keys.
+    """
+    aggregated = {}
+
+    for sublist in results:
+        for record in sublist:
+            address = record.get("address")
+            staked_str = record.get("staked", "0")
+            try:
+                staked = int(staked_str)
+            except ValueError:
+                staked = 0  # fallback if conversion fails
+
+            aggregated[address] = aggregated.get(address, 0) + staked
+    return aggregated
+
+
 def get_morpheus_stakers(
     builders_project_id: str = "0xdcba960308192a0eb3e6dbd97b27b3cc2454e38d06ef78ced76e7378afb2e5dc",
-    first: int = 5,
+    first: int = 1000,
     skip: int = 0,
 ) -> List[Dict[str, Union[str, int, float, str]]]:
     """
@@ -21,6 +45,9 @@ def get_morpheus_stakers(
     Returns:
         List[Dict[str, Union[str, int, float, str]]]: A list of dictionaries containing user data.
     """
+    results = []
+
+    # BASE chain
     payload = {
         "operationName": "getBuildersProjectUsers",
         "variables": {
@@ -32,7 +59,19 @@ def get_morpheus_stakers(
     }
     url = "https://subgraph.satsuma-prod.com/8675f21b07ed/9iqb9f4qcmhosiruyg763--465704/morpheus-mainnet-base/api"
     response = requests.post(url, data=json.dumps(payload))
-    return response.json()["data"]["buildersUsers"]
+    results.append(response.json()["data"]["buildersUsers"])
+
+    # ARBITRUM chain
+    url = "https://api.studio.thegraph.com/query/73688/lumerin-node/version/latest"
+
+    headers = {
+        "content-type": "application/json",
+    }
+
+    response = requests.post(url, headers=headers, data=json.dumps(payload))
+    results.append(response.json()["data"]["buildersUsers"])
+
+    return aggregate_result(results)
 
 
 def get_user_staked_tokens(wallet_address: str, provider: str) -> List[Dict[str, Union[str, int, float, str]]]:
@@ -47,9 +86,6 @@ def get_user_staked_tokens(wallet_address: str, provider: str) -> List[Dict[str,
     """
     if provider == "morpheus":
         holders = get_morpheus_stakers()
-        for holder in holders:
-            if holder["address"] == wallet_address:
-                return holder["staked"]
-        return 0
+        return holders.get(wallet_address, 0)
     else:
         raise NotImplementedError(f"{provider} not implemented")

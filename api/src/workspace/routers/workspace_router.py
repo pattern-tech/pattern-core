@@ -38,7 +38,7 @@ class CreateWorkspaceInput(BaseModel):
     name: str = Field(..., example="New Workspace")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class WorkspaceOutput(BaseModel):
@@ -49,7 +49,7 @@ class WorkspaceOutput(BaseModel):
     name: str = Field(..., example="New Workspace")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 @router.post(

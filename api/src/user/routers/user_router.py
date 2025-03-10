@@ -30,7 +30,7 @@ class CreateUserInput(BaseModel):
     password: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserOutput(BaseModel):
@@ -38,7 +38,7 @@ class UserOutput(BaseModel):
     email: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 @router.get("", response_model=UserOutput)
@@ -57,4 +57,5 @@ def get_user(
         user = service.get_user(db, user_id)
         return global_response(user)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

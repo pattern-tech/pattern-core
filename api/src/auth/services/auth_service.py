@@ -115,7 +115,7 @@ class AuthService:
         """
         # Fetch the user from the database using the provided email
         user = db.query(UserModel).filter_by(email=email).first()
-        print(password, user.password)
+
         if not user:
             raise HTTPException(
                 status_code=401, detail="Incorrect email or password")
