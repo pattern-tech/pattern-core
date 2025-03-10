@@ -1,7 +1,7 @@
 from uuid import UUID
 from enum import Enum
-from typing import List
 from pydantic import BaseModel
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -47,6 +47,7 @@ class CreateConversationInput(BaseModel):
     """
     name: str
     project_id: UUID
+    conversation_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
@@ -81,6 +82,13 @@ class MessageInput(BaseModel):
     stream: bool = True
 
 
+class FirstMessage(BaseModel):
+    """
+    Schema for the first message.
+    """
+    message: str
+
+
 @router.post(
     "",
     response_model=ConversationOutput,
@@ -92,7 +100,7 @@ def create_conversation(
     input: CreateConversationInput,
     db: Session = Depends(get_db),
     service: ConversationService = Depends(get_conversation_service),
-    user_id: UUID = Depends(authenticate_user),
+    user_id: UUID = Depends(authenticate_user)
 ):
     """
     Create a new conversation.
@@ -107,7 +115,7 @@ def create_conversation(
     """
     try:
         conversation = service.create_conversation(
-            db, input.name, input.project_id, user_id)
+            db, input.name, input.project_id, user_id, input.conversation_id)
         return global_response(conversation)
     except Exception as e:
         raise HTTPException(
@@ -319,3 +327,28 @@ async def send_message(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/{project_id}/{conversation_id}/title-generation",
+    summary="Auto Title Generation",
+    description="Using LLM to generate title for conversation",
+    response_description="LLM title generated"
+)
+async def generate_title(
+    input: FirstMessage,
+    project_id: UUID,
+    conversation_id: UUID,
+    db: Session = Depends(get_db),
+    conversation_service: ConversationService = Depends(
+        get_conversation_service),
+    user_id: UUID = Depends(authenticate_user),
+):
+    try:
+        title = conversation_service.rename_title(
+            db, conversation_id, user_id, input.message)
+        return title
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        )
