@@ -1,6 +1,5 @@
 from uuid import UUID
 from typing import List
-from datetime import timedelta
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from langchain_core.messages.human import HumanMessage
@@ -8,6 +7,7 @@ from langchain_core.messages.human import HumanMessage
 from src.util.configuration import Config
 from src.agentflow.agents.hub import AgentHub
 from src.db.models import Conversation, QueryUsage
+from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
@@ -31,7 +31,7 @@ class ConversationService:
         self.user_service = UserService()
 
     def create_conversation(
-        self, db_session: Session, name: str, project_id: UUID, user_id: UUID
+        self, db_session: Session, name: str, project_id: UUID, user_id: UUID, conversation_id: UUID = None
     ) -> Conversation:
         """
         Creates a new conversation.
@@ -41,6 +41,7 @@ class ConversationService:
             name (str): The name of the conversation.
             project_id (UUID): The ID of the project the conversation belongs to.
             user_id (UUID): The ID of the user creating the conversation.
+            conversation_id (UUID): The ID of the conversation (optional).
 
         Returns:
             Conversation: The created conversation instance.
@@ -53,6 +54,11 @@ class ConversationService:
 
         conversation = Conversation(
             name=name, project_id=project_id, user_id=user_id)
+
+        # conversation id is generated in frontend
+        if conversation_id:
+            conversation.id = conversation_id
+
         return self.repository.create(db_session, conversation)
 
     def get_conversation(
@@ -258,9 +264,46 @@ class ConversationService:
         memory = self.memory_service.get_memory(conversation_id)
 
         history = []
+        generated_id = 0
         for message in memory.messages:
             history.append({
+                "id": generated_id,
                 "role": "human" if isinstance(message, HumanMessage) else "ai",
                 "content": message.content,
             })
+            generated_id += 1
         return history
+
+    def rename_title(self, db_session: Session, conversation_id: UUID, user_id: UUID, message: str) -> str:
+        """
+        Renames a conversation title using the LLM to generate a title.
+
+        Args:
+            db_session (Session): The database session.
+            conversation_id (UUID): The ID of the conversation to rename.
+            user_id (UUID): The ID of the user renaming the conversation.
+            message (str): The message to generate a title for.
+
+        Returns:
+            str: The new title of the conversation.
+        """
+        config = Config.get_config()
+        self.llm = init_llm(service=config["llm"]["provider"],
+                            model_name=config["llm"]["model"],
+                            api_key=config["llm"]["api_key"],
+                            stream=False,
+                            callbacks=None)
+        messages = [
+            (
+                "system",
+                "You should generate a title (maximum 5 words) for this message",
+            ),
+            ("human", f"{message}"),
+        ]
+
+        title = self.llm.invoke(messages)
+
+        self.repository.update(db_session, conversation_id, {
+                               "name": title.content}, user_id)
+
+        return title.content
