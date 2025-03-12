@@ -28,6 +28,9 @@ class WorkspaceService(BaseService):
         Returns:
             Workspace: The created Workspace instance.
         """
+        if name.strip() == "":
+            raise Exception("Name is required")
+
         workspace = Workspace(name=name, user_id=user_id)
         return self.repository.create(db_session, workspace)
 
@@ -97,6 +100,9 @@ class WorkspaceService(BaseService):
         Returns:
             Workspace: The updated Workspace instance.
         """
+        if data["name"].strip() == "":
+            raise Exception("Name is required")
+
         return self.repository.update(db_session, workspace_id, data, user_id)
 
     def delete_workspace(

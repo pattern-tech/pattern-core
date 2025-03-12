@@ -1,10 +1,10 @@
 from uuid import UUID
-from typing import Set
 from typing import List
 from sqlalchemy.orm import Session
 
 from src.db.models import Project
 from src.project.repositories.project_repository import ProjectRepository
+from src.workspace.repositories.workspace_repository import WorkspaceRepository
 
 
 class ProjectService:
@@ -14,6 +14,7 @@ class ProjectService:
 
     def __init__(self):
         self.repository = ProjectRepository()
+        self.workspace_repository = WorkspaceRepository()
 
     def create_project(
         self, db_session: Session, name: str, user_id: UUID, workspace_id: UUID
@@ -30,6 +31,14 @@ class ProjectService:
         Returns:
             Project: The created project instance.
         """
+        if name.strip() == "":
+            raise Exception("Name is required")
+
+        workspace = self.workspace_repository.get_by_id(
+            db_session, workspace_id, user_id)
+        if not workspace:
+            raise Exception("Workspace not found or not owned by user")
+
         project = Project(name=name, user_id=user_id,
                           workspace_id=workspace_id)
         return self.repository.create(db_session, project)
@@ -84,6 +93,13 @@ class ProjectService:
         Returns:
             Project: The updated project instance.
         """
+        if data["name"].strip() == "":
+            raise Exception("Name is required")
+
+        workspace = self.workspace_repository.get_by_id(
+            db_session, data["workspace_id"], user_id)
+        if not workspace:
+            raise Exception("Workspace not found or not owned by user")
         return self.repository.update(db_session, project_id, data, user_id)
 
     def delete_project(
