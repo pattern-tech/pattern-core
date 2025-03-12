@@ -240,11 +240,14 @@ class ConversationService:
         memory = self.memory_service.get_memory(conversation_id)
 
         history = []
+        generated_id = 0
         for message in memory.messages:
             history.append({
+                "id": generated_id,
                 "role": "human" if isinstance(message, HumanMessage) else "ai",
                 "content": message.content,
             })
+            generated_id += 1
         return history
 
     def rename_title(self, db_session: Session, conversation_id: UUID, user_id: UUID, message: str) -> str:
