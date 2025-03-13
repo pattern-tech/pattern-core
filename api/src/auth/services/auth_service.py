@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, EmailStr
 
+from src.util.execptions import *
 from src.db.models import UserModel
 from src.db.sql_alchemy import Database
 from src.share.base_types import WalletAddress
@@ -80,15 +81,14 @@ class AuthService:
         existing_user = db.query(UserModel).filter_by(
             wallet_address=input.wallet_address).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="User already exists")
+            raise AlreadyExistsError("User already exists")
 
         # # Create a new user record
         if input.email and input.password:
             existing_user = db.query(UserModel).filter_by(
                 email=input.email.lower()).first()
             if existing_user:
-                raise HTTPException(
-                    status_code=400, detail="This email is already exists")
+                raise AlreadyExistsError("This email is already exists")
 
         if input.password:
             input.password = hash_password(input.password)
@@ -117,13 +117,11 @@ class AuthService:
         user = db.query(UserModel).filter_by(email=email).first()
 
         if not user:
-            raise HTTPException(
-                status_code=401, detail="Incorrect email or password")
+            raise NotFoundError("User not found with this email")
 
         # Verify the provided password matches the stored hash
         if not verify_password(password, user.password):
-            raise HTTPException(
-                status_code=401, detail="Incorrect email or password")
+            raise InvalidPasswordError("Incorrect email or password")
 
         return user
 
@@ -146,11 +144,10 @@ class AuthService:
             siwe_message.verify(signature)
         except ValueError:
             # ValueError is raised if message is invalid according to SIWE
-            raise HTTPException(
-                status_code=400, detail="The provided message is not a valid SIWE message")
+            raise InvalidMessageError(
+                "The provided message is not a valid SIWE message")
         except:
-            raise HTTPException(
-                status_code=401, detail="Signature is not valid")
+            raise InvalidSignatureError("Signature is not valid")
 
         # check if not exist create new user
         user = self.user_service.get_user_by_wallet_address(

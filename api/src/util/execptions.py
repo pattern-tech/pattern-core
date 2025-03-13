@@ -21,3 +21,50 @@ class ItemNotFoundError(Exception):
     def __init__(self, message="not found"):
         self.message = message
         super().__init__(f"{self.message}")
+
+
+class NotFoundError(Exception):
+    """Exception raised when something"""
+
+    def __init__(self, message="not found"):
+        self.message = message
+        super().__init__(f"{self.message}")
+
+
+class NotEnoughBalanceError(Exception):
+    """Exception raised when user balance is not enough"""
+
+    def __init__(self, message="not enough balance"):
+        self.message = message
+        super().__init__(f"{self.message}")
+
+
+class InvalidMessageError(Exception):
+    """Exception raised when an item not found."""
+
+    def __init__(self, message="invalid message"):
+        self.message = message
+        super().__init__(f"{self.message}")
+
+
+class InvalidSignatureError(Exception):
+    """Exception raised when the signature in invalid"""
+
+    def __init__(self, message="invalid signature"):
+        self.message = message
+        super().__init__(f"{self.message}")
+
+
+class InvalidPasswordError(Exception):
+    """Exception raised when the password in invalid"""
+
+    def __init__(self, message="invalid password"):
+        self.message = message
+        super().__init__(f"{self.message}")
+
+class AlreadyExistsError(Exception):
+    """Exception raised when something is already exists"""
+
+    def __init__(self, message="duplicate"):
+        self.message = message
+        super().__init__(f"{self.message}")

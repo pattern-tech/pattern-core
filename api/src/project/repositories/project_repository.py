@@ -3,8 +3,8 @@ from typing import Optional, List, Set
 from sqlalchemy.orm import Session
 
 from src.db.models import Project
+from src.util.execptions import NotFoundError
 from src.share.base_repository import BaseRepository
-
 
 class ProjectRepository(BaseRepository[Project]):
     """
@@ -73,7 +73,7 @@ class ProjectRepository(BaseRepository[Project]):
         """
         project = self.get_by_id(db_session, id, user_id)
         if not project:
-            raise Exception("Project not found")
+            raise NotFoundError("Project not found")
         for key, value in project_data.items():
             setattr(project, key, value)
         db_session.commit()
@@ -94,6 +94,6 @@ class ProjectRepository(BaseRepository[Project]):
         """
         project = self.get_by_id(db_session, id, user_id)
         if not project:
-            raise Exception("Project not found")
+            raise NotFoundError("Project not found")
         db_session.delete(project)
         db_session.commit()

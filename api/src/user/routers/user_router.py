@@ -1,13 +1,13 @@
 from uuid import UUID
-from typing import List
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from sqlalchemy.orm import Session
-from src.auth.utils.get_token import authenticate_user
 from src.db.sql_alchemy import Database
-from src.util.response import global_response
+from src.auth.utils.get_token import authenticate_user
 from src.user.services.user_service import UserService
+from src.util.response import global_response, GlobalResponse
+
 
 router = APIRouter(prefix="/user")
 database = Database()
@@ -36,12 +36,14 @@ class CreateUserInput(BaseModel):
 class UserOutput(BaseModel):
     id: UUID
     email: str
+    wallet_address: str
+    chain_id: int
 
     class Config:
         from_attributes = True
 
 
-@router.get("", response_model=UserOutput)
+@router.get("", response_model=GlobalResponse[UserOutput, dict])
 def get_user(
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),

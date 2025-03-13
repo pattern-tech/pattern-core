@@ -3,6 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from src.db.models import Workspace
+from src.util.execptions import NotFoundError
 from src.share.base_repository import BaseRepository
 
 
@@ -80,7 +81,7 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         """
         workspace = self.get_by_id(db_session, id, user_id)
         if not workspace:
-            raise Exception("Workspace not found or not owned by user")
+            raise NotFoundError("Workspace not found or not owned by user")
         for key, value in workspace_data.items():
             setattr(workspace, key, value)
         db_session.commit()
@@ -101,6 +102,6 @@ class WorkspaceRepository(BaseRepository[Workspace]):
         """
         workspace = self.get_by_id(db_session, id, user_id)
         if not workspace:
-            raise Exception("Workspace not found or not owned by user")
+            raise NotFoundError("Workspace not found or not owned by user")
         db_session.delete(workspace)
         db_session.commit()

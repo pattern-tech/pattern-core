@@ -7,6 +7,7 @@ from src.db.models import QueryUsage
 from src.share.base_service import BaseService
 from src.user.services.user_service import UserService
 from src.share.staked_tokens import get_user_staked_tokens
+from src.util.execptions import NotFoundError, NotEnoughBalanceError
 from src.query_usage.repositories.query_usage_repository import QueryUsageRepository
 
 
@@ -39,7 +40,11 @@ class QueryUsageService(BaseService):
         Returns:
             Optional[QueryUsage]: The query usage if found, otherwise None.
         """
-        return self.repository.get_by_id(db_session, id)
+        query_usage = self.repository.get_by_id(db_session, id)
+        if not query_usage:
+            raise NotFoundError("Query usage not found")
+
+        return query_usage
 
     def get_all_query_usages(
             self, db_session: Session, user_id: UUID, provider: str = None, duration: datetime = None) -> List[QueryUsage]:
@@ -97,7 +102,7 @@ class QueryUsageService(BaseService):
             wallet_address=user.wallet_address, provider="morpheus")
 
         if staked_morpheus == 0:
-            raise Exception(
+            raise NotEnoughBalanceError(
                 "You need to stake Morpheus tokens to use this service")
 
         usage_setting = self.get_usage_setting(

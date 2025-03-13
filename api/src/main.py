@@ -46,7 +46,7 @@ app.add_middleware(
 
 
 # Global handler for all exceptions
-@app.exception_handler(Exception)
+@app.exception_handler(HTTPException)
 async def global_exception_handler(request: Request, exc: Exception):
 
     # Send the exception to Sentry
@@ -65,7 +65,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     # For any other exceptions, return a 500 error
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Something went wrong"},
+        content={"detail": "Something went wrong"}
     )
 
 
