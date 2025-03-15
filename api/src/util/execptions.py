@@ -62,9 +62,26 @@ class InvalidPasswordError(Exception):
         self.message = message
         super().__init__(f"{self.message}")
 
+
 class AlreadyExistsError(Exception):
     """Exception raised when something is already exists"""
 
     def __init__(self, message="duplicate"):
+        self.message = message
+        super().__init__(f"{self.message}")
+
+
+class JWTDecodeError(Exception):
+    """Exception raised when the JWT is invalid"""
+
+    def __init__(self, message="invalid JWT"):
+        self.message = message
+        super().__init__(f"{self.message}")
+
+
+class InvalidTokenError(Exception):
+    """Exception raised when the token is invalid"""
+
+    def __init__(self, message="invalid token"):
         self.message = message
         super().__init__(f"{self.message}")

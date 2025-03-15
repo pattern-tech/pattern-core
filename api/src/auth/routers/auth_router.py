@@ -1,5 +1,5 @@
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.auth.utils.bcrypt_helper import generate_access_token
@@ -17,6 +17,9 @@ router = APIRouter(prefix="/auth")
 database = Database()
 
 auth = AuthService()
+
+# Create a module-level dependency
+get_db_dependency = Depends(database.get_db)
 
 
 class AuthOutput(BaseModel):
@@ -40,7 +43,7 @@ class AuthOutput(BaseModel):
         },
     }
 )
-def register(input: RegisterInput, db: Session = Depends(database.get_db)):
+def register(input: RegisterInput, db: Session = get_db_dependency):
     """
     Register a new user.
 
@@ -86,7 +89,7 @@ def register(input: RegisterInput, db: Session = Depends(database.get_db)):
         },
     }
 )
-def login(input: LoginInput, db: Session = Depends(database.get_db)):
+def login(input: LoginInput, db: Session = get_db_dependency):
     """
     Login a user and return an access token.
 
@@ -126,7 +129,7 @@ def login(input: LoginInput, db: Session = Depends(database.get_db)):
         },
     }
 )
-def verify(input: VerifyInput, db: Session = Depends(database.get_db)):
+def verify(input: VerifyInput, db: Session = get_db_dependency):
     """
     Verify a signature according to SIWE spec and return an access token
 
