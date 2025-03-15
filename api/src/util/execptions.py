@@ -85,3 +85,10 @@ class InvalidTokenError(Exception):
     def __init__(self, message="invalid token"):
         self.message = message
         super().__init__(f"{self.message}")
+
+
+class RateLimitError(Exception):
+    """Exception raised when the rate limit is exceeded"""
+    def __init__(self, message="rate limit exceeded"):
+        self.message = message
+        super().__init__(self.message)
