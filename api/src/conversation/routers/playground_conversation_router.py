@@ -1,7 +1,8 @@
 from uuid import UUID
 from enum import Enum
-from pydantic import BaseModel
+from datetime import datetime
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -57,6 +58,9 @@ class CreateConversationInput(BaseModel):
     name: str
     project_id: UUID
     conversation_id: Optional[UUID] = None
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True

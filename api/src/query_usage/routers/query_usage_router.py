@@ -1,5 +1,5 @@
 from uuid import UUID
-from datetime import timedelta
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
@@ -49,6 +49,9 @@ class QueryUsageOutput(BaseModel):
     """
     id: UUID = Field(..., example="123e4567-e89b-12d3-a456-426614174000")
     provider: str = Field(..., example="morpheus")
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True

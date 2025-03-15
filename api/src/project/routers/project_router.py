@@ -1,7 +1,8 @@
 from uuid import UUID
+from datetime import datetime
 from typing import List, Dict
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
@@ -50,6 +51,9 @@ class ProjectOutput(BaseModel):
     id: UUID
     name: str
     workspace_id: UUID
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True

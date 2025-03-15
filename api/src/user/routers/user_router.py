@@ -1,5 +1,6 @@
 from uuid import UUID
-from pydantic import BaseModel
+from datetime import datetime
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from sqlalchemy.orm import Session
@@ -38,6 +39,9 @@ class UserOutput(BaseModel):
     email: str
     wallet_address: str
     chain_id: int
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True
