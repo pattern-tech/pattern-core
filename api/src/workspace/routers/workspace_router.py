@@ -1,13 +1,14 @@
 from uuid import UUID
-from typing import List
+from typing import List, Dict
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
-from src.db.sql_alchemy import Database
-from src.util.response import global_response
-from src.auth.utils.get_token import authenticate_user
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.db.sql_alchemy import Database
+from src.util.execptions import NotFoundError
+from src.auth.utils.get_token import authenticate_user
 from src.workspace.services.workspace_service import WorkspaceService
+from src.util.response import global_response, GlobalResponse, ExceptionResponse
 
 router = APIRouter(prefix="/workspace")
 database = Database()
@@ -54,10 +55,16 @@ class WorkspaceOutput(BaseModel):
 
 @router.post(
     "",
-    response_model=WorkspaceOutput,
+    response_model=GlobalResponse[WorkspaceOutput, Dict],
     summary="Create Workspace",
     description="Creates a new workspace for the authenticated user.",
-    response_description="The created workspace data."
+    response_description="The created workspace data.",
+    responses={
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received."
+        },
+    },
 )
 def create_workspace(
     input: CreateWorkspaceInput,
@@ -87,10 +94,16 @@ def create_workspace(
 
 @router.get(
     "/{workspace_id}",
-    response_model=WorkspaceOutput,
+    response_model=GlobalResponse[WorkspaceOutput, Dict],
     summary="Get Workspace",
     description="Retrieves a workspace by its ID for the authenticated user.",
-    response_description="The workspace data."
+    response_description="The workspace data.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Workspace not found."
+        },
+    },
 )
 def get_workspace(
     workspace_id: UUID,
@@ -120,7 +133,7 @@ def get_workspace(
 
 @router.get(
     "",
-    response_model=List[WorkspaceOutput],
+    response_model=GlobalResponse[List[WorkspaceOutput], Dict],
     summary="List All Workspaces",
     description="Lists all workspaces for the authenticated user.",
     response_description="A list of all workspaces data."
@@ -146,10 +159,16 @@ def get_all_workspaces(
 
 @router.put(
     "/{workspace_id}",
-    response_model=WorkspaceOutput,
+    response_model=GlobalResponse[WorkspaceOutput, Dict],
     summary="Update Workspace",
     description="Updates an existing workspace by its ID for the authenticated user.",
-    response_description="The updated workspace data."
+    response_description="The updated workspace data.",
+    responses={
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received."
+        },
+    },
 )
 def update_workspace(
     workspace_id: UUID,
@@ -186,7 +205,17 @@ def update_workspace(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete Workspace",
     description="Deletes a workspace by its ID for the authenticated user.",
-    response_description="The workspace is successfully deleted."
+    response_description="The workspace is successfully deleted.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Workspace not found"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    },
 )
 def delete_workspace(
     workspace_id: UUID,
@@ -208,7 +237,10 @@ def delete_workspace(
     try:
         workspace = service.delete_workspace(db, workspace_id, user_id)
         return global_response(workspace)
+
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

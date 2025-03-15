@@ -1,9 +1,10 @@
-import bcrypt
-from fastapi import HTTPException
-from jose import JWTError, jwt
-from passlib.context import CryptContext
 import os
+import bcrypt
+
+from jose import JWTError, jwt
 from dotenv import load_dotenv
+from passlib.context import CryptContext
+from src.util.execptions import JWTDecodeError
 
 load_dotenv()
 
@@ -74,4 +75,4 @@ def decode_access_token(token: str) -> dict:
         else:
             raise JWTError("Required fields not found in token")
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise JWTDecodeError("Invalid or expired token")

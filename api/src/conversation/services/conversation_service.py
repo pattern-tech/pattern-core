@@ -6,6 +6,7 @@ from langchain_core.messages.human import HumanMessage
 
 from src.util.configuration import Config
 from src.agentflow.agents.hub import AgentHub
+from src.util.execptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
 from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
@@ -50,7 +51,7 @@ class ConversationService:
             raise Exception("Name is required")
 
         if not self.project_repository.get_by_id(db_session, project_id, user_id):
-            raise Exception("Project not exists or not owned by user")
+            raise NotFoundError("Project not exists or not owned by user")
 
         conversation = Conversation(
             name=name, project_id=project_id, user_id=user_id)
@@ -85,21 +86,25 @@ class ConversationService:
             db_session, user_id, conversation_id)
 
         if not conversation:
-            raise Exception("Conversation not found")
+            raise NotFoundError("Conversation not found")
 
         return conversation, messages
 
-    def get_all_conversations(self, db_session: Session, project_id: UUID) -> List[Conversation]:
+    def get_all_conversations(self, db_session: Session, project_id: UUID, user_id: UUID) -> List[Conversation]:
         """
         Lists all conversations for a specific project.
 
         Args:
             db_session (Session): The database session.
             project_id (UUID): The ID of the project to retrieve conversations for.
+            user_id (UUID): The ID of the user who owns the project.
 
         Returns:
             List[Conversation]: A list of Conversation instances.
         """
+        if not self.project_service.get_project(db_session, project_id, user_id):
+            raise NotFoundError("Project not exists or not owned by user")
+
         return self.repository.get_all(db_session, project_id)
 
     def update_conversation(
@@ -124,7 +129,7 @@ class ConversationService:
             raise Exception("Name is required")
 
         if not self.project_repository.get_by_id(db_session, data["project_id"], user_id):
-            raise Exception("Project not exists or not owned by user")
+            raise NotFoundError("Project not exists or not owned by user")
 
         return self.repository.update(db_session, conversation_id, data, user_id)
 
@@ -194,10 +199,11 @@ class ConversationService:
             db_session, conversation_id, user_id)
 
         if not conversation:
-            raise Exception("Conversation not found or is not owned by user")
+            raise NotFoundError(
+                "Conversation not found or is not owned by user")
 
         if conversation.project_id != project_id:
-            raise Exception("Project not found or is not owned by user")
+            raise NotFoundError("Project not found or is not owned by user")
 
         config = Config.get_config()
 

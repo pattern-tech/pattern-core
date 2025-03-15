@@ -119,4 +119,4 @@ class WorkspaceService(BaseService):
         Returns:
             None
         """
-        self.repository.delete(db_session, workspace_id, user_id)
+        return self.repository.delete(db_session, workspace_id, user_id)

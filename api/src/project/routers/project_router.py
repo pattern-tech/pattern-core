@@ -1,13 +1,14 @@
 from uuid import UUID
-from typing import List, Set
+from typing import List, Dict
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
-from src.util.response import global_response
+from src.util.execptions import NotFoundError
 from src.auth.utils.get_token import authenticate_user
 from src.project.services.project_service import ProjectService
+from src.util.response import global_response, GlobalResponse, ExceptionResponse
 
 router = APIRouter(prefix="/project")
 database = Database()
@@ -56,16 +57,22 @@ class ProjectOutput(BaseModel):
 
 @router.post(
     "",
-    response_model=ProjectOutput,
+    response_model=GlobalResponse[ProjectOutput, Dict],
     summary="Create Project",
     description="Creates a new project for the authenticated user within a specified workspace.",
-    response_description="The created project data."
+    response_description="The created project data.",
+    responses={
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    }
 )
 def create_project(
     input: CreateProjectInput,
     db: Session = Depends(get_db),
     service: ProjectService = Depends(get_project_service),
-    user_id: UUID = Depends(authenticate_user),
+    user_id: UUID = Depends(authenticate_user)
 ):
     """
     Create a new project.
@@ -89,10 +96,20 @@ def create_project(
 
 @router.get(
     "/{project_id}",
-    response_model=ProjectOutput,
+    response_model=GlobalResponse[ProjectOutput, Dict],
     summary="Get Project",
     description="Retrieves a project by its ID for the authenticated user.",
-    response_description="The project data."
+    response_description="The project data.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Project not found"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    }
 )
 def get_project(
     project_id: UUID,
@@ -122,10 +139,16 @@ def get_project(
 
 @router.get(
     "",
-    response_model=List[ProjectOutput],
+    response_model=GlobalResponse[List[ProjectOutput], Dict],
     summary="List All Projects",
     description="Lists all projects for the authenticated user.",
-    response_description="A list of all projects for the user."
+    response_description="A list of all projects for the user.",
+    responses={
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    }
 )
 def get_all_projects(
     user_id: UUID = Depends(authenticate_user),
@@ -148,10 +171,20 @@ def get_all_projects(
 
 @router.put(
     "/{project_id}",
-    response_model=ProjectOutput,
+    response_model=GlobalResponse[ProjectOutput, Dict],
     summary="Update Project",
     description="Updates an existing project by its ID for the authenticated user.",
-    response_description="The updated project data."
+    response_description="The updated project data.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Project not found"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    }
 )
 def update_project(
     project_id: UUID,
@@ -187,7 +220,17 @@ def update_project(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete Project",
     description="Deletes a project by its ID for the authenticated user.",
-    response_description="The project is successfully deleted."
+    response_description="The project is successfully deleted.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Project not found"
+        },
+        400: {
+                "model": ExceptionResponse,
+                "description": "Bad request received"
+            }
+    }
 )
 def delete_project(
     project_id: UUID,
@@ -209,7 +252,10 @@ def delete_project(
     try:
         project = service.delete_project(db, project_id, user_id)
         return global_response(project)
+
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

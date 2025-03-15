@@ -2,15 +2,17 @@ from uuid import UUID
 from enum import Enum
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List, Optional, Dict
 from fastapi.responses import StreamingResponse
+from typing import List, Optional, Dict, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
-from src.util.response import global_response
+from src.util.execptions import NotFoundError
 from src.auth.utils.get_token import authenticate_user
+from src.project.services.project_service import ProjectService
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.services.conversation_service import ConversationService
+from src.util.response import global_response, GlobalResponse, ExceptionResponse
 
 router = APIRouter(prefix="/playground/conversation")
 database = Database()
@@ -39,6 +41,13 @@ def get_query_usage_service() -> QueryUsageService:
     Dependency to instantiate the QueryUsageService.
     """
     return QueryUsageService()
+
+
+def get_project_service() -> ProjectService:
+    """
+    Dependency to instantiate the ProjectService.
+    """
+    return ProjectService()
 
 
 class CreateConversationInput(BaseModel):
@@ -90,12 +99,43 @@ class FirstMessage(BaseModel):
     message: str
 
 
+class HistoryMessage(BaseModel):
+    """
+    Schema for the history message.
+    """
+    id: int
+    role: Literal["ai", "human"]
+    content: str
+
+
+class ChatHistory(BaseModel):
+    """
+    Schema for chat history.
+    """
+    history: List[HistoryMessage]
+
+class TitleOutput(BaseModel):
+    """
+    Schema for title output.
+    """
+    title: str
+
 @router.post(
     "",
-    response_model=ConversationOutput,
+    response_model=GlobalResponse[ConversationOutput, Dict],
     summary="Create Conversation",
     description="Creates a new conversation for the authenticated user.",
-    response_description="The created conversation data."
+    response_description="The created conversation data.",
+    responses={
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received."
+        },
+        404: {
+            "model": ExceptionResponse,
+            "description": "Project not found"
+        }
+    },
 )
 def create_conversation(
     input: CreateConversationInput,
@@ -118,18 +158,31 @@ def create_conversation(
         conversation = service.create_conversation(
             db, input.name, input.project_id, user_id, input.conversation_id)
         return global_response(conversation)
+
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        )
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get(
     "/{project_id}/{conversation_id}",
-    response_model=ConversationOutput,
+    response_model=GlobalResponse[ConversationOutput, ChatHistory],
     summary="Get Conversation",
     description="Retrieves a conversation by its ID for the authenticated user along with chat history metadata.",
-    response_description="The conversation data with chat history metadata."
+    response_description="The conversation data with chat history metadata.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Conversation not found"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    },
 )
 def get_conversation(
     project_id: UUID,
@@ -151,21 +204,37 @@ def get_conversation(
         ConversationOutput: The conversation data with chat history metadata.
     """
     try:
+
         conversation, history = service.get_conversation(
             db, conversation_id, user_id)
         return global_response(content=conversation, metadata={"history": history})
-    except Exception as e:
+
+    except NotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
         )
 
 
 @router.get(
     "/{project_id}",
-    response_model=List[ConversationOutput],
+    response_model=GlobalResponse[List[ConversationOutput], Dict],
     summary="List All Conversations",
     description="Lists all conversations for a specific project for the authenticated user.",
-    response_description="A list of all conversations for the project."
+    response_description="A list of all conversations for the project.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Project not found"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    },
 )
 def get_all_conversations(
     project_id: UUID,
@@ -184,8 +253,16 @@ def get_all_conversations(
     Returns:
         List[ConversationOutput]: A list of all conversations for the project.
     """
-    conversations = service.get_all_conversations(db, project_id)
-    return global_response(conversations)
+    try:
+        conversations = service.get_all_conversations(db, project_id, user_id)
+        return global_response(conversations)
+
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.put(
@@ -229,9 +306,20 @@ def update_conversation(
 
 @router.delete(
     "/{project_id}/{conversation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete Conversation",
     description="Deletes a conversation by its ID for the authenticated user.",
-    response_description="No content if the conversation is successfully deleted."
+    response_description="No content if the conversation is successfully deleted.",
+    responses={
+            404: {
+                "model": ExceptionResponse,
+                "description": "Project not found"
+            },
+        400: {
+                "model": ExceptionResponse,
+                "description": "Bad request received"
+        }
+    },
 )
 def delete_conversation(
     project_id: UUID,
@@ -253,7 +341,9 @@ def delete_conversation(
         None: If the conversation is successfully deleted.
     """
     try:
-        service.delete_conversation(db, conversation_id, user_id)
+        conversation = service.delete_conversation(
+            db, conversation_id, user_id)
+        return global_response(conversation)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
@@ -262,9 +352,20 @@ def delete_conversation(
 
 @router.post(
     "/{project_id}/{conversation_id}/chat",
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Send Message",
     description="Sends a message in the conversation chat for the authenticated user.",
-    response_description="The message response data along with chat history in metadata."
+    response_description="The message response data along with chat history in metadata.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Conversation or Project not found"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    }
 )
 async def send_message(
     input: MessageInput,
@@ -331,6 +432,10 @@ async def send_message(
             metadata = {"intermediate_steps": response["intermediate_steps"]}
             return global_response(content=response["response"], metadata=metadata)
 
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -338,9 +443,16 @@ async def send_message(
 
 @router.post(
     "/{project_id}/{conversation_id}/title-generation",
+    response_model=GlobalResponse[TitleOutput, Dict],
     summary="Auto Title Generation",
     description="Using LLM to generate title for conversation",
-    response_description="LLM title generated"
+    response_description="LLM title generated",
+    responses={
+            400: {
+                "model": ExceptionResponse,
+                "description": "Bad request received"
+            }
+    },
 )
 async def generate_title(
     input: FirstMessage,
@@ -354,7 +466,7 @@ async def generate_title(
     try:
         title = conversation_service.rename_title(
             db, conversation_id, user_id, input.message)
-        return title
+        return global_response({"title": title})
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)

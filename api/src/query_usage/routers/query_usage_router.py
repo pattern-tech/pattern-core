@@ -1,15 +1,15 @@
 from uuid import UUID
 from datetime import timedelta
-from typing import List, Optional
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
+from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
-from src.util.response import global_response
 from src.auth.utils.get_token import authenticate_user
+from src.util.execptions import NotFoundError, NotEnoughBalanceError
 from src.query_usage.services.query_usage_service import QueryUsageService
-
+from src.util.response import global_response, GlobalResponse, ExceptionResponse
 
 router = APIRouter(prefix="/query-usage")
 database = Database()
@@ -56,10 +56,20 @@ class QueryUsageOutput(BaseModel):
 
 @router.get(
     "/{query_usage_id}",
-    response_model=QueryUsageOutput,
+    response_model=GlobalResponse[QueryUsageOutput, Dict],
     summary="Get Query Usage",
     description="Retrieves a query usage record by its ID for the authenticated user.",
-    response_description="The query usage data."
+    response_description="The query usage data.",
+    responses={
+        404: {
+            "model": ExceptionResponse,
+            "description": "Query Usage not found"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    },
 )
 def get_query_usage(
     query_usage_id: UUID,
@@ -78,20 +88,33 @@ def get_query_usage(
     Returns:
         QueryUsageOutput: The query usage details if found.
     """
-    query_usage = service.get_query_usage(db, query_usage_id)
-    if not query_usage:
+    try:
+        query_usage = service.get_query_usage(db, query_usage_id)
+        return global_response(query_usage)
+    except NotFoundError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Query usage not found or unauthorized access."
-        )
-    return global_response(query_usage)
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get(
     "",
-    response_model=List[QueryUsageOutput],
+    response_model=GlobalResponse[List[QueryUsageOutput], Dict],
     summary="Get user query usage",
     description="Get number of used and total number of allowed query for a user",
-    response_description="Number of used and total number of allowed query for a user"
+    response_description="Number of used and total number of allowed query for a user",
+    responses={
+        403: {
+            "model": ExceptionResponse,
+            "description": "Not enough balance"
+        },
+        400: {
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    },
 )
 def get_user_query_usages(
     provider: Optional[str] = None,
@@ -113,11 +136,18 @@ def get_user_query_usages(
     Returns:
         dict: A dictionary containing the number of used and total number of allowed query.
     """
-    query_usages = service.get_all_query_usages(
-        db, user_id, provider, duration)
+    try:
+        query_usages = service.get_all_query_usages(
+            db, user_id, provider, duration)
 
-    data = {
-        "query_usages": len(query_usages),
-        "max_query_allowance_per_day": service.get_user_max_query_allowance(db, user_id)
-    }
-    return global_response(data)
+        data = {
+            "query_usages": len(query_usages),
+            "max_query_allowance_per_day": service.get_user_max_query_allowance(db, user_id)
+        }
+        return global_response(data)
+    except NotEnoughBalanceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

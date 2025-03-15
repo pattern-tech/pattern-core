@@ -3,8 +3,8 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 
 from src.db.models import Conversation
+from src.util.execptions import NotFoundError
 from src.share.base_repository import BaseRepository
-
 
 class ConversationRepository(BaseRepository[Conversation]):
     """
@@ -76,7 +76,7 @@ class ConversationRepository(BaseRepository[Conversation]):
         """
         conversation = self.get_by_id(db_session, id, user_id)
         if not conversation:
-            raise Exception("Conversation not found")
+            raise NotFoundError("Conversation not found")
         for key, value in conversation_data.items():
             setattr(conversation, key, value)
         db_session.commit()
@@ -97,7 +97,7 @@ class ConversationRepository(BaseRepository[Conversation]):
         """
         conversation = self.get_by_id(db_session, id, user_id)
         if not conversation:
-            raise Exception("Conversation not found")
+            raise NotFoundError("Conversation not found")
 
         db_session.delete(conversation)
         db_session.commit()

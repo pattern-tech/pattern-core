@@ -3,6 +3,7 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from src.db.models import Project
+from src.util.execptions import NotFoundError
 from src.project.repositories.project_repository import ProjectRepository
 from src.workspace.repositories.workspace_repository import WorkspaceRepository
 
@@ -37,7 +38,7 @@ class ProjectService:
         workspace = self.workspace_repository.get_by_id(
             db_session, workspace_id, user_id)
         if not workspace:
-            raise Exception("Workspace not found or not owned by user")
+            raise NotFoundError("Workspace not found or not owned by user")
 
         project = Project(name=name, user_id=user_id,
                           workspace_id=workspace_id)
@@ -62,7 +63,7 @@ class ProjectService:
         """
         project = self.repository.get_by_id(db_session, project_id, user_id)
         if not project:
-            raise Exception("Project not found")
+            raise NotFoundError("Project not found")
         return project
 
     def get_all_projects(self, db_session: Session, user_id: UUID) -> List[Project]:
@@ -99,7 +100,7 @@ class ProjectService:
         workspace = self.workspace_repository.get_by_id(
             db_session, data["workspace_id"], user_id)
         if not workspace:
-            raise Exception("Workspace not found or not owned by user")
+            raise NotFoundError("Workspace not found or not owned by user")
         return self.repository.update(db_session, project_id, data, user_id)
 
     def delete_project(
