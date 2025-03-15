@@ -109,7 +109,7 @@ def get_query_usage(
     description="Get number of used and total number of allowed query for a user",
     response_description="Number of used and total number of allowed query for a user",
     responses={
-        403: {
+        429: {
             "model": ExceptionResponse,
             "description": "Not enough balance"
         },
@@ -150,7 +150,7 @@ def get_user_query_usages(
         return global_response(data)
     except NotEnoughBalanceError as e:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
