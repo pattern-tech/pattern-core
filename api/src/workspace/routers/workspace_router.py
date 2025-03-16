@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime
 from typing import List, Dict
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -48,6 +49,10 @@ class WorkspaceOutput(BaseModel):
     """
     id: UUID = Field(..., example="123e4567-e89b-12d3-a456-426614174000")
     name: str = Field(..., example="New Workspace")
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+
 
     class Config:
         from_attributes = True

@@ -1,14 +1,15 @@
 from uuid import UUID
 from enum import Enum
-from pydantic import BaseModel
+from datetime import datetime
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
-from src.util.execptions import NotFoundError
 from src.auth.utils.get_token import authenticate_user
+from src.util.execptions import NotFoundError, RateLimitError
 from src.project.services.project_service import ProjectService
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.services.conversation_service import ConversationService
@@ -57,6 +58,9 @@ class CreateConversationInput(BaseModel):
     name: str
     project_id: UUID
     conversation_id: Optional[UUID] = None
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True
@@ -114,11 +118,13 @@ class ChatHistory(BaseModel):
     """
     history: List[HistoryMessage]
 
+
 class TitleOutput(BaseModel):
     """
     Schema for title output.
     """
     title: str
+
 
 @router.post(
     "",
@@ -199,6 +205,8 @@ def get_conversation(
     - **db**: Database session.
     - **service**: Conversation service handling business logic.
     - **user_id**: The authenticated user's ID.
+
+    - **metadata**: The chat history metadata.
 
     Returns:
         ConversationOutput: The conversation data with chat history metadata.
@@ -318,7 +326,7 @@ def update_conversation(
         400: {
                 "model": ExceptionResponse,
                 "description": "Bad request received"
-        }
+                }
     },
 )
 def delete_conversation(
@@ -364,6 +372,10 @@ def delete_conversation(
         400: {
             "model": ExceptionResponse,
             "description": "Bad request received"
+        },
+        429: {
+            "model": ExceptionResponse,
+            "description": "Rate daily limit exceeded"
         }
     }
 )
@@ -386,8 +398,6 @@ async def send_message(
     - **db**: Database session.
     - **service**: Conversation service handling business logic.
     - **user_id**: The authenticated user's ID.
-
-    - **metadata**: The chat history metadata.
 
     Returns:
         StreamingResponse: If `stream` is true.
@@ -436,6 +446,9 @@ async def send_message(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
         )
+    except RateLimitError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
