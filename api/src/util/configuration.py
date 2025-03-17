@@ -35,19 +35,22 @@ class Config(metaclass=Singleton):
                 raise Exception(f"{agent}_API_KEY not found")
 
         # load llm
-        if os.environ["LLM_PROVIDER"] or os.environ["LLM_MODEL"]:
+        if os.environ["LLM_PROVIDER"] and os.environ["LLM_MODEL"]:
+
             config["llm"] = {
                 "provider": os.environ["LLM_PROVIDER"],
                 "model": os.environ["LLM_MODEL"],
-                "api_key": os.environ["LLM_API_KEY"],
-                "extra_params": {
+                "api_key": os.environ["LLM_API_KEY"]
+            }
+
+            if os.environ["LLM_PROVIDER"] == "ollama":
+                config['llm']["extra_params"] = {
                     "host": os.environ["LLM_HOST"],
                     "models_path": os.environ["LLM_MODELS_PATH"]
                 }
-            }
         else:
             raise Exception(
-                "LLM_PROVIDER or LLM_MODEL not set in .env")
+                "LLM_PROVIDER and LLM_MODEL not set in .env")
 
         # load services
         config["services"] = []
