@@ -177,6 +177,14 @@ def handle_exceptions(func: callable) -> callable:
     return wrapper
 
 
+def tool(func: callable) -> callable:
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, callbacks=None):
     """
     Returns an instance of a language model based on the specified service.

@@ -42,9 +42,19 @@ services:
     networks:
       - pattern_core_network
 
+  qdrant:
+    image: qdrant/qdrant
+    ports:
+      - "0.0.0.0:6333:6333"
+      - "0.0.0.0:6334:6334"
+    networks:
+      - pattern_core_network
+    volumes:
+      - qdrant_data:/qdrant/storage
+
 volumes:
   pg_data:
+  qdrant_data:
 
 networks:
   pattern_core_network:
-    external: true

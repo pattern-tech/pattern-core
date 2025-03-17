@@ -1,11 +1,13 @@
 import os
 import ast
+import inspect
 import importlib.util
+import json
+from typing import Callable, Optional, List, Dict, Any, Type, get_type_hints
+from pydantic import BaseModel, create_model
 
-from typing import Callable, Optional
 
-
-def find_tool_functions(directory: str, file_name: Optional[str] = None):
+def find_tool_functions(directory: str, file_name: Optional[str] = None) -> List[Callable]:
     """
     Scans the given directory or a specific file for Python files, identifies functions with the @tool decorator,
     and returns references to these functions.
@@ -15,7 +17,7 @@ def find_tool_functions(directory: str, file_name: Optional[str] = None):
         file_name (Optional[str]): The specific Python file to scan within the directory.
 
     Returns:
-        List[function]: A list of references to functions with the @tool decorator.
+        List[Callable]: A list of references to functions with the @tool decorator.
     """
     tool_functions = []
 
@@ -55,17 +57,33 @@ def find_tool_functions(directory: str, file_name: Optional[str] = None):
     return tool_functions
 
 
-def get_all_tools(tools_path: str) -> list[Callable]:
+def get_all_tools(tools_path: str) -> List[Dict[str, str]]:
     """
-    Retrieves all tool functions from the specified directory.
+    Retrieves all tool functions from the specified directory and extracts their names and descriptions.
 
     Args:
-        tools_path (str, optional): The specific tool file to retrieve functions from. If None, retrieves all tools from the 'agentic' directory.
+        tools_path (str): The specific tool file to retrieve functions from. If None, retrieves all tools from the 'providers' directory.
 
     Returns:
-        list[Callable]: A list of callable tool function references.
+        List[Dict[str, str]]: A list of dictionaries containing function names and descriptions.
     """
     tools_root_path = os.path.join(
         os.getcwd(), "src", "agentflow", "providers")
     functions = find_tool_functions(tools_root_path, f"{tools_path}.py")
-    return functions
+
+    tools_info = []
+    for func in functions:
+        # Extract function name
+        name = func.__name__
+
+        # Extract function description from docstring
+        description = ""
+        if func.__doc__:
+            description = inspect.cleandoc(func.__doc__).strip()
+
+        tools_info.append({
+            "name": name,
+            "description": description
+        })
+
+    return tools_info

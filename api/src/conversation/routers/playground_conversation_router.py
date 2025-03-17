@@ -326,7 +326,7 @@ def update_conversation(
         400: {
                 "model": ExceptionResponse,
                 "description": "Bad request received"
-                }
+            }
     },
 )
 def delete_conversation(
@@ -379,7 +379,7 @@ def delete_conversation(
         }
     }
 )
-async def send_message(
+def send_message(
     input: MessageInput,
     conversation_id: UUID,
     project_id: UUID,
@@ -405,53 +405,62 @@ async def send_message(
 
         metadata: The chat history metadata.
     """
-    try:
+    result = conversation_service.send_message(db,
+                                      input.message,
+                                      user_id,
+                                      conversation_id,
+                                      project_id,
+                                      input.message_type,
+                                      input.stream)
 
-        max_query_allowance = query_usage_service.get_user_max_query_allowance(
-            db, user_id)
-        is_eligible = query_usage_service.check_user_eligibility(
-            db, user_id, max_query_allowance)
-        if not is_eligible:
-            raise Exception(
-                "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
-            )
+    return global_response(result)
+    # try:
 
-        if input.stream:
-            return StreamingResponse(
-                conversation_service.send_message(db,
-                                                  input.message,
-                                                  user_id,
-                                                  conversation_id,
-                                                  project_id,
-                                                  input.message_type,
-                                                  input.stream),
-                media_type="text/plain"
-            )
-        else:
-            response = None
-            async for item in conversation_service.send_message(
-                db,
-                input.message,
-                user_id,
-                conversation_id,
-                project_id,
-                input.message_type,
-                input.stream
-            ):
-                response = item
-            metadata = {"intermediate_steps": response["intermediate_steps"]}
-            return global_response(content=response["response"], metadata=metadata)
+    # max_query_allowance = query_usage_service.get_user_max_query_allowance(
+    #     db, user_id)
+    # is_eligible = query_usage_service.check_user_eligibility(
+    #     db, user_id, max_query_allowance)
+    # if not is_eligible:
+    #     raise Exception(
+    #         "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
+    #     )
 
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
-    except RateLimitError as e:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    # if input.stream:
+    #     return StreamingResponse(
+    #         conversation_service.send_message(db,
+    #                                             input.message,
+    #                                             user_id,
+    #                                             conversation_id,
+    #                                             project_id,
+    #                                             input.message_type,
+    #                                             input.stream),
+    #         media_type="text/plain"
+    #     )
+    # else:
+    #     response = None
+    #     async for item in conversation_service.send_message(
+    #         db,
+    #         input.message,
+    #         user_id,
+    #         conversation_id,
+    #         project_id,
+    #         input.message_type,
+    #         input.stream
+    #     ):
+    #         response = item
+    #     metadata = {"intermediate_steps": response["intermediate_steps"]}
+    #     return global_response(content=response["response"], metadata=metadata)
+
+    # except NotFoundError as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+    #     )
+    # except RateLimitError as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
+    # except Exception as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post(

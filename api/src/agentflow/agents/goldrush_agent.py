@@ -7,6 +7,7 @@ from src.agentflow.utils.tools_index import get_all_tools
 from src.agentflow.utils.shared_tools import handle_exceptions
 from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
 
+
 @tool
 @handle_exceptions
 def goldrush_agent(query: str):
@@ -30,9 +31,9 @@ def goldrush_agent(query: str):
     config = Config.get_config()
 
     llm = init_llm(service=config["llm"]["provider"],
-                        model_name=config["llm"]["model"],
-                        api_key=config["llm"]["api_key"],
-                        stream=False)
+                   model_name=config["llm"]["model"],
+                   api_key=config["llm"]["api_key"],
+                   stream=False)
 
     tools = get_all_tools(tools_path="goldrush_tools")
 

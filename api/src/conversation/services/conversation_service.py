@@ -17,6 +17,10 @@ from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
+from src.agentflow.tools.indexing import FunctionIndexer, FunctionSchema
+from src.agentflow.utils.tools_index import get_all_tools
+from src.agentflow.core.code_generattion import CodeGenerator
+
 
 class ConversationService:
     """
@@ -26,9 +30,9 @@ class ConversationService:
     def __init__(self):
         self.repository = ConversationRepository()
         self.project_repository = ProjectRepository()
-        self.memory_service = MemoryService()
+        # self.memory_service = MemoryService()
         self.project_service = ProjectService()
-        self.query_usage_service = QueryUsageService()
+        # self.query_usage_service = QueryUsageService()
         self.user_service = UserService()
 
     def create_conversation(
@@ -162,7 +166,7 @@ class ConversationService:
         """
         return self.repository.get_project_associated_with_conversation(db_session, conversation_id)
 
-    async def send_message(
+    def send_message(
         self,
         db_session: Session,
         message: str,
@@ -205,46 +209,35 @@ class ConversationService:
         if conversation.project_id != project_id:
             raise NotFoundError("Project not found or is not owned by user")
 
-        config = Config.get_config()
+        indexer = FunctionIndexer()
 
-        sub_agents = AgentHub().get_agents(config["agents"])
+        functions = indexer.search_functions(query=message, limit=5)
 
-        memory = self.memory_service.get_memory(conversation_id)
+        if not functions:
+            print('not functions')
+            functions = []
+            ether_scan_tools = get_all_tools("ether_scan_tools")
+            moralis_tools = get_all_tools("moralis_tools")
 
-        agent = RouterAgentService(
-            sub_agents=sub_agents, memory=memory, streaming=stream)
+            functions.extend(ether_scan_tools)
+            functions.extend(moralis_tools)
 
-        if stream:
-            try:
-                # Stream tokens as they become available.
-                async for token in agent.stream(message):
-                    yield token
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-                )
-        else:
-            result = agent.ask(message)
+            for function in functions:
+                fn_schema = FunctionSchema(function_name=function["name"],
+                                           description=function["description"])
+                indexer.index_function(fn_schema)
+                print(f'indexed {function["name"]}')
 
-            intermediate_steps = []
-            for step in result["intermediate_steps"]:
-                intermediate_steps.append({
-                    "function_name": step[0].tool,
-                    "arguments": step[0].tool_input,
-                    "output": step[1]
-                })
+        functions = indexer.search_functions(query=message, limit=5)
 
-            yield {
-                "response": result["output"],
-                "intermediate_steps": intermediate_steps
-            }
+        imports = "from src.agentflow.providers.ether_scan_tools import *\nfrom src.agentflow.providers.moralis_tools import *"
 
-        query_usage = QueryUsage(
-            user_id=user_id,
-            provider="morpheus",
-        )
-        self.query_usage_service.create_query_usage(
-            db_session, query_usage)
+        code_generator = CodeGenerator()
+        code_generator.set_user_input(message)
+        code_generator.set_tools_schema(functions)
+        result, error, code = code_generator.generate_and_execute(imports)
+
+        return result
 
     def get_history(
         self,

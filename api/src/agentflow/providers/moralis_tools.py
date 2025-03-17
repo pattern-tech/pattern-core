@@ -2,7 +2,7 @@ import requests
 
 from typing import Any
 from moralis import evm_api
-from langchain.tools import tool
+from src.agentflow.utils.shared_tools import tool
 
 from src.util.configuration import Config
 from src.agentflow.utils.shared_tools import handle_exceptions
@@ -11,6 +11,7 @@ _config = Config.get_config()
 _moralis_config = Config.get_service_config(_config, "MORALIS")
 
 _MORALIS_URL = "https://deep-index.moralis.io/api/v2"
+
 
 @tool
 @handle_exceptions

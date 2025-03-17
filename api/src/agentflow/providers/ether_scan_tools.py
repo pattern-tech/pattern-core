@@ -5,11 +5,21 @@ import requests
 import dateparser
 
 from web3 import Web3
-from langchain.tools import tool
+
 from typing import List, Any, Optional, Dict
 
 from src.util.configuration import Config
 from src.agentflow.utils.shared_tools import handle_exceptions
+
+from src.agentflow.utils.shared_tools import tool
+from hexbytes import HexBytes
+
+
+class HexJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, HexBytes):
+            return obj.hex()
+        return super().default(obj)
 
 
 _config = Config.get_config()
@@ -17,6 +27,7 @@ _ether_scan_config = Config.get_service_config(_config, "ETHER_SCAN")
 
 _ETHERSCAN_URL = "https://api.etherscan.io/v2/api"
 _ETH_RPC = os.environ["ETH_RPC"]
+
 
 @handle_exceptions
 def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
@@ -68,7 +79,7 @@ def fetch_contract_source_code(contract_address: str, api_key: str) -> str:
         "apikey": api_key
     }
     response = requests.get(url, params=params)
-    return response.json()["result"][0]["SourceCode"]
+    return response.json()["result"][0]
 
 
 @handle_exceptions
@@ -156,9 +167,18 @@ def get_contract_source_code(contract_address: str) -> str:
 
     Args:
         contract_address (str): The contract address.
+        output_include (list[str]): A list of field names to include in the output.
 
     Returns:
-        str: The contract source code.
+        List[dict[str, Any]]:
+            A list of dictionaries where each dictionary only contains the keys
+            listed in `output_include` (if they exist in the source data).
+            Possible fields include:
+
+            - SourceCode, ABI, ContractName, CompilerVersion, OptimizationUsed, Runs,       ConstructorArguments, EVMVersion, Library, LicenseType, Proxy, Implementation, SwarmSource, SimilarMatch
+
+    Notes: if the contract is proxy the `Proxy` field is 1 and there is implementation address
+           in `Implementation` field.
     """
     api_key = _ether_scan_config["api_key"]
     return fetch_contract_source_code(contract_address, api_key)
@@ -211,7 +231,7 @@ def get_contract_events(
     event_name: str,
     from_block: Optional[int] = None,
     to_block: Optional[int] = None
-) -> List[Any]:
+) -> List[Dict[str, Any]]:
     """
     Fetch events for a given smart contract event within a block range.
 
@@ -222,7 +242,7 @@ def get_contract_events(
         to_block (Optional[int]): The ending block (default: current block).
 
     Returns:
-        List[Any]: A list of event logs.
+        List[Dict[str, Any]]: A list of event logs in JSON serializable format.
 
     Raises:
         Exception: If the event is not found in the contract's ABI.
@@ -251,7 +271,21 @@ def get_contract_events(
     if to_block is None:
         to_block = web3.eth.block_number
 
-    return event_instance.get_logs(from_block=from_block, to_block=to_block)
+    logs = event_instance.get_logs(from_block=from_block, to_block=to_block)
+
+    # Convert AttributeDict objects to serializable dictionaries
+    serializable_logs = []
+    for log in logs:
+        log_dict = dict(log)
+        # Convert any non-serializable types like HexBytes
+        for key, value in log_dict.items():
+            if isinstance(value, HexBytes):
+                log_dict[key] = value.hex()
+            elif isinstance(value, bytes):
+                log_dict[key] = value.hex()
+        serializable_logs.append(log_dict)
+
+    return serializable_logs
 
 
 @tool
