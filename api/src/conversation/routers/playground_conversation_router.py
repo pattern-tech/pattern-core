@@ -412,7 +412,7 @@ async def send_message(
         is_eligible = query_usage_service.check_user_eligibility(
             db, user_id, max_query_allowance)
         if not is_eligible:
-            raise Exception(
+            raise RateLimitError(
                 "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
             )
 
