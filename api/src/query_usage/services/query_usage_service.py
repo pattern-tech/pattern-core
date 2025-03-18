@@ -7,7 +7,7 @@ from src.db.models import QueryUsage
 from src.share.base_service import BaseService
 from src.user.services.user_service import UserService
 from src.share.staked_tokens import get_user_staked_tokens
-from src.util.execptions import NotFoundError, NotEnoughBalanceError
+from src.util.execptions import NotFoundError, RateLimitError
 from src.query_usage.repositories.query_usage_repository import QueryUsageRepository
 
 
@@ -102,7 +102,7 @@ class QueryUsageService(BaseService):
             wallet_address=user.wallet_address, provider="morpheus")
 
         if staked_morpheus == 0:
-            raise NotEnoughBalanceError(
+            raise RateLimitError(
                 "You need to stake Morpheus tokens to use this service")
 
         usage_setting = self.get_usage_setting(

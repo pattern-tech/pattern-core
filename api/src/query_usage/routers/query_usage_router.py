@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
 from src.auth.utils.get_token import authenticate_user
-from src.util.execptions import NotFoundError, NotEnoughBalanceError
+from src.util.execptions import NotFoundError, RateLimitError
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.util.response import global_response, GlobalResponse, ExceptionResponse
 
@@ -148,7 +148,7 @@ def get_user_query_usages(
             "max_query_allowance_per_day": service.get_user_max_query_allowance(db, user_id)
         }
         return global_response(data)
-    except NotEnoughBalanceError as e:
+    except RateLimitError as e:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
     except Exception as e:

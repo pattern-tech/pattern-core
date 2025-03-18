@@ -31,14 +31,6 @@ class NotFoundError(Exception):
         super().__init__(f"{self.message}")
 
 
-class NotEnoughBalanceError(Exception):
-    """Exception raised when user balance is not enough"""
-
-    def __init__(self, message="not enough balance"):
-        self.message = message
-        super().__init__(f"{self.message}")
-
-
 class InvalidMessageError(Exception):
     """Exception raised when an item not found."""
 
@@ -89,6 +81,7 @@ class InvalidTokenError(Exception):
 
 class RateLimitError(Exception):
     """Exception raised when the rate limit is exceeded"""
+
     def __init__(self, message="rate limit exceeded"):
         self.message = message
         super().__init__(self.message)
