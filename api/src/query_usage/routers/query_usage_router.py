@@ -1,8 +1,8 @@
 from uuid import UUID
-from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
@@ -50,11 +50,16 @@ class QueryUsageOutput(BaseModel):
     id: UUID = Field(..., example="123e4567-e89b-12d3-a456-426614174000")
     provider: str = Field(..., example="morpheus")
     created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
-    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
-    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True
+
+
+class TodayQueryUsage(BaseModel):
+    today_query_count: int = Field(..., example=2)
+    remaining_query_allowance: int = Field(..., example=3)
+    max_query_allowance_per_day: int = Field(..., example=5)
+    next_reset_time: datetime = Field(..., example="2025-03-15T15:30:20+03:30")
 
 
 @router.get(
@@ -104,7 +109,7 @@ def get_query_usage(
 
 @router.get(
     "",
-    response_model=GlobalResponse[List[QueryUsageOutput], Dict],
+    response_model=GlobalResponse[TodayQueryUsage, Dict],
     summary="Get user query usage",
     description="Get number of used and total number of allowed query for a user",
     response_description="Number of used and total number of allowed query for a user",
@@ -121,31 +126,42 @@ def get_query_usage(
 )
 def get_user_query_usages(
     provider: Optional[str] = None,
-    duration: Optional[timedelta] = timedelta(hours=24),
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),
     service: QueryUsageService = Depends(get_query_usage_service),
 ):
     """
-    Get user query usage
+    Get user query usage including the remaining query count for today and the next reset time.
 
     - **provider**: Optional filter by provider.
-    - **duration**: Optional filter by a specific datetime.
     - **user_id**: The authenticated user's ID.
     - **db**: Database session.
     - **service**: QueryUsage service handling business logic.
-    - **conversation_service**: Conversation service handling business logic.
 
     Returns:
-        dict: A dictionary containing the number of used and total number of allowed query.
+        dict: A dictionary containing:
+            - today_query_count: Number of queries used today
+            - max_query_allowance_per_day: Total number of allowed queries per day
+            - remaining_queries_today: Number of remaining queries for today
+            - next_reset_time: The datetime when the query usage will reset to zero
     """
     try:
-        query_usages = service.get_all_query_usages(
-            db, user_id, provider, duration)
+        # Get the max query allowance for this user
+        max_query_allowance = service.get_user_max_query_allowance(db, user_id)
+
+        # Get today's query count using the new repository method
+        today_query_count, _, next_reset_time = service.get_user_query_count_for_today(
+            db, user_id, provider)
+
+        # Calculate remaining queries for today
+        remaining_queries_today = max(
+            0, max_query_allowance - today_query_count)
 
         data = {
-            "query_usages": len(query_usages),
-            "max_query_allowance_per_day": service.get_user_max_query_allowance(db, user_id)
+            "today_query_count": today_query_count,
+            "max_query_allowance_per_day": max_query_allowance,
+            "remaining_queries_today": remaining_queries_today,
+            "next_reset_time": next_reset_time
         }
         return global_response(data)
     except RateLimitError as e:

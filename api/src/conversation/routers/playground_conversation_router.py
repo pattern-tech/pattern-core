@@ -409,6 +409,7 @@ async def send_message(
 
         max_query_allowance = query_usage_service.get_user_max_query_allowance(
             db, user_id)
+
         is_eligible = query_usage_service.check_user_eligibility(
             db, user_id, max_query_allowance)
         if not is_eligible:

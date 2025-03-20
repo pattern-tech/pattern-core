@@ -1,7 +1,7 @@
 from uuid import UUID
-from typing import List, Optional
+from datetime import datetime
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from typing import List, Optional, Tuple
 
 from src.db.models import QueryUsage
 from src.share.base_service import BaseService
@@ -117,23 +117,44 @@ class QueryUsageService(BaseService):
 
         return max_allowed_query
 
+    def get_user_query_count_for_today(self, db_session: Session, user_id: UUID, provider: Optional[str] = None) -> Tuple[int, Optional[datetime]]:
+        """
+        Retrieves the count of queries made by a user today and the timestamp of the oldest query.
+
+        'Today' is defined as a 24-hour period starting from the user's account creation time.
+
+        Args:
+            db_session (Session): The database session to use.
+            user_id (UUID): The unique identifier of the user.
+            provider (str, optional): The provider to filter by. Defaults to None.
+
+        Returns:
+            Tuple[int, Optional[datetime]]: A tuple containing the count of queries and 
+                                           the timestamp of the oldest query.
+        """
+        return self.repository.get_user_query_count_for_today(db_session, user_id, provider)
+
     def check_user_eligibility(self, db_session: Session, user_id: UUID, max_query_allowance: int) -> bool:
         """
         Checks if a user is eligible to make a query based on their daily query limit.
+        If a user has exceeded their daily limit for the current day (since midnight UTC),
+        they won't be allowed to chat with the model until the next day.
 
         Args:
             db_session (Session): The database session.
             user_id (UUID): The ID of the user.
-            max_query_allowance (int): The number of queries the user is allowed to make.
+            max_query_allowance (int): The number of queries the user is allowed to make per day.
 
         Returns:
             bool: True if the user is eligible, False otherwise.
         """
-        user_query_usage_until_previous_24h = self.get_all_query_usages(
-            db_session, user_id, "morpheus", timedelta(hours=24)
+        # Get the count of queries for today and the timestamp of the oldest query
+        query_count, oldest_query_time = self.get_user_query_count_for_today(
+            db_session, user_id, "morpheus"
         )
-
-        if len(user_query_usage_until_previous_24h) >= max_query_allowance:
+        print(query_count)
+        # If the user has exceeded their daily limit
+        if query_count >= max_query_allowance:
             return False
 
         return True
