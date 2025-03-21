@@ -149,10 +149,10 @@ class QueryUsageService(BaseService):
             bool: True if the user is eligible, False otherwise.
         """
         # Get the count of queries for today and the timestamp of the oldest query
-        query_count, oldest_query_time = self.get_user_query_count_for_today(
+        query_count, _, _ = self.get_user_query_count_for_today(
             db_session, user_id, "morpheus"
         )
-        print(query_count)
+
         # If the user has exceeded their daily limit
         if query_count >= max_query_allowance:
             return False

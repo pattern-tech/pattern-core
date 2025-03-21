@@ -2,7 +2,7 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from src.share.base_repository import BaseRepository
 from src.db.models import QueryUsage, UsageSetting, UserModel
@@ -113,8 +113,8 @@ class QueryUsageRepository(BaseRepository[QueryUsage]):
             return 0, None
 
         # Calculate the start of the user's 'today' (24 hours from their creation time)
-        creation_time = user.created_at
-        current_time = datetime.now(creation_time.tzinfo)
+        creation_time = user.created_at.replace(tzinfo=timezone.utc)
+        current_time = datetime.now(timezone.utc)
 
         # Calculate the day offset (how many days have passed since creation)
         days_since_creation = (current_time - creation_time).days

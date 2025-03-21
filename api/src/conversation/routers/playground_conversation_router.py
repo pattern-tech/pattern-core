@@ -414,7 +414,7 @@ async def send_message(
             db, user_id, max_query_allowance)
         if not is_eligible:
             raise RateLimitError(
-                "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
+                "You have reached your daily query limit. Please try again tomorrow or stake more to get more credit."
             )
 
         if input.stream:
