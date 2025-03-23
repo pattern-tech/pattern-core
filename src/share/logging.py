@@ -1,5 +1,6 @@
 import os
 import logging
+import datetime
 
 from pathlib import Path
 from logging import Logger
@@ -26,7 +27,9 @@ class Logging(metaclass=Singleton):
         self._logger.propagate = False
 
         formatter = logging.Formatter(
-            "%(asctime)s [%(levelname)s] - %(message)s")
+            "%(asctime)s [%(levelname)s] - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S")
+        formatter.converter = lambda *args: datetime.datetime.now(datetime.timezone.utc).timetuple()
 
         # TimedRotatingFileHandler for automatic log file rotation
         size_handler = handlers.RotatingFileHandler(
