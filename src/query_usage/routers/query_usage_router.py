@@ -110,13 +110,13 @@ def get_query_usage(
 @router.get(
     "",
     response_model=GlobalResponse[TodayQueryUsage, Dict],
-    summary="Get user query usage",
+    summary="Get User Daily Query Usage",
     description="Get number of used and total number of allowed query for a user",
     response_description="Number of used and total number of allowed query for a user",
     responses={
         429: {
             "model": ExceptionResponse,
-            "description": "Not enough balance"
+            "description": "Not credit to use service"
         },
         400: {
             "model": ExceptionResponse,
