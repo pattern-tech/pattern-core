@@ -326,7 +326,7 @@ def update_conversation(
         400: {
                 "model": ExceptionResponse,
                 "description": "Bad request received"
-                }
+            }
     },
 )
 def delete_conversation(
@@ -413,19 +413,14 @@ def send_message(
             db, user_id, max_query_allowance)
         if not is_eligible:
             raise RateLimitError(
-<<<<<<< HEAD:api/src/conversation/routers/playground_conversation_router.py
-                "You have reached your daily query limit. Please try again tomorrow or stake more to get more queries."
-=======
-                "You have reached your daily query limit. Please try again tomorrow or stake more to get more credit."
->>>>>>> 189d6dfab9890f0b5eef2bf8108f01bcde692a83:src/conversation/routers/playground_conversation_router.py
-            )
+                "You have reached your daily query limit. Please try again tomorrow or stake more to get more credit.")
         result = conversation_service.send_message(db,
-                                                input.message,
-                                                user_id,
-                                                conversation_id,
-                                                project_id,
-                                                input.message_type,
-                                                input.stream)
+                                                   input.message,
+                                                   user_id,
+                                                   conversation_id,
+                                                   project_id,
+                                                   input.message_type,
+                                                   input.stream)
 
         return global_response(result)
 
