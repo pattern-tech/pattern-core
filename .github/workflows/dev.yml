@@ -30,8 +30,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./api
-          file: ./api/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: patterntechnology/pattern-core-api:latest
           platforms: linux/amd64
