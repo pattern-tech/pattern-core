@@ -28,7 +28,7 @@ class Config(metaclass=Singleton):
         # load agents
         if os.environ["AGENTS"]:
             agents = os.environ["AGENTS"].split(",")
-            config["agents"] = agents
+            config["agents"] = [agent.strip() for agent in agents]
 
         for agent in agents:
             if not os.environ[f"{agent}_API_KEY"]:
