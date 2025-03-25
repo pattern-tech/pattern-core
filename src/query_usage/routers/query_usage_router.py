@@ -124,7 +124,7 @@ def get_query_usage(
         }
     },
 )
-def get_user_query_usages(
+def get_user_daily_query_usages(
     provider: Optional[str] = None,
     user_id: UUID = Depends(authenticate_user),
     db: Session = Depends(get_db),

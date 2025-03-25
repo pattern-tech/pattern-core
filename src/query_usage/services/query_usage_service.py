@@ -99,7 +99,7 @@ class QueryUsageService(BaseService):
                 return max_allowed_query
 
         staked_morpheus = get_user_staked_tokens(
-            wallet_address=user.wallet_address, provider="morpheus")
+            wallet_address=user.wallet_address.lower(), provider="morpheus")
 
         if staked_morpheus == 0:
             raise RateLimitError(
@@ -112,7 +112,7 @@ class QueryUsageService(BaseService):
         for setting in usage_setting:
             if setting.provider == "morpheus":
                 max_allowed_query = setting.max_query * \
-                    (int(staked_morpheus) / 1e18)
+                    int(int(staked_morpheus) / 1e18)
                 break
 
         return max_allowed_query
