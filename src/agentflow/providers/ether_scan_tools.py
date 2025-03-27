@@ -18,6 +18,7 @@ _ether_scan_config = Config.get_service_config(_config, "ETHER_SCAN")
 _ETHERSCAN_URL = "https://api.etherscan.io/v2/api"
 _ETH_RPC = os.environ["ETH_RPC"]
 
+
 @handle_exceptions
 def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
     """
@@ -68,7 +69,7 @@ def fetch_contract_source_code(contract_address: str, api_key: str) -> str:
         "apikey": api_key
     }
     response = requests.get(url, params=params)
-    return response.json()["result"][0]["SourceCode"]
+    return response.json()["result"][0]
 
 
 @handle_exceptions
@@ -161,7 +162,16 @@ def get_contract_source_code(contract_address: str) -> str:
         str: The contract source code.
     """
     api_key = _ether_scan_config["api_key"]
-    return fetch_contract_source_code(contract_address, api_key)
+    response = fetch_contract_source_code(contract_address, api_key)
+
+    # fetch the implementation source code if it is proxy
+    is_proxy = int(response['Proxy'])
+    if is_proxy:
+        implementation_addr = response["Implementation"]
+        if implementation_addr:
+            return fetch_contract_source_code(implementation_addr, api_key)["SourceCode"]
+
+    return "unable to fetch the source code"
 
 
 @tool

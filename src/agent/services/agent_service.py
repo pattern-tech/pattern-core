@@ -126,7 +126,7 @@ class RouterAgentService:
             except asyncio.TimeoutError:
                 continue
 
-        result = await task
+        _ = await task
 
     def ask(self, message: str):
         """
