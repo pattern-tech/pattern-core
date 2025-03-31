@@ -14,13 +14,16 @@ class StreamingCallbackHandler(BaseCallbackHandler):
     """
     A callback handler that collects tokens and intermediate events in an asyncio queue.
     Uses a newline-delimited JSON protocol.
+    Ensures each event is a complete JSON object with a newline terminator.
     """
 
     def __init__(self):
         self.queue = asyncio.Queue()
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
+        # Create a complete JSON event for each token
         event = {"type": "token", "data": token}
+        # Ensure each event ends with a newline for proper parsing
         self.queue.put_nowait(json.dumps(event) + "\n")
 
     def on_agent_action(self, action, **kwargs) -> None:
@@ -29,6 +32,7 @@ class StreamingCallbackHandler(BaseCallbackHandler):
             "tool": getattr(action, "tool", None),
             "tool_input": getattr(action, "tool_input", {})
         }
+        # Ensure each event ends with a newline for proper parsing
         self.queue.put_nowait(json.dumps(event) + "\n")
 
 
@@ -119,33 +123,53 @@ class RouterAgentService:
                 self.agent_executor.arun({"input": message})
             )
 
-        # Buffer to collect tokens
-        buffer = ""
+        # Use a smaller timeout to ensure more responsive streaming
+        timeout = 0.01
 
         # Yield tokens as they become available.
         while not task.done() or not self.streaming_handler.queue.empty():
             try:
-                token = await asyncio.wait_for(self.streaming_handler.queue.get(), timeout=0.1)
-                # Add token to buffer
-                buffer += token
+                # Get token with a short timeout to maintain streaming responsiveness
+                token = await asyncio.wait_for(self.streaming_handler.queue.get(), timeout=timeout)
 
-                # Check if buffer contains complete JSON objects (ending with newline)
-                while "\n" in buffer:
-                    # Split at the first newline
-                    json_str, buffer = buffer.split("\n", 1)
-                    # Only yield complete JSON objects
-                    if json_str:
-                        yield json_str + "\n"
+                # Ensure token is a complete JSON object
+                if token.endswith("\n"):
+                    # Token is already a complete JSON object, yield it directly
+                    yield token
+                else:
+                    # Token might be incomplete, wait a tiny bit for more data
+                    buffer = token
+                    try:
+                        # Try to get more data with a very short timeout
+                        while not buffer.endswith("\n"):
+                            more_token = await asyncio.wait_for(
+                                self.streaming_handler.queue.get(),
+                                timeout=0.005
+                            )
+                            buffer += more_token
+                            # If we now have a complete line, break
+                            if "\n" in buffer:
+                                break
+                    except asyncio.TimeoutError:
+                        # If we timeout waiting for more data, that's okay
+                        # We'll just yield what we have if it's complete
+                        pass
 
+                    # Process the buffer to yield complete JSON objects
+                    while "\n" in buffer:
+                        json_str, remaining = buffer.split("\n", 1)
+                        if json_str:  # Only yield non-empty strings
+                            yield json_str + "\n"
+                        buffer = remaining
+
+                    # If there's anything left in the buffer, keep it for next iteration
+                    if buffer:
+                        # Put it back in the queue for the next iteration
+                        self.streaming_handler.queue.put_nowait(buffer)
             except asyncio.TimeoutError:
+                # Short timeout to keep the loop responsive
+                await asyncio.sleep(0.01)
                 continue
-
-        # Yield any remaining complete JSON in the buffer
-        if buffer and "\n" in buffer:
-            parts = buffer.split("\n")
-            for i in range(len(parts) - 1):
-                if parts[i]:
-                    yield parts[i] + "\n"
 
         result = await task
 
