@@ -24,8 +24,9 @@ def etherscan_agent(query: str):
     - Retrieve the ABI of a smart contract
     - Retrieve the ABI of a specific event from a smart contract
     - Fetch events for a given smart contract event within a block range
-    - Retrieve the latest Ethereum block number
+    - Retrieve the latest Ethereum block number and hash
     - Convert a Unix timestamp to the nearest Ethereum block number
+    - Decode the input data of an Ethereum transaction
 
     Args:
         query (str): query about Ethereum blockchain tasks.
@@ -63,6 +64,9 @@ def etherscan_agent(query: str):
                 "function_args": step[0].tool_input,
                 "function_output": step[-1]
             })
-        return {"agent_steps": agent_steps}
+        if agent_steps:
+            return {"agent_steps": agent_steps}
+        else:
+            return {"agent_answer": response["output"]}
     except:
         return "no tools called inside agent"
