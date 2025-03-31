@@ -98,6 +98,7 @@ class RouterAgentService:
             - If memory is enabled, the agent's response is invoked synchronously using `run_in_executor`.
             - If memory is not enabled, the agent's response is invoked asynchronously using `arun`.
             - The method clears any leftover tokens in the queue before starting to stream the response.
+            - Uses a buffer to ensure complete JSON objects are sent to prevent parsing errors.
         """
         # Clear any leftover tokens.
         while not self.streaming_handler.queue.empty():
@@ -118,13 +119,33 @@ class RouterAgentService:
                 self.agent_executor.arun({"input": message})
             )
 
+        # Buffer to collect tokens
+        buffer = ""
+
         # Yield tokens as they become available.
         while not task.done() or not self.streaming_handler.queue.empty():
             try:
                 token = await asyncio.wait_for(self.streaming_handler.queue.get(), timeout=0.1)
-                yield token
+                # Add token to buffer
+                buffer += token
+
+                # Check if buffer contains complete JSON objects (ending with newline)
+                while "\n" in buffer:
+                    # Split at the first newline
+                    json_str, buffer = buffer.split("\n", 1)
+                    # Only yield complete JSON objects
+                    if json_str:
+                        yield json_str + "\n"
+
             except asyncio.TimeoutError:
                 continue
+
+        # Yield any remaining complete JSON in the buffer
+        if buffer and "\n" in buffer:
+            parts = buffer.split("\n")
+            for i in range(len(parts) - 1):
+                if parts[i]:
+                    yield parts[i] + "\n"
 
         result = await task
 
