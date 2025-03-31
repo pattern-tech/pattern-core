@@ -57,6 +57,9 @@ def moralis_agent(query: str):
                 "function_args": step[0].tool_input,
                 "function_output": step[-1]
             })
-        return {"agent_steps": agent_steps}
+        if agent_steps:
+            return {"agent_steps": agent_steps}
+        else:
+            return {"agent_answer": response["output"]}
     except:
         return "no tools called inside agent"
