@@ -1,11 +1,11 @@
-from langchain.tools import tool
-from langchain.agents import AgentExecutor
+import os
+import json
 
-from src.util.configuration import Config
-from src.agentflow.utils.enum import AgentType
+from langchain.tools import tool
+from src.agentflow.agents.base_agent import OraAgent
 from src.agentflow.utils.tools_index import get_all_tools
 from src.agentflow.utils.shared_tools import handle_exceptions
-from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
+from langchain_core.utils.function_calling import convert_to_openai_function
 
 
 @tool
@@ -28,38 +28,19 @@ def moralis_agent(query: str):
     Returns:
         str: Response containing the requested Ethereum blockchain information
     """
-    config = Config.get_config()
-
-    llm = init_llm(service=config["llm"]["provider"],
-                   model_name=config["llm"]["model"],
-                   api_key=config["llm"]["api_key"],
-                   stream=False)
+    agent = OraAgent(os.environ["ORA_API_KEY"])
 
     tools = get_all_tools(tools_path="moralis_tools")
 
-    prompt = init_prompt(llm, AgentType.BLOCKCHAIN_AGENT)
+    openai_tools = [convert_to_openai_function(tool.func) for tool in tools]
 
-    agent = init_agent(llm, tools, prompt)
+    for tool, tool_def in zip(tools, openai_tools):
+        tool_def = {"type": "function", "function": tool_def}
+        agent.add_tool(tool_def, tool.func)
 
-    agent_executor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        return_intermediate_steps=True,
-        verbose=True)
+    # Pretty-print the tools for debugging
+    print(json.dumps(agent.tools, indent=2))
 
-    response = agent_executor.invoke({"input": query})
+    result = agent.chat(query)
 
-    try:
-        agent_steps = []
-        for step in response["intermediate_steps"]:
-            agent_steps.append({
-                "function_name": step[0].tool,
-                "function_args": step[0].tool_input,
-                "function_output": step[-1]
-            })
-        if agent_steps:
-            return {"agent_steps": agent_steps}
-        else:
-            return {"agent_answer": response["output"]}
-    except:
-        return "no tools called inside agent"
+    return result
