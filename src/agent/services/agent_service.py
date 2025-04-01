@@ -1,5 +1,6 @@
 import json
 import asyncio
+from typing import Dict, Any, Optional, AsyncGenerator
 
 from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
@@ -13,26 +14,40 @@ from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
 class StreamingCallbackHandler(BaseCallbackHandler):
     """
     A callback handler that collects tokens and intermediate events in an asyncio queue.
-    Uses a newline-delimited JSON protocol.
-    Ensures each event is a complete JSON object with a newline terminator.
+    Uses a newline-delimited JSON (NDJSON) protocol for reliable streaming.
+    Each event is a complete JSON object with a newline terminator.
     """
 
     def __init__(self):
         self.queue = asyncio.Queue()
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
+        """
+        Handle new tokens from the LLM.
+
+        Args:
+            token (str): The new token from the LLM.
+            **kwargs: Additional keyword arguments.
+        """
         # Create a complete JSON event for each token
         event = {"type": "token", "data": token}
-        # Ensure each event ends with a newline for proper parsing
+        # Use NDJSON format (newline-delimited JSON)
         self.queue.put_nowait(json.dumps(event) + "\n")
 
     def on_agent_action(self, action, **kwargs) -> None:
+        """
+        Handle agent actions.
+
+        Args:
+            action: The action being performed by the agent.
+            **kwargs: Additional keyword arguments.
+        """
         event = {
             "type": "tool_start",
             "tool": getattr(action, "tool", None),
             "tool_input": getattr(action, "tool_input", {})
         }
-        # Ensure each event ends with a newline for proper parsing
+        # Use NDJSON format
         self.queue.put_nowait(json.dumps(event) + "\n")
 
 
@@ -43,9 +58,23 @@ class RouterAgentService:
     """
 
     def __init__(self, sub_agents, memory=None, streaming: bool = True):
+        """
+        Initialize the RouterAgentService.
+
+        Args:
+            sub_agents: The sub-agents to use for routing.
+            memory: The memory to use for storing conversation history.
+            streaming (bool): Whether to enable streaming responses.
+        """
         self.sub_agents = sub_agents
         self.memory = memory
         self.streaming = streaming
+        self.streaming_handler = None
+
+        # Default timeout values that can be adjusted if needed
+        self.token_timeout = 0.01
+        self.buffer_timeout = 0.005
+        self.poll_interval = 0.01
 
         # Set up the streaming callback if streaming is enabled.
         if streaming:
@@ -87,8 +116,31 @@ class RouterAgentService:
                 history_messages_key="chat_history",
             )
 
-    async def stream(self, message: str):
+    async def _process_complete_json(self, buffer: str) -> tuple[list[str], str]:
         """
+        Process a buffer to extract complete JSON objects.
+
+        Args:
+            buffer (str): The buffer containing JSON data.
+
+        Returns:
+            tuple: A tuple containing a list of complete JSON strings and any remaining buffer.
+        """
+        results = []
+        remaining = buffer
+
+        # Process all complete objects in the buffer
+        while "\n" in remaining:
+            json_str, remaining = remaining.split("\n", 1)
+            if json_str:  # Only include non-empty strings
+                results.append(json_str + "\n")
+
+        return results, remaining
+
+    async def stream(self, message: str) -> AsyncGenerator[str, None]:
+        """
+        Stream the agent's response to the input message.
+
         Args:
             message (str): The input message to be processed by the agent.
 
@@ -99,16 +151,17 @@ class RouterAgentService:
             asyncio.TimeoutError: If waiting for a token from the queue times out.
 
         Notes:
-            - If memory is enabled, the agent's response is invoked synchronously using `run_in_executor`.
-            - If memory is not enabled, the agent's response is invoked asynchronously using `arun`.
-            - The method clears any leftover tokens in the queue before starting to stream the response.
-            - Uses a buffer to ensure complete JSON objects are sent to prevent parsing errors.
+            This method uses an efficient NDJSON streaming protocol for reliable parsing.
+            It supports both memory and non-memory modes, adapting the execution method accordingly.
         """
-        # Clear any leftover tokens.
+        if not self.streaming or not self.streaming_handler:
+            raise ValueError("Streaming is not enabled")
+
+        # Clear any leftover tokens
         while not self.streaming_handler.queue.empty():
             self.streaming_handler.queue.get_nowait()
 
-        # If memory is enabled, use the synchronous `invoke` wrapped in run_in_executor.
+        # Start the agent task based on memory configuration
         if self.memory:
             loop = asyncio.get_running_loop()
             task = loop.run_in_executor(
@@ -123,57 +176,65 @@ class RouterAgentService:
                 self.agent_executor.arun({"input": message})
             )
 
-        # Use a smaller timeout to ensure more responsive streaming
-        timeout = 0.01
+        buffer = ""  # Initialize an empty buffer for accumulating incomplete JSON
 
-        # Yield tokens as they become available.
+        # Continue processing while the task is running or queue has items
         while not task.done() or not self.streaming_handler.queue.empty():
             try:
-                # Get token with a short timeout to maintain streaming responsiveness
-                token = await asyncio.wait_for(self.streaming_handler.queue.get(), timeout=timeout)
+                # Try to get a token with a timeout to maintain responsiveness
+                token = await asyncio.wait_for(
+                    self.streaming_handler.queue.get(),
+                    timeout=self.token_timeout
+                )
 
-                # Ensure token is a complete JSON object
-                if token.endswith("\n"):
-                    # Token is already a complete JSON object, yield it directly
-                    yield token
-                else:
-                    # Token might be incomplete, wait a tiny bit for more data
-                    buffer = token
-                    try:
-                        # Try to get more data with a very short timeout
-                        while not buffer.endswith("\n"):
-                            more_token = await asyncio.wait_for(
-                                self.streaming_handler.queue.get(),
-                                timeout=0.005
-                            )
-                            buffer += more_token
-                            # If we now have a complete line, break
-                            if "\n" in buffer:
-                                break
-                    except asyncio.TimeoutError:
-                        # If we timeout waiting for more data, that's okay
-                        # We'll just yield what we have if it's complete
-                        pass
+                # Add the new token to our buffer
+                buffer += token
 
-                    # Process the buffer to yield complete JSON objects
-                    while "\n" in buffer:
-                        json_str, remaining = buffer.split("\n", 1)
-                        if json_str:  # Only yield non-empty strings
-                            yield json_str + "\n"
-                        buffer = remaining
+                # If we have complete JSON objects (ending with newline), process them
+                if "\n" in buffer:
+                    complete_jsons, buffer = await self._process_complete_json(buffer)
+                    for json_str in complete_jsons:
+                        yield json_str
 
-                    # If there's anything left in the buffer, keep it for next iteration
-                    if buffer:
-                        # Put it back in the queue for the next iteration
-                        self.streaming_handler.queue.put_nowait(buffer)
             except asyncio.TimeoutError:
-                # Short timeout to keep the loop responsive
-                await asyncio.sleep(0.01)
+                # No new tokens available, wait a bit before checking again
+                await asyncio.sleep(self.poll_interval)
                 continue
+            except Exception as e:
+                # Handle any parsing or processing errors
+                error_event = {
+                    "type": "error",
+                    "data": f"Streaming error: {str(e)}"
+                }
+                yield json.dumps(error_event) + "\n"
+                # Continue processing despite errors
 
-        result = await task
+        # If there's anything left in the buffer after task completion, process it
+        if buffer:
+            try:
+                # Try to parse it as JSON and yield if valid
+                json.loads(buffer)  # This is just a validation check
+                yield buffer if buffer.endswith("\n") else buffer + "\n"
+            except json.JSONDecodeError:
+                # If it's not valid JSON, wrap it in an error event
+                error_event = {
+                    "type": "error",
+                    "data": f"Invalid JSON in final buffer: {buffer}"
+                }
+                yield json.dumps(error_event) + "\n"
 
-    def ask(self, message: str):
+        # Wait for the task to complete and get the result
+        try:
+            await task
+        except Exception as e:
+            # Handle any errors during task execution
+            error_event = {
+                "type": "error",
+                "data": f"Task execution error: {str(e)}"
+            }
+            yield json.dumps(error_event) + "\n"
+
+    def ask(self, message: str) -> Dict[str, Any]:
         """
         Sends a message to the agent and returns the response.
 
@@ -181,14 +242,12 @@ class RouterAgentService:
             message (str): The message to send to the agent.
 
         Returns:
-            The response from the agent.
-
-        If the agent has memory, it uses the agent with chat history to invoke the response.
-        Otherwise, it uses the agent executor to invoke the response.
+            Dict[str, Any]: The response from the agent.
         """
         if self.memory:
             return self.agent_with_chat_history.invoke(
                 input={"input": message},
-                config={"configurable": {"session_id": "ـ"}})
+                config={"configurable": {"session_id": "ـ"}}
+            )
         else:
             return self.agent_executor.invoke({"input": message})
