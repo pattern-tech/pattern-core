@@ -1,6 +1,6 @@
 import json
 import asyncio
-from typing import Dict, Any, Optional, AsyncGenerator
+from typing import Dict, Any, AsyncGenerator
 
 from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler

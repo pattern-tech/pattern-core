@@ -6,7 +6,7 @@ import dateparser
 
 from web3 import Web3
 from langchain.tools import tool
-from typing import List, Any, Optional, Dict
+from typing import List, Any, Optional, Dict, Union
 
 from src.util.configuration import Config
 from src.agentflow.utils.shared_tools import handle_exceptions
@@ -584,4 +584,112 @@ def decode_transaction_input(transaction_input: str, contract_address: str) -> D
             "error": f"Failed to decode transaction input: {str(e)}",
             "raw_input": transaction_input,
             "function_selector": function_selector
+        }
+
+
+@tool
+@handle_exceptions
+def call_contract_function(contract_address: str, function_name: str, function_params: Optional[List[Any]] = None) -> Dict[str, Any]:
+    """
+    Call a read-only (view/pure) function of a smart contract and return its result.
+
+    Args:
+        contract_address (str): The address of the smart contract.
+        function_name (str): The name of the function to call.
+        function_params (Optional[List[Any]]): List of parameters to pass to the function. Default is None (no parameters).
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the following fields:
+            - success: Boolean indicating if the call was successful
+            - result: The result of the function call if successful
+            - error: Error message if unsuccessful
+            - result_type: The data type of the result
+
+    Raises:
+        Exception: If the contract ABI cannot be retrieved or the function call fails
+    """
+    # Initialize parameters if None
+    if function_params is None:
+        function_params = []
+
+    api_key = _ether_scan_config["api_key"]
+    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
+
+    try:
+        # Get the contract ABI
+        abi = fetch_contract_abi(contract_address, api_key)
+        contract = web3.eth.contract(address=contract_address, abi=abi)
+
+        # Find the function in the ABI
+        function_entries = [f for f in abi if f.get(
+            'type') == 'function' and f.get('name') == function_name]
+        if not function_entries:
+            available_functions = [f['name']
+                                   for f in abi if f.get('type') == 'function']
+            raise Exception(
+                f"Function '{function_name}' not found in contract ABI. Available functions: {available_functions}")
+
+        # Get the function object
+        function_obj = getattr(contract.functions, function_name)
+
+        # Check if the function is read-only
+        function_entry = function_entries[0]
+        if function_entry.get('stateMutability') not in ['view', 'pure', 'constant']:
+            raise Exception(
+                f"Function '{function_name}' is not a read-only function and might modify state or require a transaction.")
+
+        # Call the function with provided parameters
+        result = function_obj(*function_params).call()
+
+        # Process the result
+        result_type = "unknown"
+        processed_result = result
+
+        # Determine result type and format accordingly
+        if isinstance(result, (int, float, bool, str)):
+            result_type = type(result).__name__
+        elif isinstance(result, bytes):
+            processed_result = web3.to_hex(result)
+            result_type = "bytes (hex)"
+        elif isinstance(result, tuple):
+            # Handle named tuples (common in Solidity returns)
+            if hasattr(result, '_asdict'):
+                processed_result = dict(result._asdict())
+                result_type = "struct"
+            else:
+                processed_result = list(result)
+                result_type = "tuple"
+
+            # Convert any bytes in the result to hex
+            if isinstance(processed_result, dict):
+                for key, value in processed_result.items():
+                    if isinstance(value, bytes):
+                        processed_result[key] = web3.to_hex(value)
+                    # Large ints might be wei values
+                    elif isinstance(value, int) and value > 10**10:
+                        processed_result[f"{key}_eth"] = web3.from_wei(
+                            value, 'ether')
+            elif isinstance(processed_result, list):
+                processed_result = [web3.to_hex(v) if isinstance(
+                    v, bytes) else v for v in processed_result]
+        elif isinstance(result, list):
+            processed_result = result
+            result_type = "array"
+            # Convert any bytes in the list to hex
+            for i, item in enumerate(processed_result):
+                if isinstance(item, bytes):
+                    processed_result[i] = web3.to_hex(item)
+
+        return {
+            "success": True,
+            "result": processed_result,
+            "result_type": result_type
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "result": None,
+            "result_type": None
         }

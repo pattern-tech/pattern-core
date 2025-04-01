@@ -27,6 +27,7 @@ def etherscan_agent(query: str):
     - Retrieve the latest Ethereum block number and hash
     - Convert a Unix timestamp to the nearest Ethereum block number
     - Decode the input data of an Ethereum transaction
+    - Call a read-only (view/pure) function of a smart contract and return its result.
 
     Args:
         query (str): query about Ethereum blockchain tasks.
