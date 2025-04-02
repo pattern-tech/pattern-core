@@ -15,25 +15,51 @@ from src.agentflow.utils.shared_tools import handle_exceptions
 _config = Config.get_config()
 _ether_scan_config = Config.get_service_config(_config, "ETHER_SCAN")
 
-_ETHERSCAN_URL = "https://api.etherscan.io/v2/api"
-_ETH_RPC = os.environ["ETH_RPC"]
+
+def _get_chain_config(chain_id: str) -> Dict:
+    _config = {}
+    if chain_id == "1":
+        _config["RPC"] = os.environ["ETH_RPC"]
+        _config["URL"] = "https://api.etherscan.io/v2/api"
+        _config["API_KEY"] = os.environ["ETHER_SCAN_API_KEY"]
+    elif chain_id == "42161":
+        _config["RPC"] = os.environ["ARBITRUM_ONE_RPC"]
+        _config["URL"] = "https://api.arbiscan.io/api"
+        _config["API_KEY"] = os.environ["ARBI_SCAN_API_KEY"]
+    elif chain_id == "8453":
+        _config["RPC"] = os.environ["BASE_RPC"]
+        _config["URL"] = "https://api.basescan.org/api"
+        _config["API_KEY"] = os.environ["BASE_SCAN_API_KEY"]
+    elif chain_id == "137":
+        _config["RPC"] = os.environ["POLYGON_RPC"]
+        _config["URL"] = "https://api.polygonscan.com/api"
+        _config["API_KEY"] = os.environ["POLYGON_SCAN_API_KEY"]
+    elif chain_id == "250":
+        _config["RPC"] = os.environ["FANTOM_RPC"]
+        _config["URL"] = "https://api.ftmscan.com/api"
+        _config["API_KEY"] = os.environ["FTM_SCAN_API_KEY"]
+    else:
+        raise ValueError(f"Invalid chain ID: {chain_id}")
+
+    return _config
 
 
 @handle_exceptions
-def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
+def fetch_contract_abi(contract_address: str, chain_id: str, api_key: str) -> Dict:
     """
     Retrieve the ABI of a smart contract from the Etherscan API.
 
     Args:
         contract_address (str): The contract address.
+        chain_id (str): The chain ID can be 1, 42161, 8453
         api_key (str): The decrypted Etherscan API key.
 
     Returns:
         Dict: A dictionary representing the contract ABI.
     """
-    url = _ETHERSCAN_URL
+    url = _get_chain_config(chain_id)["URL"]
     params = {
-        "chainid": "1",
+        "chainid": chain_id,
         "module": "contract",
         "action": "getabi",
         "address": contract_address,
@@ -49,20 +75,21 @@ def fetch_contract_abi(contract_address: str, api_key: str) -> Dict:
 
 
 @handle_exceptions
-def fetch_contract_source_code(contract_address: str, api_key: str) -> str:
+def fetch_contract_source_code(contract_address: str, chain_id: str, api_key: str) -> str:
     """
     Retrieve the source code of a smart contract from the Etherscan API.
 
     Args:
         contract_address (str): The contract address.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
         api_key (str): The decrypted Etherscan API key.
 
     Returns:
         str: The contract source code.
     """
-    url = _ETHERSCAN_URL
+    url = _get_chain_config(chain_id)["URL"]
     params = {
-        "chainid": "1",
+        "chainid": chain_id,
         "module": "contract",
         "action": "getsourcecode",
         "address": contract_address,
@@ -91,20 +118,21 @@ def get_event_abi(abi: List[Dict], event_name: str) -> Optional[Dict]:
 
 
 @handle_exceptions
-def timestamp_to_block_number(timestamp: int, api_key: str) -> int:
+def timestamp_to_block_number(timestamp: int, chain_id: str, api_key: str) -> int:
     """
     Convert a given Unix timestamp to the nearest Ethereum block number.
 
     Args:
         timestamp (int): Unix timestamp.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
         api_key (str): The decrypted Etherscan API key.
 
     Returns:
         int: The closest block number.
     """
-    url = _ETHERSCAN_URL
+    url = _get_chain_config(chain_id)["URL"]
     params = {
-        "chainid": "1",
+        "chainid": chain_id,
         "module": "block",
         "action": "getblocknobytime",
         "timestamp": timestamp,
@@ -151,19 +179,20 @@ def convert_to_timestamp(date_str: str) -> int:
 
 @tool
 @handle_exceptions
-def get_contract_source_code(contract_address: str) -> str:
+def get_contract_source_code(contract_address: str, chain_id: str) -> str:
     """
     Retrieve the source code of a smart contract.
 
     Args:
         contract_address (str): The contract address.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
 
     Returns:
         str: The contract source code.
     """
-    api_key = _ether_scan_config["api_key"]
+    api_key = _get_chain_config(chain_id)["API_KEY"]
 
-    response = fetch_contract_source_code(contract_address, api_key)
+    response = fetch_contract_source_code(contract_address, chain_id, api_key)
 
     final_output = {"proxy": [], "implementation": []}
 
@@ -171,7 +200,8 @@ def get_contract_source_code(contract_address: str) -> str:
     while int(response.get('Proxy', 0)):
         final_output["proxy"].append(response["SourceCode"])
         current_address = response["Implementation"]
-        response = fetch_contract_source_code(current_address, api_key)
+        response = fetch_contract_source_code(
+            contract_address, chain_id, api_key)
 
     final_output["implementation"].append(response["SourceCode"])
 
@@ -180,28 +210,30 @@ def get_contract_source_code(contract_address: str) -> str:
 
 @tool
 @handle_exceptions
-def get_contract_abi(contract_address: str) -> Dict:
+def get_contract_abi(contract_address: str, chain_id: str) -> Dict:
     """
     Retrieve the ABI of a smart contract.
 
     Args:
         contract_address (str): The contract address.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
 
     Returns:
         Dict: The contract ABI.
     """
-    api_key = _ether_scan_config["api_key"]
-    return fetch_contract_abi(contract_address, api_key)
+    api_key = _get_chain_config(chain_id)["API_KEY"]
+    return fetch_contract_abi(contract_address, chain_id, api_key)
 
 
 @tool
 @handle_exceptions
-def get_abi_of_event(contract_address: str, event_name: str) -> Dict:
+def get_abi_of_event(contract_address: str, chain_id: str, event_name: str) -> Dict:
     """
     Retrieve the ABI of a specific event from a smart contract.
 
     Args:
         contract_address (str): The smart contract address.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
         event_name (str): The name of the event.
 
     Returns:
@@ -210,8 +242,8 @@ def get_abi_of_event(contract_address: str, event_name: str) -> Dict:
     Raises:
         Exception: If the API key is not found or the event is not in the contract ABI.
     """
-    api_key = _ether_scan_config["api_key"]
-    abi = fetch_contract_abi(contract_address, api_key)
+    api_key = _get_chain_config(chain_id)["API_KEY"]
+    abi = fetch_contract_abi(contract_address, chain_id, api_key)
     event_abi = get_event_abi(abi, event_name)
     if event_abi is None:
         raise Exception(f"Event '{event_name}' not found in the ABI.")
@@ -222,6 +254,7 @@ def get_abi_of_event(contract_address: str, event_name: str) -> Dict:
 @handle_exceptions
 def get_contract_events(
     contract_address: str,
+    chain_id: str,
     event_name: str,
     from_block: Optional[int] = None,
     to_block: Optional[int] = None
@@ -231,6 +264,7 @@ def get_contract_events(
 
     Args:
         contract_address (str): The smart contract address.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
         event_name (str): The name of the event to fetch.
         from_block (Optional[int]): The starting block (default: current block - 10).
         to_block (Optional[int]): The ending block (default: current block).
@@ -241,10 +275,10 @@ def get_contract_events(
     Raises:
         Exception: If the event is not found in the contract's ABI.
     """
-    api_key = _ether_scan_config["api_key"]
-    abi = fetch_contract_abi(contract_address, api_key)
+    api_key = _get_chain_config(chain_id)["API_KEY"]
+    abi = fetch_contract_abi(contract_address, chain_id, api_key)
 
-    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
+    web3 = Web3(Web3.HTTPProvider(_get_chain_config(chain_id)["RPC"]))
     contract = web3.eth.contract(address=contract_address, abi=abi)
 
     # Resolve the actual event name case-insensitively
@@ -270,55 +304,64 @@ def get_contract_events(
 
 @tool
 @handle_exceptions
-def get_latest_eth_block_number() -> int:
+def get_latest_chain_block_number(chain_id: str) -> int:
     """
-    Retrieve the latest Ethereum block number.
+    Retrieve the latest chain block number.
+
+    Args:
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
 
     Returns:
         int: The current block number on the Ethereum mainnet.
     """
-    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
+    web3 = Web3(Web3.HTTPProvider(_get_chain_config(chain_id)["RPC"]))
     return web3.eth.block_number
 
 
 @tool
 @handle_exceptions
-def convert_timestamp_to_block_number(timestamp: int) -> int:
+def convert_timestamp_to_block_number(timestamp: int, chain_id: str) -> int:
     """
     Convert a Unix timestamp to the nearest Ethereum block number.
 
     Args:
         timestamp (int): The Unix timestamp.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
 
     Returns:
         int: The block number closest to the provided timestamp.
     """
-    api_key = _ether_scan_config["api_key"]
-    return timestamp_to_block_number(timestamp, api_key)
+    api_key = _get_chain_config(chain_id)["API_KEY"]
+    return timestamp_to_block_number(timestamp, chain_id, api_key)
 
 
 @tool
 @handle_exceptions
-def get_latest_eth_block_hash() -> str:
+def get_latest_eth_block_hash(chain_id: str) -> str:
     """
-    Retrieve the hash of the latest Ethereum block.
+    Retrieve the hash of the latest chain block.
+
+    Args:
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
 
     Returns:
         str: The hash of the latest block on the Ethereum mainnet.
     """
-    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
+    web3 = Web3(Web3.HTTPProvider(_get_chain_config(chain_id)["RPC"]))
     latest_block = web3.eth.get_block('latest')
     return web3.to_hex(latest_block.hash)
 
 
 @tool
 @handle_exceptions
-def get_block_transactions(block_number: int, output_include: List[str]) -> List[Dict[str, Any]]:
+def get_block_transactions(block_number: int, chain_id: str, output_include: List[str]) -> List[Dict[str, Any]]:
     """
     Retrieve all transactions in a specific Ethereum block.
 
     Args:
         block_number (int): The block number to retrieve transactions from.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        output_include (List[str]): List of fields to include in the output.
 
      Returns:
         List[dict[str, Any]]:
@@ -329,7 +372,7 @@ def get_block_transactions(block_number: int, output_include: List[str]) -> List
             - blockHash, blockNumber, from, gas, gasPrice, maxPriorityFeePerGas, maxFeePerGas,
               hash, input, nonce, to, transactionIndex, value, type, accessList, chainId, v, yParity, r, s
     """
-    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
+    web3 = Web3(Web3.HTTPProvider(_get_chain_config(chain_id)["RPC"]))
 
     # Validate block number
     latest_block = web3.eth.block_number
@@ -367,13 +410,14 @@ def get_block_transactions(block_number: int, output_include: List[str]) -> List
 
 @tool
 @handle_exceptions
-def decode_transaction_input(transaction_input: str, contract_address: str) -> Dict[str, Any]:
+def decode_transaction_input(transaction_input: str, contract_address: str, chain_id: str) -> Dict[str, Any]:
     """
     Decode the input data of an Ethereum transaction using the ABI of the contract.
 
     Args:
         transaction_input (str): The input data of the transaction (hex string starting with '0x')
         contract_address (str): The address of the contract that was called in the transaction
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
 
     Returns:
         Dict[str, Any]: A dictionary containing the decoded transaction input with the following fields:
@@ -402,10 +446,10 @@ def decode_transaction_input(transaction_input: str, contract_address: str) -> D
 
     try:
         # Get the contract ABI
-        abi = get_contract_abi(contract_address)
+        abi = get_contract_abi(contract_address, chain_id)
 
         # Initialize Web3
-        web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
+        web3 = Web3(Web3.HTTPProvider(_get_chain_config(chain_id)["RPC"]))
         contract = web3.eth.contract(address=contract_address, abi=abi)
 
         # Try direct decoding first using web3.py's built-in functionality
@@ -491,7 +535,7 @@ def decode_transaction_input(transaction_input: str, contract_address: str) -> D
 
                         # Try with implementation ABI
                         implementation_abi = get_contract_abi(
-                            implementation_address)
+                            implementation_address, chain_id)
                         implementation_contract = web3.eth.contract(
                             address=contract_address,
                             abi=implementation_abi
@@ -589,12 +633,13 @@ def decode_transaction_input(transaction_input: str, contract_address: str) -> D
 
 @tool
 @handle_exceptions
-def call_contract_function(contract_address: str, function_name: str, function_params: Optional[List[Any]] = None) -> Dict[str, Any]:
+def call_contract_function(contract_address: str, chain_id: str, function_name: str, function_params: Optional[List[Any]] = None) -> Dict[str, Any]:
     """
     Call a read-only (view/pure) function of a smart contract and return its result.
 
     Args:
         contract_address (str): The address of the smart contract.
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
         function_name (str): The name of the function to call.
         function_params (Optional[List[Any]]): List of parameters to pass to the function. Default is None (no parameters).
 
@@ -612,12 +657,12 @@ def call_contract_function(contract_address: str, function_name: str, function_p
     if function_params is None:
         function_params = []
 
-    api_key = _ether_scan_config["api_key"]
-    web3 = Web3(Web3.HTTPProvider(_ETH_RPC))
+    api_key = _get_chain_config(chain_id)["API_KEY"]
+    web3 = Web3(Web3.HTTPProvider(_get_chain_config(chain_id)["RPC"]))
 
     try:
         # Get the contract ABI
-        abi = fetch_contract_abi(contract_address, api_key)
+        abi = fetch_contract_abi(contract_address, chain_id, api_key)
         contract = web3.eth.contract(address=contract_address, abi=abi)
 
         # Find the function in the ABI

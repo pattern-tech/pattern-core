@@ -13,7 +13,7 @@ from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
 
 @tool
 @handle_exceptions
-def etherscan_agent(query: str):
+def chainscan_agent(query: str):
     """
     An agent for handling Ethereum blockchain-related queries and tasks.
     This agent can perform the following tasks:
@@ -28,6 +28,8 @@ def etherscan_agent(query: str):
     - Convert a Unix timestamp to the nearest Ethereum block number
     - Decode the input data of an Ethereum transaction
     - Call a read-only (view/pure) function of a smart contract and return its result.
+
+    supported chains : 1, 42161, 8453, 137, 250
 
     Args:
         query (str): query about Ethereum blockchain tasks.
