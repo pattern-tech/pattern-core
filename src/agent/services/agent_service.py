@@ -72,9 +72,9 @@ class RouterAgentService:
         self.streaming_handler = None
 
         # Default timeout values that can be adjusted if needed
-        self.token_timeout = 0.01
-        self.buffer_timeout = 0.005
-        self.poll_interval = 0.01
+        self.token_timeout = 0.5  # Increased from 0.01
+        self.buffer_timeout = 0.1  # Increased from 0.005
+        self.poll_interval = 0.1  # Increased from 0.01
 
         # Set up the streaming callback if streaming is enabled.
         if streaming:
@@ -200,6 +200,22 @@ class RouterAgentService:
                 # No new tokens available, wait a bit before checking again
                 await asyncio.sleep(self.poll_interval)
                 continue
+            except asyncio.CancelledError:
+                # Handle task cancellation gracefully
+                error_event = {
+                    "type": "info",
+                    "data": "Stream was cancelled"
+                }
+                yield json.dumps(error_event) + "\n"
+                break
+            except ConnectionError as e:
+                # Handle connection errors specifically
+                error_event = {
+                    "type": "error",
+                    "data": f"Connection error: {str(e)}"
+                }
+                yield json.dumps(error_event) + "\n"
+                break
             except Exception as e:
                 # Handle any parsing or processing errors
                 error_event = {
@@ -223,9 +239,30 @@ class RouterAgentService:
                 }
                 yield json.dumps(error_event) + "\n"
 
-        # Wait for the task to complete and get the result
+        # Send a completion event to signal the end of streaming
         try:
+            completion_event = {
+                "type": "completion",
+                "data": "Stream completed"
+            }
+            yield json.dumps(completion_event) + "\n"
+            
+            # Wait for the task to complete and get the result
             await task
+        except asyncio.CancelledError:
+            # Handle task cancellation gracefully
+            error_event = {
+                "type": "info",
+                "data": "Task was cancelled"
+            }
+            yield json.dumps(error_event) + "\n"
+        except ConnectionError as e:
+            # Handle connection errors specifically
+            error_event = {
+                "type": "error",
+                "data": f"Connection error: {str(e)}"
+            }
+            yield json.dumps(error_event) + "\n"
         except Exception as e:
             # Handle any errors during task execution
             error_event = {
