@@ -153,6 +153,7 @@ class RouterAgentService:
         Notes:
             This method uses an efficient NDJSON streaming protocol for reliable parsing.
             It supports both memory and non-memory modes, adapting the execution method accordingly.
+            Includes a heartbeat mechanism to keep the connection alive during long processing.
         """
         if not self.streaming or not self.streaming_handler:
             raise ValueError("Streaming is not enabled")
@@ -177,6 +178,8 @@ class RouterAgentService:
             )
 
         buffer = ""  # Initialize an empty buffer for accumulating incomplete JSON
+        last_activity = asyncio.get_event_loop().time()  # Track the last activity time
+        heartbeat_interval = 15.0  # Send heartbeat every 15 seconds
 
         # Continue processing while the task is running or queue has items
         while not task.done() or not self.streaming_handler.queue.empty():
@@ -186,6 +189,9 @@ class RouterAgentService:
                     self.streaming_handler.queue.get(),
                     timeout=self.token_timeout
                 )
+
+                # Update the last activity time when we receive a token
+                last_activity = asyncio.get_event_loop().time()
 
                 # Add the new token to our buffer
                 buffer += token
@@ -197,7 +203,18 @@ class RouterAgentService:
                         yield json_str
 
             except asyncio.TimeoutError:
-                # No new tokens available, wait a bit before checking again
+                # No new tokens available, check if we should send a heartbeat
+                current_time = asyncio.get_event_loop().time()
+                if current_time - last_activity >= heartbeat_interval:
+                    # Send a heartbeat to keep the connection alive
+                    heartbeat_event = {
+                        "type": "heartbeat",
+                        "data": "still_processing"
+                    }
+                    yield json.dumps(heartbeat_event) + "\n"
+                    last_activity = current_time  # Reset the activity timer
+                
+                # Wait a bit before checking again
                 await asyncio.sleep(self.poll_interval)
                 continue
             except asyncio.CancelledError:
