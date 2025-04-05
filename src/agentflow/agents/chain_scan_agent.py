@@ -44,7 +44,7 @@ def chainscan_agent(query: str):
                    api_key=config["llm"]["api_key"],
                    stream=False)
 
-    tools = get_all_tools(tools_path="ether_scan_tools")
+    tools = get_all_tools(tools_path="chain_scan_tools")
 
     prompt = init_prompt(llm, AgentType.BLOCKCHAIN_AGENT)
 

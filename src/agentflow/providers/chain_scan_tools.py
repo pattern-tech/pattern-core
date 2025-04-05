@@ -201,7 +201,7 @@ def get_contract_source_code(contract_address: str, chain_id: str) -> str:
         final_output["proxy"].append(response["SourceCode"])
         current_address = response["Implementation"]
         response = fetch_contract_source_code(
-            contract_address, chain_id, api_key)
+            current_address, chain_id, api_key)
 
     final_output["implementation"].append(response["SourceCode"])
 
@@ -662,6 +662,7 @@ def call_contract_function(contract_address: str, chain_id: str, function_name: 
 
     try:
         # Get the contract ABI
+        contract_address = Web3.to_checksum_address(contract_address)
         abi = fetch_contract_abi(contract_address, chain_id, api_key)
         contract = web3.eth.contract(address=contract_address, abi=abi)
 

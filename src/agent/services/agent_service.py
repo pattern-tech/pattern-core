@@ -213,7 +213,7 @@ class RouterAgentService:
                     }
                     yield json.dumps(heartbeat_event) + "\n"
                     last_activity = current_time  # Reset the activity timer
-                
+
                 # Wait a bit before checking again
                 await asyncio.sleep(self.poll_interval)
                 continue
@@ -263,7 +263,7 @@ class RouterAgentService:
                 "data": "Stream completed"
             }
             yield json.dumps(completion_event) + "\n"
-            
+
             # Wait for the task to complete and get the result
             await task
         except asyncio.CancelledError:
