@@ -72,9 +72,9 @@ class RouterAgentService:
         self.streaming_handler = None
 
         # Default timeout values that can be adjusted if needed
-        self.token_timeout = 0.01
-        self.buffer_timeout = 0.005
-        self.poll_interval = 0.01
+        self.token_timeout = 0.5  # Increased from 0.01
+        self.buffer_timeout = 0.1  # Increased from 0.005
+        self.poll_interval = 0.1  # Increased from 0.01
 
         # Set up the streaming callback if streaming is enabled.
         if streaming:
@@ -153,6 +153,7 @@ class RouterAgentService:
         Notes:
             This method uses an efficient NDJSON streaming protocol for reliable parsing.
             It supports both memory and non-memory modes, adapting the execution method accordingly.
+            Includes a heartbeat mechanism to keep the connection alive during long processing.
         """
         if not self.streaming or not self.streaming_handler:
             raise ValueError("Streaming is not enabled")
@@ -177,6 +178,8 @@ class RouterAgentService:
             )
 
         buffer = ""  # Initialize an empty buffer for accumulating incomplete JSON
+        last_activity = asyncio.get_event_loop().time()  # Track the last activity time
+        heartbeat_interval = 15.0  # Send heartbeat every 15 seconds
 
         # Continue processing while the task is running or queue has items
         while not task.done() or not self.streaming_handler.queue.empty():
@@ -186,6 +189,9 @@ class RouterAgentService:
                     self.streaming_handler.queue.get(),
                     timeout=self.token_timeout
                 )
+
+                # Update the last activity time when we receive a token
+                last_activity = asyncio.get_event_loop().time()
 
                 # Add the new token to our buffer
                 buffer += token
@@ -197,9 +203,36 @@ class RouterAgentService:
                         yield json_str
 
             except asyncio.TimeoutError:
-                # No new tokens available, wait a bit before checking again
+                # No new tokens available, check if we should send a heartbeat
+                current_time = asyncio.get_event_loop().time()
+                if current_time - last_activity >= heartbeat_interval:
+                    # Send a heartbeat to keep the connection alive
+                    heartbeat_event = {
+                        "type": "heartbeat",
+                        "data": "still_processing"
+                    }
+                    yield json.dumps(heartbeat_event) + "\n"
+                    last_activity = current_time  # Reset the activity timer
+                
+                # Wait a bit before checking again
                 await asyncio.sleep(self.poll_interval)
                 continue
+            except asyncio.CancelledError:
+                # Handle task cancellation gracefully
+                error_event = {
+                    "type": "info",
+                    "data": "Stream was cancelled"
+                }
+                yield json.dumps(error_event) + "\n"
+                break
+            except ConnectionError as e:
+                # Handle connection errors specifically
+                error_event = {
+                    "type": "error",
+                    "data": f"Connection error: {str(e)}"
+                }
+                yield json.dumps(error_event) + "\n"
+                break
             except Exception as e:
                 # Handle any parsing or processing errors
                 error_event = {
@@ -223,9 +256,30 @@ class RouterAgentService:
                 }
                 yield json.dumps(error_event) + "\n"
 
-        # Wait for the task to complete and get the result
+        # Send a completion event to signal the end of streaming
         try:
+            completion_event = {
+                "type": "completion",
+                "data": "Stream completed"
+            }
+            yield json.dumps(completion_event) + "\n"
+            
+            # Wait for the task to complete and get the result
             await task
+        except asyncio.CancelledError:
+            # Handle task cancellation gracefully
+            error_event = {
+                "type": "info",
+                "data": "Task was cancelled"
+            }
+            yield json.dumps(error_event) + "\n"
+        except ConnectionError as e:
+            # Handle connection errors specifically
+            error_event = {
+                "type": "error",
+                "data": f"Connection error: {str(e)}"
+            }
+            yield json.dumps(error_event) + "\n"
         except Exception as e:
             # Handle any errors during task execution
             error_event = {
