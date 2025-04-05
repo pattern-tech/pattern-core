@@ -162,6 +162,13 @@ class RouterAgentService:
         while not self.streaming_handler.queue.empty():
             self.streaming_handler.queue.get_nowait()
 
+        # Send an initial heartbeat message to inform the client that processing has started
+        init_heartbeat_event = {
+            "type": "heartbeat",
+            "data": "processing_started"
+        }
+        yield json.dumps(init_heartbeat_event) + "\n"
+
         # Start the agent task based on memory configuration
         if self.memory:
             loop = asyncio.get_running_loop()
@@ -213,7 +220,7 @@ class RouterAgentService:
                     }
                     yield json.dumps(heartbeat_event) + "\n"
                     last_activity = current_time  # Reset the activity timer
-                
+
                 # Wait a bit before checking again
                 await asyncio.sleep(self.poll_interval)
                 continue
@@ -263,7 +270,7 @@ class RouterAgentService:
                 "data": "Stream completed"
             }
             yield json.dumps(completion_event) + "\n"
-            
+
             # Wait for the task to complete and get the result
             await task
         except asyncio.CancelledError:
