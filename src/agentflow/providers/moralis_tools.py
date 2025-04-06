@@ -6,6 +6,17 @@ from src.agentflow.utils.shared_tools import tool
 
 from src.util.configuration import Config
 from src.agentflow.utils.shared_tools import handle_exceptions
+from src.agentflow.models.moralis_models import (
+    TokenBalanceResponse,
+    TokenBalanceInput,
+    WalletHistoryInput,
+    WalletHistoryResponse,
+    WalletStatsInput,
+    WalletStatsResponse,
+    TransactionDetailInput,
+    TransactionDetailResponse,
+    TokenApprovalInput,
+    TokenApprovalResponse)
 
 _config = Config.get_config()
 _moralis_config = Config.get_service_config(_config, "MORALIS")
@@ -15,246 +26,222 @@ _MORALIS_URL = "https://deep-index.moralis.io/api/v2"
 
 @tool
 @handle_exceptions
-def get_wallet_active_chains(wallet_address: str, output_include: list[str]) -> list[dict[str, Any]]:
+def get_wallet_token_balances(input_data: TokenBalanceInput) -> TokenBalanceResponse:
     """
-    Get active chains for a wallet address across all chains
+    Get token balances for a specific wallet address and their token prices in USD (paginated).
+    Apply decimal conversion for balance.
 
     Args:
-        wallet_address (str): Ethereum wallet address
-        output_include (list[str]):
-            A list of field names to include in in the output.
-
+        input_data: Input parameters including wallet address and various query options. Can be either a TokenBalanceInput model or a dictionary.
 
     Returns:
-        List[dict[str, Any]]:
-            A list of dictionaries where each dictionary only contains the keys
-            listed in `output_include` (if they exist in the source data).
-            Possible fields include:
-
-            - chain, chain_id, first_transaction, last_transaction
+        TokenBalanceResponse: A response object containing the wallet token balances with prices
     """
+    # Convert dictionary to Pydantic model if needed
+    if isinstance(input_data, dict):
+        input_model = TokenBalanceInput(**input_data)
+    else:
+        input_model = input_data
+
+    # Start with required parameters
     params = {
-        "address": wallet_address
+        "address": input_model.wallet_address,
+        "chain": input_model.chain
     }
 
-    result = evm_api.wallets.get_wallet_active_chains(
-        api_key=_moralis_config["api_key"],
-        params=params,
-    )
+    # Add optional parameters if provided
+    if input_model.cursor:
+        params["cursor"] = input_model.cursor
 
-    results = result["active_chains"]
-    final_results = []
-    for result in results:
-        final_results.append({item: result[item]
-                              for item in result.keys() if item in output_include})
-    return final_results
+    if input_model.token_addresses:
+        params["token_addresses"] = input_model.token_addresses
 
+    if input_model.exclude_spam is not None:
+        params["exclude_spam"] = input_model.exclude_spam
 
-@tool
-@handle_exceptions
-def get_wallet_token_balances(wallet_address: str, output_include: list[str], cursor: str = None) -> dict:
-    """
-    Get token balances for a specific wallet address and their token prices in USD. (paginated)
-    apply decimal conversion for balance
+    if input_model.exclude_native is not None:
+        params["exclude_native"] = input_model.exclude_native
 
-    Args:
-        wallet_address (str): Ethereum wallet address
-        output_include (list[str]): A list of field names to include in the output.
-        cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
-
-
-    Returns:
-        List[dict[str, Any]]:
-            A list of dictionaries where each dictionary only contains the keys
-            listed in `output_include` (if they exist in the source data).
-            Possible fields include:
-
-            - token_address, symbol, name, logo, thumbnail, decimals, balance, balance_formatted,
-              usd_price, usd_price_24hr_percent_change, usd_price_24hr_usd_change, usd_value,
-              usd_value_24hr_usd_change, native_token, portfolio_percentage
-    """
-    params = {
-        "chain": "eth",
-        "address": wallet_address
-    }
-
-    if cursor:
-        params["cursor"] = cursor
+    if input_model.limit is not None:
+        params["limit"] = input_model.limit
 
     api_result = evm_api.wallets.get_wallet_token_balances_price(
         api_key=_moralis_config["api_key"],
         params=params,
     )
 
-    results = api_result["result"]
-    final_results = []
-    for result in results:
-        final_results.append({item: result[item]
-                              for item in result.keys() if item in output_include})
-
-    return {"cursor": api_result["cursor"],
-            "results": final_results}
+    return api_result
 
 
 @tool
 @handle_exceptions
-def get_wallet_stats(wallet_address: str, output_include: list[str]) -> dict:
+def get_wallet_stats(input_data: WalletStatsInput) -> WalletStatsResponse:
     """
-    Get the stats for a wallet address.
+    Get the stats for a wallet address, including NFT counts, transaction counts, and transfer counts.
 
     Args:
-        wallet_address (str): Ethereum wallet address
+        input_data: Input parameters including wallet address and chain. Can be either a WalletStatsInput model or a dictionary.
 
     Returns:
-        List[dict[str, Any]]:
-            A list of dictionaries where each dictionary only contains the keys
-            listed in `output_include` (if they exist in the source data).
-            Possible fields include:
-
-            - nfts, collections, transactions, nft_transfers, token_transfers
+        WalletStatsResponse: A response object containing wallet statistics
     """
+    # Convert dictionary to Pydantic model if needed
+    if isinstance(input_data, dict):
+        input_model = WalletStatsInput(**input_data)
+    else:
+        input_model = input_data
+
+    # Prepare parameters for the API call
     params = {
-        "chain": "eth",
-        "address": wallet_address
+        "chain": input_model.chain,
+        "address": input_model.wallet_address
     }
 
-    result = evm_api.wallets.get_wallet_stats(
+    # Call the Moralis API
+    api_result = evm_api.wallets.get_wallet_stats(
         api_key=_moralis_config["api_key"],
         params=params,
     )
 
-    return {item: result[item]
-            for item in result.keys() if item in output_include}
+    return api_result
 
 
 @tool
 @handle_exceptions
-def get_wallet_history(wallet_address: str, output_include: list[str], cursor: str = None) -> dict:
+def get_wallet_history(input_data: WalletHistoryInput) -> WalletHistoryResponse:
     """
     Retrieve the full transaction history of a specified wallet address, including sends, receives, token and NFT transfers
     and contract interactions. (paginated & in descending order)
 
     Args:
-        wallet_address (str): Ethereum wallet address
-        output_include (list[str]): A list of field names to include in the output.
-        cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
+        input_data: Input parameters including wallet address and various query options. Can be either a WalletHistoryInput model or a dictionary.
 
     Returns:
-        dict[str, Any]:
-            A dictionary where each key-value pair only contains the keys
-            listed in `output_include` (if they exist in the source data).
-            Possible fields include:
-
-            - hash, from_address_entity, from_address_entity_logo, from_address,
-              from_address_label, to_address_entity, to_address_entity_logo, to_address, to_address_label,
-              value, receipt_contract_address, block_timestamp, block_number, block_hash, internal_transactions,
-              nft_transfers, erc20_transfer, native_transfers
+        WalletHistoryResponse: A response object containing the wallet transaction history
     """
+    # Convert dictionary to Pydantic model if needed
+    if isinstance(input_data, dict):
+        input_model = WalletHistoryInput(**input_data)
+    else:
+        input_model = input_data
+
+    # Start with required parameters
     params = {
-        "chain": "eth",
-        "order": "DESC",
-        "address": wallet_address
+        "address": input_model.wallet_address,
+        "chain": input_model.chain,
+        "order": input_model.order
     }
 
-    if cursor:
-        params["cursor"] = cursor
+    # Add optional parameters if provided
+    if input_model.cursor:
+        params["cursor"] = input_model.cursor
+
+    if input_model.from_block is not None:
+        params["from_block"] = input_model.from_block
+
+    if input_model.to_block is not None:
+        params["to_block"] = input_model.to_block
+
+    if input_model.from_date:
+        params["from_date"] = input_model.from_date
+
+    if input_model.to_date:
+        params["to_date"] = input_model.to_date
+
+    if input_model.limit is not None:
+        params["limit"] = input_model.limit
 
     api_result = evm_api.wallets.get_wallet_history(
         api_key=_moralis_config["api_key"],
         params=params,
     )
 
-    final_results = []
-    for result in api_result["result"]:
-        final_results.append({item: result[item]
-                              for item in result.keys() if item in output_include})
-
-    return {"cursor": api_result["cursor"],
-            "results": final_results}
+    return api_result
 
 
 @tool
 @handle_exceptions
-def get_transaction_detail(transaction_hash: str, output_include: list[str]) -> dict:
+def get_transaction_detail(input_data: TransactionDetailInput) -> TransactionDetailResponse:
     """
     Get the contents of a transaction by the given transaction hash.
 
     Args:
-        transaction_hash (str): transaction hash to be decoded
-        output_include (list[str]): A list of field names to include in the output.
+        input_data: Input parameters including transaction hash and chain. Can be either a TransactionDetailInput model or a dictionary.
 
     Returns:
-        dict[str, Any]:
-            A dictionary where each key-value pair only contains the keys
-            listed in `output_include` (if they exist in the source data).
-            Possible fields include:
-
-            - hash, from_address_entity, from_address_entity_logo, from_address,
-              from_address_label, to_address_entity, to_address_entity_logo, to_address, to_address_label,
-              value, receipt_gas_used, receipt_contract_address, receipt_root, receipt_status, block_timestamp,
-              block_number, block_hash, decoded_call, decoded_event
-
-
+        TransactionDetailResponse: A response object containing the transaction details
     """
+    # Convert dictionary to Pydantic model if needed
+    if isinstance(input_data, dict):
+        input_model = TransactionDetailInput(**input_data)
+    else:
+        input_model = input_data
+
+    # Prepare parameters for the API call
     params = {
-        "chain": "eth",
-        "transaction_hash": transaction_hash
+        "chain": input_model.chain,
+        "transaction_hash": input_model.transaction_hash
     }
 
-    result = evm_api.transaction.get_transaction_verbose(
+    # Add optional parameters if provided
+    if input_model.include:
+        params["include"] = input_model.include
+
+    # Call the Moralis API
+    api_result = evm_api.transaction.get_transaction_verbose(
         api_key=_moralis_config["api_key"],
         params=params,
     )
 
-    return {item: result[item]
-            for item in result.keys() if item in output_include}
+    return api_result
 
 
 @tool
 @handle_exceptions
-def get_token_approvals(wallet_address: str, output_include: list[str], cursor: str = None) -> dict:
+def get_token_approvals(input_data: TokenApprovalInput) -> TokenApprovalResponse:
     """
-    Get ERC20 approvals for one or many wallet addresses and/or contract addresses, ordered by block number in descending order.
+    Get ERC20 approvals for a wallet address, ordered by block number in descending order.
 
     Args:
-        wallet_address (str): Ethereum wallet address
-        output_include (list[str]): A list of field names to include in the output.
-        cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
+        input_data: Input parameters including wallet address, chain, and pagination options. Can be either a TokenApprovalInput model or a dictionary.
 
     Returns:
-        List[dict[str, Any]]:
-            A list of dictionaries where each dictionary only contains the keys
-            listed in `output_include` (if they exist in the source data).
-            Possible fields include:
-
-            - block_number, block_timestamp, transaction_hash, value, value_formatted, token, spender
+        TokenApprovalResponse: A response object containing the token approvals
     """
+    # Convert dictionary to Pydantic model if needed
+    if isinstance(input_data, dict):
+        input_model = TokenApprovalInput(**input_data)
+    else:
+        input_model = input_data
+
+    # Prepare the API URL and parameters
     base_url = _MORALIS_URL
-    api_url = f"{base_url}/wallets/{wallet_address}/approvals"
+    api_url = f"{base_url}/wallets/{input_model.wallet_address}/approvals"
 
-    params = {'chain': 'eth'}
+    params = {'chain': input_model.chain}
 
-    if cursor:
-        params["cursor"] = cursor
+    # Add optional parameters if provided
+    if input_model.cursor:
+        params["cursor"] = input_model.cursor
 
+    if input_model.limit is not None:
+        params["limit"] = input_model.limit
+
+    # Set up headers
     headers = {
         'accept': 'application/json',
         'X-API-Key': _moralis_config["api_key"]
     }
 
+    # Make the API request
     response = requests.get(api_url, headers=headers, params=params)
 
     if response.status_code != 200:
         raise Exception(
             f"Failed to get token approvals. Status code: {response.status_code}")
 
+    # Parse the response
     api_result = response.json()
 
-    results = api_result["result"]
-    final_results = []
-    for result in results:
-        final_results.append({item: result[item]
-                              for item in result.keys() if item in output_include})
-
-    return {"cursor": api_result["cursor"],
-            "results": final_results}
+    # Convert to Pydantic model
+    return TokenApprovalResponse(**api_result)

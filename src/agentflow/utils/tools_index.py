@@ -57,15 +57,16 @@ def find_tool_functions(directory: str, file_name: Optional[str] = None) -> List
     return tool_functions
 
 
-def get_all_tools(tools_path: str) -> List[Dict[str, str]]:
+def get_all_tools(tools_path: str) -> List[Dict[str, Any]]:
     """
-    Retrieves all tool functions from the specified directory and extracts their names and descriptions.
+    Retrieves all tool functions from the specified directory and extracts their names, descriptions,
+    input schemas, and output schemas.
 
     Args:
         tools_path (str): The specific tool file to retrieve functions from. If None, retrieves all tools from the 'providers' directory.
 
     Returns:
-        List[Dict[str, str]]: A list of dictionaries containing function names and descriptions.
+        List[Dict[str, Any]]: A list of dictionaries containing function names, descriptions, input schemas, and output schemas.
     """
     tools_root_path = os.path.join(
         os.getcwd(), "src", "agentflow", "providers")
@@ -81,9 +82,36 @@ def get_all_tools(tools_path: str) -> List[Dict[str, str]]:
         if func.__doc__:
             description = inspect.cleandoc(func.__doc__).strip()
 
-        tools_info.append({
+        # extract the input and output schema from function
+        input_schema = None
+        output_schema = None
+
+        # Get type hints for the function
+        type_hints = get_type_hints(func)
+
+        # Extract input schema from function parameters
+        for param_name, param_type in type_hints.items():
+            if param_name != 'return' and hasattr(param_type, 'to_json_schema'):
+                # Found a Pydantic model as input parameter
+                input_schema = param_type.to_json_schema()
+                break
+
+        # Extract output schema from return type
+        if 'return' in type_hints and hasattr(type_hints['return'], 'to_json_schema'):
+            # Found a Pydantic model as return type
+            output_schema = type_hints['return'].to_json_schema()
+
+        tool_info = {
             "name": name,
             "description": description
-        })
+        }
+
+        if input_schema:
+            tool_info["input_schema"] = input_schema
+
+        if output_schema:
+            tool_info["output_schema"] = output_schema
+
+        tools_info.append(tool_info)
 
     return tools_info

@@ -58,9 +58,6 @@ class CreateConversationInput(BaseModel):
     name: str
     project_id: UUID
     conversation_id: Optional[UUID] = None
-    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
-    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
-    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True
@@ -73,7 +70,9 @@ class ConversationOutput(BaseModel):
     id: UUID
     name: str
     project_id: UUID
-    chat_history: List[Dict]
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True
@@ -319,15 +318,15 @@ def update_conversation(
     description="Deletes a conversation by its ID for the authenticated user.",
     response_description="No content if the conversation is successfully deleted.",
     responses={
-            404: {
-                "model": ExceptionResponse,
-                "description": "Project not found"
-            },
+        404: {
+            "model": ExceptionResponse,
+            "description": "Project not found"
+        },
         400: {
-                "model": ExceptionResponse,
-                "description": "Bad request received"
-                }
-    },
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
+    }
 )
 def delete_conversation(
     project_id: UUID,
@@ -423,18 +422,7 @@ def send_message(
                                                    input.stream)
 
         return global_response(result)
-        return global_response(result)
 
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
-    except RateLimitError as e:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except NotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)

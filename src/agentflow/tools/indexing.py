@@ -13,6 +13,7 @@ class FunctionSchema(BaseModel):
     """Schema for storing function information."""
     function_name: str
     description: str
+    input_schema: Optional[Dict] = None
     output_schema: Optional[Dict] = None
     parameters: Optional[Dict[str, Any]] = None
     tags: Optional[List[str]] = None

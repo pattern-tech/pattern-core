@@ -215,15 +215,18 @@ class ConversationService:
         if not functions:
             print('not functions')
             functions = []
-            ether_scan_tools = get_all_tools("ether_scan_tools")
+            # ether_scan_tools = get_all_tools("ether_scan_tools")
             moralis_tools = get_all_tools("moralis_tools")
 
-            functions.extend(ether_scan_tools)
+            # functions.extend(ether_scan_tools)
             functions.extend(moralis_tools)
 
             for function in functions:
                 fn_schema = FunctionSchema(function_name=function["name"],
-                                           description=function["description"])
+                                           description=function["description"],
+                                           input_schema=function["input_schema"],
+                                           output_schema=function["output_schema"])
+
                 indexer.index_function(fn_schema)
                 print(f'indexed {function["name"]}')
 

@@ -34,24 +34,42 @@ class CodeGenerator:
         return ""
 
     def generate_code(self, model="gpt-4o-mini"):
-        """Generate Python code based on user input and system prompt"""
+        # """Generate Python code based on user input and system prompt"""
         body = f"functions schema:\n-----------\n{self.tools_schema}\n-----------\nuser_task: {self.user_input}"
         messages = [
             {"role": "developer", "content": self.system_prompt},
             {"role": "user", "content": body}
         ]
 
-        completion = self.client.chat.completions.create(
-            model=model,
-            messages=messages
+        # completion = self.client.chat.completions.create(
+        #     model=model,
+        #     messages=messages
+        # )
+
+        # using ORA
+        import openai
+
+        # Set your ORA API key
+        ORA_API_KEY = "ETH:5FH4mkkmWNo3iry7E5Lnhk3XtmYgM18pPEHRiqWz1vu7NAVDwFNgoBWNJU2gcbtXCqVShYjXABUuiZjrUTWet2LKxVZZqToFWCLwJ46cdh9ZPWBAhYFDWALZ5L7oMtqxKN8uzFim8Ffu6He9ZZSVwhajPz7Q1fYuagkGRCsCJjNPxFf4SADuJT2kBWmGKyp6gBxH8ZHcd7VYMRt21fkrFGPcPqiFCFyapQdnZrTT9n1ThPZ4gUUpMguHLuw5fd89JBfZpcMENc8d5MJz"
+
+        # Initialize the client
+        client = openai.OpenAI(
+            api_key=ORA_API_KEY,
+            base_url="https://api.ora.io/v1",
         )
 
-        return self.extract_code(completion.choices[0].message.content)
+        # Perform a chat completion
+        chat_completion = client.chat.completions.create(
+            model="meta-llama/Llama-3.3-70B-Instruct",
+            messages=messages,
+        )
+
+        return self.extract_code(chat_completion.choices[0].message.content)
 
     def execute_code(self, code, imports: List):
         """Execute the generated code and return the result"""
         if imports:
-            code = f"{imports}\n" + code
+            code = f"{imports}\n\n" + code
             print(f"Executing code\n-----------\n{code}\n-----------")
         try:
             namespace = {}
