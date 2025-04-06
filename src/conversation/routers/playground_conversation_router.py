@@ -326,7 +326,7 @@ def update_conversation(
         400: {
                 "model": ExceptionResponse,
                 "description": "Bad request received"
-            }
+                }
     },
 )
 def delete_conversation(
@@ -423,7 +423,18 @@ def send_message(
                                                    input.stream)
 
         return global_response(result)
+        return global_response(result)
 
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+        )
+    except RateLimitError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except NotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
