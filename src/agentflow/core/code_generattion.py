@@ -46,15 +46,10 @@ class CodeGenerator:
         #     messages=messages
         # )
 
-        # using ORA
-        import openai
-
-        # Set your ORA API key
-        ORA_API_KEY = "ETH:5FH4mkkmWNo3iry7E5Lnhk3XtmYgM18pPEHRiqWz1vu7NAVDwFNgoBWNJU2gcbtXCqVShYjXABUuiZjrUTWet2LKxVZZqToFWCLwJ46cdh9ZPWBAhYFDWALZ5L7oMtqxKN8uzFim8Ffu6He9ZZSVwhajPz7Q1fYuagkGRCsCJjNPxFf4SADuJT2kBWmGKyp6gBxH8ZHcd7VYMRt21fkrFGPcPqiFCFyapQdnZrTT9n1ThPZ4gUUpMguHLuw5fd89JBfZpcMENc8d5MJz"
 
         # Initialize the client
-        client = openai.OpenAI(
-            api_key=ORA_API_KEY,
+        client = OpenAI(
+            api_key=os.environ["ORA_API_KEY"],
             base_url="https://api.ora.io/v1",
         )
 

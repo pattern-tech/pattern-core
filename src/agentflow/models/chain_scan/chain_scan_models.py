@@ -184,71 +184,75 @@ class ContractFunctionCallInput(BaseModel):
 class EventParameter(BaseModel):
     """Represents a parameter in a contract event."""
     name: Optional[str] = Field(None, description="Name of the parameter")
-    type: Optional[str] = Field(None, description="Type of the parameter (e.g., 'address', 'uint256')")
-    indexed: Optional[bool] = Field(None, description="Whether the parameter is indexed")
+    type: Optional[str] = Field(
+        None, description="Type of the parameter (e.g., 'address', 'uint256')")
+    indexed: Optional[bool] = Field(
+        None, description="Whether the parameter is indexed")
     value: Optional[Any] = Field(None, description="Value of the parameter")
 
 
 class ContractEvent(BaseModel):
     """Represents a contract event."""
     event_name: Optional[str] = Field(None, description="Name of the event")
-    block_number: Optional[int] = Field(None, description="Block number where the event was emitted")
-    block_timestamp: Optional[str] = Field(None, description="Timestamp of the block in ISO format")
-    transaction_hash: Optional[str] = Field(None, description="Transaction hash that emitted the event")
-    log_index: Optional[int] = Field(None, description="Index of the log in the transaction receipt")
-    address: Optional[str] = Field(None, description="Contract address that emitted the event")
-    parameters: Optional[List[EventParameter]] = Field(None, description="Parameters of the event")
+    block_number: Optional[int] = Field(
+        None, description="Block number where the event was emitted")
+    block_timestamp: Optional[str] = Field(
+        None, description="Timestamp of the block in ISO format")
+    transaction_hash: Optional[str] = Field(
+        None, description="Transaction hash that emitted the event")
+    log_index: Optional[int] = Field(
+        None, description="Index of the log in the transaction receipt")
+    address: Optional[str] = Field(
+        None, description="Contract address that emitted the event")
+    parameters: Optional[List[EventParameter]] = Field(
+        None, description="Parameters of the event")
 
 
 class BlockTransaction(BaseModel):
     """Represents a transaction in a block."""
     hash: Optional[str] = Field(None, description="Transaction hash")
-    block_number: Optional[int] = Field(None, description="Block number containing the transaction")
-    block_timestamp: Optional[str] = Field(None, description="Timestamp of the block in ISO format")
+    block_number: Optional[int] = Field(
+        None, description="Block number containing the transaction")
+    block_timestamp: Optional[str] = Field(
+        None, description="Timestamp of the block in ISO format")
     from_address: Optional[str] = Field(None, description="Sender address")
     to_address: Optional[str] = Field(None, description="Recipient address")
     value: Optional[str] = Field(None, description="Value transferred in wei")
     gas: Optional[int] = Field(None, description="Gas limit")
     gas_price: Optional[str] = Field(None, description="Gas price in wei")
-    input: Optional[str] = Field(None, description="Input data for the transaction")
+    input: Optional[str] = Field(
+        None, description="Input data for the transaction")
     nonce: Optional[int] = Field(None, description="Transaction nonce")
-    transaction_index: Optional[int] = Field(None, description="Index of the transaction in the block")
+    transaction_index: Optional[int] = Field(
+        None, description="Index of the transaction in the block")
 
 
 class ContractAbiItem(BaseModel):
     """Represents an item in a contract ABI."""
-    type: Optional[str] = Field(None, description="Type of the ABI item (e.g., 'function', 'event')")
-    name: Optional[str] = Field(None, description="Name of the function or event")
-    inputs: Optional[List[Dict[str, Any]]] = Field(None, description="Input parameters")
-    outputs: Optional[List[Dict[str, Any]]] = Field(None, description="Output parameters for functions")
-    stateMutability: Optional[str] = Field(None, description="State mutability for functions (e.g., 'view', 'pure')")
-    constant: Optional[bool] = Field(None, description="Whether the function is constant")
-    payable: Optional[bool] = Field(None, description="Whether the function is payable")
-    anonymous: Optional[bool] = Field(None, description="Whether the event is anonymous (for events)")
-
-
-class ContractSourceCode(BaseModel):
-    """Represents the source code of a contract."""
-    SourceCode: Optional[str] = Field(None, description="Source code of the contract")
-    ABI: Optional[str] = Field(None, description="ABI of the contract as a JSON string")
-    ContractName: Optional[str] = Field(None, description="Name of the contract")
-    CompilerVersion: Optional[str] = Field(None, description="Compiler version used")
-    OptimizationUsed: Optional[str] = Field(None, description="Whether optimization was used")
-    Runs: Optional[str] = Field(None, description="Number of optimization runs")
-    ConstructorArguments: Optional[str] = Field(None, description="Constructor arguments used for deployment")
-    EVMVersion: Optional[str] = Field(None, description="EVM version targeted")
-    Library: Optional[str] = Field(None, description="Libraries used")
-    LicenseType: Optional[str] = Field(None, description="License type")
-    Proxy: Optional[str] = Field(None, description="Whether this is a proxy contract")
-    Implementation: Optional[str] = Field(None, description="Implementation address if this is a proxy")
-    SwarmSource: Optional[str] = Field(None, description="Swarm source")
+    type: Optional[str] = Field(
+        None, description="Type of the ABI item (e.g., 'function', 'event')")
+    name: Optional[str] = Field(
+        None, description="Name of the function or event")
+    inputs: Optional[List[Dict[str, Any]]] = Field(
+        None, description="Input parameters")
+    outputs: Optional[List[Dict[str, Any]]] = Field(
+        None, description="Output parameters for functions")
+    stateMutability: Optional[str] = Field(
+        None, description="State mutability for functions (e.g., 'view', 'pure')")
+    constant: Optional[bool] = Field(
+        None, description="Whether the function is constant")
+    payable: Optional[bool] = Field(
+        None, description="Whether the function is payable")
+    anonymous: Optional[bool] = Field(
+        None, description="Whether the event is anonymous (for events)")
 
 
 class ContractAbiResponse(BaseModel):
     """Response model for contract ABI endpoints.
     Contains the contract ABI as a list of ABI items.
     """
-    items: List[ContractAbiItem] = Field(default_factory=list, description="List of ABI items")
+    items: List[ContractAbiItem] = Field(
+        default_factory=list, description="List of ABI items")
 
     @classmethod
     def to_json_schema(cls) -> str:
@@ -260,7 +264,29 @@ class ContractSourceCodeResponse(BaseModel):
     """Response model for contract source code endpoints.
     Contains the contract source code and related information.
     """
-    source_code: ContractSourceCode = Field(..., description="Contract source code and related information")
+    """Represents the source code of a contract."""
+    SourceCode: Optional[str] = Field(
+        None, description="Source code of the contract")
+    ABI: Optional[str] = Field(
+        None, description="ABI of the contract as a JSON string")
+    ContractName: Optional[str] = Field(
+        None, description="Name of the contract")
+    CompilerVersion: Optional[str] = Field(
+        None, description="Compiler version used")
+    OptimizationUsed: Optional[str] = Field(
+        None, description="Whether optimization was used")
+    Runs: Optional[str] = Field(
+        None, description="Number of optimization runs")
+    ConstructorArguments: Optional[str] = Field(
+        None, description="Constructor arguments used for deployment")
+    EVMVersion: Optional[str] = Field(None, description="EVM version targeted")
+    Library: Optional[str] = Field(None, description="Libraries used")
+    LicenseType: Optional[str] = Field(None, description="License type")
+    Proxy: Optional[str] = Field(
+        None, description="Whether this is a proxy contract")
+    Implementation: Optional[str] = Field(
+        None, description="Implementation address if this is a proxy")
+    SwarmSource: Optional[str] = Field(None, description="Swarm source")
 
     @classmethod
     def to_json_schema(cls) -> str:
@@ -273,8 +299,10 @@ class EventAbiResponse(BaseModel):
     Contains the ABI of a specific event.
     """
     event_name: Optional[str] = Field(None, description="Name of the event")
-    inputs: Optional[List[Dict[str, Any]]] = Field(None, description="Input parameters of the event")
-    anonymous: Optional[bool] = Field(None, description="Whether the event is anonymous")
+    inputs: Optional[List[Dict[str, Any]]] = Field(
+        None, description="Input parameters of the event")
+    anonymous: Optional[bool] = Field(
+        None, description="Whether the event is anonymous")
     type: str = Field("event", description="Type of the ABI item")
 
     @classmethod
@@ -311,7 +339,8 @@ class ContractEventsResponse(BaseModel):
     """Response model for contract events endpoints.
     Contains a list of events emitted by the contract.
     """
-    events: List[ContractEvent] = Field(default_factory=list, description="List of contract events")
+    events: List[ContractEvent] = Field(
+        default_factory=list, description="List of contract events")
 
     @classmethod
     def to_json_schema(cls) -> str:
@@ -335,7 +364,8 @@ class BlockTransactionsResponse(BaseModel):
     """Response model for block transactions endpoints.
     Contains a list of transactions in a block.
     """
-    transactions: List[BlockTransaction] = Field(default_factory=list, description="List of transactions in the block")
+    transactions: List[BlockTransaction] = Field(
+        default_factory=list, description="List of transactions in the block")
 
     @classmethod
     def to_json_schema(cls) -> str:
@@ -347,9 +377,12 @@ class ContractFunctionCallResponse(BaseModel):
     """Response model for contract function call endpoint.
     Contains the function call result and metadata.
     """
-    success: bool = Field(..., description="Whether the function call was successful")
-    result: Optional[Any] = Field(None, description="Result of the function call")
-    error: Optional[str] = Field(None, description="Error message if the call failed")
+    success: bool = Field(...,
+                          description="Whether the function call was successful")
+    result: Optional[Any] = Field(
+        None, description="Result of the function call")
+    error: Optional[str] = Field(
+        None, description="Error message if the call failed")
     result_type: Optional[str] = Field(None, description="Type of the result")
 
     @classmethod
@@ -401,7 +434,8 @@ class DecodeTransactionInput(BaseModel):
 class DecodedParameter(BaseModel):
     """Represents a decoded parameter from a transaction input."""
     name: Optional[str] = Field(None, description="Name of the parameter")
-    type: str = Field(..., description="Type of the parameter (e.g., 'address', 'uint256')")
+    type: str = Field(...,
+                      description="Type of the parameter (e.g., 'address', 'uint256')")
     value: Any = Field(..., description="Decoded value of the parameter")
 
 
@@ -409,9 +443,12 @@ class DecodeTransactionResponse(BaseModel):
     """Response model for decode_transaction_input endpoint.
     Contains the decoded transaction input with function name, signature, and parameters.
     """
-    function_name: str = Field(..., description="Name of the function that was called")
-    function_signature: str = Field(..., description="Signature of the function (e.g., 'transfer(address,uint256)')")
-    parameters: List[DecodedParameter] = Field(default_factory=list, description="Decoded parameters of the function call")
+    function_name: str = Field(...,
+                               description="Name of the function that was called")
+    function_signature: str = Field(
+        ..., description="Signature of the function (e.g., 'transfer(address,uint256)')")
+    parameters: List[DecodedParameter] = Field(
+        default_factory=list, description="Decoded parameters of the function call")
 
     @classmethod
     def to_json_schema(cls) -> str:

@@ -11,8 +11,12 @@ from typing import List, Optional, Dict
 
 # Internal imports
 from src.agentflow.models.chain_scan import *
-from src.agentflow.models.chain_scan.chain_scan_models import ContractSourceCode, EventParameter, ContractEvent, BlockTransaction, DecodedParameter
 from src.agentflow.utils.shared_tools import tool, handle_exceptions
+from src.agentflow.models.chain_scan.chain_scan_models import (
+    EventParameter,
+    ContractEvent,
+    BlockTransaction,
+    DecodedParameter)
 
 
 def _get_chain_config(chain_id: str) -> Dict:
@@ -151,7 +155,7 @@ def get_current_timestamp() -> CurrentTimestampResponse:
     Returns:
         CurrentTimestampResponse: The current Unix timestamp.
     """
-    return CurrentTimestampResponse(timestamp=int(time.time()))
+    return int(time.time())
 
 
 @tool
@@ -177,7 +181,7 @@ def convert_to_timestamp(input_data: ConvertToTimestampInput) -> TimestampRespon
 
     parsed_date = dateparser.parse(input_model.date_str)
     if parsed_date:
-        return TimestampResponse(timestamp=int(time.mktime(parsed_date.timetuple())))
+        return int(time.mktime(parsed_date.timetuple()))
     else:
         raise ValueError(
             f"Could not parse the date string: {input_model.date_str}")
@@ -212,11 +216,7 @@ def get_contract_source_code(input_data: ContractSourceCodeInput) -> ContractSou
         else:
             raise
 
-    # Create a ContractSourceCode object from the response
-    source_code = ContractSourceCode(**response)
-
-    # Return a ContractSourceCodeResponse with the source_code
-    return ContractSourceCodeResponse(source_code=source_code)
+    return response
 
 
 @tool
@@ -238,9 +238,9 @@ def get_contract_abi(input_data: ContractAbiInput) -> ContractAbiResponse:
         input_model = input_data
 
     api_key = _get_chain_config(input_model.chain_id)["API_KEY"]
-    abi_items = fetch_contract_abi(
+    abi = fetch_contract_abi(
         input_model.contract_address, input_model.chain_id, api_key)
-    return ContractAbiResponse(items=abi_items)
+    return abi
 
 
 @tool
@@ -268,6 +268,7 @@ def get_abi_of_event(input_data: EventAbiOfContractInput) -> EventAbiResponse:
     abi = fetch_contract_abi(input_model.contract_address,
                              input_model.chain_id, api_key)
     event_abi = get_event_abi(abi, input_model.event_name)
+
     if event_abi is None:
         available_events = [item["name"]
                             for item in abi if item.get("type") == "event"]
@@ -275,11 +276,7 @@ def get_abi_of_event(input_data: EventAbiOfContractInput) -> EventAbiResponse:
             f"Event '{input_model.event_name}' not found in contract ABI. Available events: {available_events}")
 
     # Create and return an EventAbiResponse instance
-    return EventAbiResponse(
-        event_name=event_abi.get("name"),
-        inputs=event_abi.get("inputs", []),
-        anonymous=event_abi.get("anonymous", False)
-    )
+    return event_abi
 
 
 @tool
@@ -304,6 +301,7 @@ def get_contract_events(input_data: ContractEventsInput) -> ContractEventsRespon
         input_model = input_data
 
     api_key = _get_chain_config(input_model.chain_id)["API_KEY"]
+
     web3 = Web3(Web3.HTTPProvider(
         _get_chain_config(input_model.chain_id)["RPC"]))
 
@@ -392,7 +390,7 @@ def get_latest_chain_block_number(input_data: LatestBlockNumberInput) -> BlockNu
 
     web3 = Web3(Web3.HTTPProvider(
         _get_chain_config(input_model.chain_id)["RPC"]))
-    return BlockNumberResponse(block_number=web3.eth.block_number)
+    return web3.eth.block_number
 
 
 @tool
@@ -416,7 +414,7 @@ def convert_timestamp_to_block_number(input_data: TimestampToBlockNumberInput) -
     api_key = _get_chain_config(input_model.chain_id)["API_KEY"]
     block_number = timestamp_to_block_number(
         input_model.timestamp, input_model.chain_id, api_key)
-    return BlockNumberResponse(block_number=block_number)
+    return block_number
 
 
 @tool
@@ -440,7 +438,7 @@ def get_latest_eth_block_hash(input_data: LatestBlockHashInput) -> BlockHashResp
     web3 = Web3(Web3.HTTPProvider(
         _get_chain_config(input_model.chain_id)["RPC"]))
     block = web3.eth.get_block('latest')
-    return BlockHashResponse(block_hash=block.hash.hex())
+    return block.hash.hex()
 
 
 @tool
@@ -490,23 +488,7 @@ def get_block_transactions(input_data: BlockTransactionsInput) -> BlockTransacti
         else:
             filtered_tx = tx_dict
 
-        # Create BlockTransaction instance with the filtered fields
-        block_tx = BlockTransaction(
-            hash=filtered_tx.get('hash'),
-            block_number=filtered_tx.get('blockNumber'),
-            from_address=filtered_tx.get('from'),
-            to=filtered_tx.get('to'),
-            value=filtered_tx.get('value'),
-            gas=filtered_tx.get('gas'),
-            gas_price=filtered_tx.get('gasPrice'),
-            input=filtered_tx.get('input'),
-            nonce=filtered_tx.get('nonce'),
-            transaction_index=filtered_tx.get('transactionIndex')
-        )
-        block_transactions.append(block_tx)
-
-    # Return BlockTransactionsResponse instance
-    return BlockTransactionsResponse(transactions=block_transactions)
+    return filtered_tx
 
 
 @tool
@@ -858,16 +840,16 @@ def call_contract_function(input_data: ContractFunctionCallInput) -> ContractFun
                 if isinstance(item, bytes):
                     processed_result[i] = web3.to_hex(item)
 
-        return ContractFunctionCallResponse(
-            success=True,
-            result=processed_result,
-            result_type=result_type
-        )
+        return {
+            "success": True,
+            "result": processed_result,
+            "result_type": result_type
+        }
 
     except Exception as e:
-        return ContractFunctionCallResponse(
-            success=False,
-            error=str(e),
-            result=None,
-            result_type=None
-        )
+        return {
+            "success": False,
+            "error": str(e),
+            "result": None,
+            "result_type": None
+        }

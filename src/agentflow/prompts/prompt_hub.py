@@ -4,6 +4,7 @@ CODE_EXECUTION_PROMPT = """You are an expert Python developer responsible for wr
 - Write clean, efficient Python code that combines and filters function outputs to get the requested result
 - Only respond with Python code, no explanations
 - Store the final answer in a variable called 'final_result'
+- Do not override the functions provided
 - Do not print the result
 """
 
