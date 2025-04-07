@@ -215,24 +215,26 @@ class ConversationService:
         if not functions:
             print('not functions')
             functions = []
-            # ether_scan_tools = get_all_tools("ether_scan_tools")
+            chain_scan_tools = get_all_tools("chain_scan_tools")
             moralis_tools = get_all_tools("moralis_tools")
 
-            # functions.extend(ether_scan_tools)
+            functions.extend(chain_scan_tools)
             functions.extend(moralis_tools)
 
             for function in functions:
+                inp_schema = function["input_schema"] if "input_schema" in function.keys() else None
+                out_schema = function["output_schema"] if "output_schema" in function.keys() else None
                 fn_schema = FunctionSchema(function_name=function["name"],
                                            description=function["description"],
-                                           input_schema=function["input_schema"],
-                                           output_schema=function["output_schema"])
+                                           input_schema=inp_schema,
+                                           output_schema=out_schema)
 
                 indexer.index_function(fn_schema)
                 print(f'indexed {function["name"]}')
 
         functions = indexer.search_functions(query=message, limit=5)
 
-        imports = "from src.agentflow.providers.ether_scan_tools import *\nfrom src.agentflow.providers.moralis_tools import *"
+        imports = "from src.agentflow.providers.chain_scan_tools import *\nfrom src.agentflow.providers.moralis_tools import *"
 
         code_generator = CodeGenerator()
         code_generator.set_user_input(message)

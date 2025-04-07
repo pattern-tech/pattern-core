@@ -404,35 +404,35 @@ def send_message(
 
         metadata: The chat history metadata.
     """
-    try:
-        max_query_allowance = query_usage_service.get_user_max_query_allowance(
-            db, user_id)
+    # try:
+    max_query_allowance = query_usage_service.get_user_max_query_allowance(
+        db, user_id)
 
-        is_eligible = query_usage_service.check_user_eligibility(
-            db, user_id, max_query_allowance)
-        if not is_eligible:
-            raise RateLimitError(
-                "You have reached your daily query limit. Please try again tomorrow or stake more to get more credit.")
-        result = conversation_service.send_message(db,
-                                                   input.message,
-                                                   user_id,
-                                                   conversation_id,
-                                                   project_id,
-                                                   input.message_type,
-                                                   input.stream)
+    is_eligible = query_usage_service.check_user_eligibility(
+        db, user_id, max_query_allowance)
+    if not is_eligible:
+        raise RateLimitError(
+            "You have reached your daily query limit. Please try again tomorrow or stake more to get more credit.")
+    result = conversation_service.send_message(db,
+                                                input.message,
+                                                user_id,
+                                                conversation_id,
+                                                project_id,
+                                                input.message_type,
+                                                input.stream)
 
-        return global_response(result)
+    return global_response(result)
 
-    except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
-        )
-    except RateLimitError as e:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    # except NotFoundError as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
+    #     )
+    # except RateLimitError as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
+    # except Exception as e:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post(

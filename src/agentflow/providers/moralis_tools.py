@@ -1,26 +1,13 @@
+import os
 import requests
 
-from typing import Any
 from moralis import evm_api
-from src.agentflow.utils.shared_tools import tool
 
-from src.util.configuration import Config
-from src.agentflow.utils.shared_tools import handle_exceptions
-from src.agentflow.models.moralis_models import (
-    TokenBalanceResponse,
-    TokenBalanceInput,
-    WalletHistoryInput,
-    WalletHistoryResponse,
-    WalletStatsInput,
-    WalletStatsResponse,
-    TransactionDetailInput,
-    TransactionDetailResponse,
-    TokenApprovalInput,
-    TokenApprovalResponse)
+from src.agentflow.models.moralis import *
+from src.agentflow.utils.shared_tools import tool, handle_exceptions
 
-_config = Config.get_config()
-_moralis_config = Config.get_service_config(_config, "MORALIS")
 
+_MORALIS_API_KEY=os.environ["MORALIS_API_KEY"]
 _MORALIS_URL = "https://deep-index.moralis.io/api/v2"
 
 
@@ -66,7 +53,7 @@ def get_wallet_token_balances(input_data: TokenBalanceInput) -> TokenBalanceResp
         params["limit"] = input_model.limit
 
     api_result = evm_api.wallets.get_wallet_token_balances_price(
-        api_key=_moralis_config["api_key"],
+        api_key=_MORALIS_API_KEY,
         params=params,
     )
 
@@ -99,7 +86,7 @@ def get_wallet_stats(input_data: WalletStatsInput) -> WalletStatsResponse:
 
     # Call the Moralis API
     api_result = evm_api.wallets.get_wallet_stats(
-        api_key=_moralis_config["api_key"],
+        api_key=_MORALIS_API_KEY,
         params=params,
     )
 
@@ -152,7 +139,7 @@ def get_wallet_history(input_data: WalletHistoryInput) -> WalletHistoryResponse:
         params["limit"] = input_model.limit
 
     api_result = evm_api.wallets.get_wallet_history(
-        api_key=_moralis_config["api_key"],
+        api_key=_MORALIS_API_KEY,
         params=params,
     )
 
@@ -189,7 +176,7 @@ def get_transaction_detail(input_data: TransactionDetailInput) -> TransactionDet
 
     # Call the Moralis API
     api_result = evm_api.transaction.get_transaction_verbose(
-        api_key=_moralis_config["api_key"],
+        api_key=_MORALIS_API_KEY,
         params=params,
     )
 
@@ -230,7 +217,7 @@ def get_token_approvals(input_data: TokenApprovalInput) -> TokenApprovalResponse
     # Set up headers
     headers = {
         'accept': 'application/json',
-        'X-API-Key': _moralis_config["api_key"]
+        'X-API-Key': _MORALIS_API_KEY
     }
 
     # Make the API request
