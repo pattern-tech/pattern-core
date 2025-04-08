@@ -212,6 +212,11 @@ class ConversationService:
 
         functions = indexer.search_functions(query=message, limit=5)
 
+        print('chose functions\n-------------------')
+        for fn in functions:
+            print(fn.payload["function_name"], fn.score)
+        print('-------------------\n\n')
+
         if not functions:
             print('not functions')
             functions = []
@@ -222,8 +227,10 @@ class ConversationService:
             functions.extend(moralis_tools)
 
             for function in functions:
-                inp_schema = function["input_schema"] if "input_schema" in function.keys() else None
-                out_schema = function["output_schema"] if "output_schema" in function.keys() else None
+                inp_schema = function["input_schema"] if "input_schema" in function.keys(
+                ) else None
+                out_schema = function["output_schema"] if "output_schema" in function.keys(
+                ) else None
                 fn_schema = FunctionSchema(function_name=function["name"],
                                            description=function["description"],
                                            input_schema=inp_schema,

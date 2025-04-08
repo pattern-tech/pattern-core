@@ -1,7 +1,5 @@
-from typing import List, Any, Optional, Dict, Literal, Union
 from pydantic import BaseModel, Field
-
-# Pydantic models for function inputs
+from typing import List, Any, Optional, Dict, Literal
 
 
 class ContractAbiInput(BaseModel):
@@ -11,8 +9,6 @@ class ContractAbiInput(BaseModel):
     contract_address: str = Field(..., description="The contract address")
     chain_id: Literal["1", "42161", "8453", "137", "250"] = Field(
         ..., description="The chain ID: 1 (Ethereum), 42161 (Arbitrum), 8453 (Base), 137 (Polygon), 250 (Fantom)")
-    api_key: Optional[str] = Field(
-        None, description="The decrypted blockchain explorer API key. Only required for direct fetch_contract_abi calls.")
 
     @classmethod
     def to_json_schema(cls) -> str:
@@ -27,8 +23,6 @@ class ContractSourceCodeInput(BaseModel):
     contract_address: str = Field(..., description="The contract address")
     chain_id: Literal["1", "42161", "8453", "137", "250"] = Field(
         ..., description="The chain ID: 1 (Ethereum), 42161 (Arbitrum), 8453 (Base), 137 (Polygon), 250 (Fantom)")
-    api_key: Optional[str] = Field(
-        None, description="The decrypted blockchain explorer API key. Only required for direct fetch_contract_source_code calls.")
 
     @classmethod
     def to_json_schema(cls) -> str:
@@ -56,8 +50,6 @@ class TimestampToBlockNumberInput(BaseModel):
     timestamp: int = Field(..., description="Unix timestamp")
     chain_id: Literal["1", "42161", "8453", "137", "250"] = Field(
         ..., description="The chain ID: 1 (Ethereum), 42161 (Arbitrum), 8453 (Base), 137 (Polygon), 250 (Fantom)")
-    api_key: Optional[str] = Field(
-        None, description="The decrypted blockchain explorer API key. Only required for direct timestamp_to_block_number calls.")
 
     @classmethod
     def to_json_schema(cls) -> str:
@@ -282,10 +274,10 @@ class ContractSourceCodeResponse(BaseModel):
     EVMVersion: Optional[str] = Field(None, description="EVM version targeted")
     Library: Optional[str] = Field(None, description="Libraries used")
     LicenseType: Optional[str] = Field(None, description="License type")
-    Proxy: Optional[str] = Field(
+    Proxy: Literal["1", "0"] = Field(
         None, description="Whether this is a proxy contract")
     Implementation: Optional[str] = Field(
-        None, description="Implementation address if this is a proxy")
+        None, description="Implementation address if this is a proxy",)
     SwarmSource: Optional[str] = Field(None, description="Swarm source")
 
     @classmethod
