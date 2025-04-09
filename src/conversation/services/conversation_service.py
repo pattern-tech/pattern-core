@@ -12,10 +12,12 @@ from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
-from src.agent.services.agent_service import RouterAgentService
+from src.agent.services.agent_service import AgentService
 from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
+
+from src.agentflow.tool_hub.hub import ToolRegistery
 
 
 class ConversationService:
@@ -205,14 +207,15 @@ class ConversationService:
         if conversation.project_id != project_id:
             raise NotFoundError("Project not found or is not owned by user")
 
-        config = Config.get_config()
+        # Select appropriate tools for the user's message using our new tool selector
+        selected_tools = ToolRegistery.select_tools_for_query(message)
 
-        sub_agents = AgentHub().get_agents(config["agents"])
+        print(str([selected_tool.name for selected_tool in selected_tools]))
 
         memory = self.memory_service.get_memory(conversation_id)
 
-        agent = RouterAgentService(
-            sub_agents=sub_agents, memory=memory, streaming=stream)
+        agent = AgentService(
+            tools=selected_tools, memory=memory, streaming=stream)
 
         if stream:
             try:

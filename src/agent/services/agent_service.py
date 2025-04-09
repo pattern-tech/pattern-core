@@ -1,7 +1,8 @@
 import json
 import asyncio
-from typing import Dict, Any, Optional, AsyncGenerator
+from typing import Dict, Any, AsyncGenerator
 
+from datetime import datetime
 from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
@@ -16,6 +17,7 @@ class StreamingCallbackHandler(BaseCallbackHandler):
     A callback handler that collects tokens and intermediate events in an asyncio queue.
     Uses a newline-delimited JSON (NDJSON) protocol for reliable streaming.
     Each event is a complete JSON object with a newline terminator.
+    Captures detailed information about tool execution including inputs and outputs.
     """
 
     def __init__(self):
@@ -42,31 +44,79 @@ class StreamingCallbackHandler(BaseCallbackHandler):
             action: The action being performed by the agent.
             **kwargs: Additional keyword arguments.
         """
+        # Extract more detailed information about the tool being called
+        tool_name = getattr(action, "tool", None)
+        tool_input = getattr(action, "tool_input", {})
+
+        # Create a more detailed event for tool start
         event = {
             "type": "tool_start",
-            "tool": getattr(action, "tool", None),
-            "tool_input": getattr(action, "tool_input", {})
+            "tool": tool_name,
+            "tool_input": tool_input,
+            "timestamp": str(datetime.now())
+        }
+        # Use NDJSON format
+        self.queue.put_nowait(json.dumps(event) + "\n")
+
+    def on_tool_end(self, output, **kwargs) -> None:
+        """
+        Handle tool completion events.
+
+        Args:
+            output: The output produced by the tool.
+            **kwargs: Additional keyword arguments.
+        """
+        # Extract information about the completed tool
+        observation = kwargs.get("observation", output)
+        tool_name = kwargs.get("name", None)
+
+        # Create a detailed event for tool completion
+        event = {
+            "type": "tool_end",
+            "tool": tool_name,
+            "output": observation,
+            "timestamp": str(datetime.now())
+        }
+        # Use NDJSON format
+        self.queue.put_nowait(json.dumps(event) + "\n")
+
+    def on_tool_error(self, error, **kwargs) -> None:
+        """
+        Handle tool error events.
+
+        Args:
+            error: The error that occurred during tool execution.
+            **kwargs: Additional keyword arguments.
+        """
+        # Extract information about the tool that caused the error
+        tool_name = kwargs.get("name", None)
+
+        # Create a detailed event for tool error
+        event = {
+            "type": "tool_error",
+            "tool": tool_name,
+            "error": str(error),
+            "timestamp": str(datetime.now())
         }
         # Use NDJSON format
         self.queue.put_nowait(json.dumps(event) + "\n")
 
 
-class RouterAgentService:
+class AgentService:
     """
-    RouterAgentService is responsible for routing the input message to the appropriate agent
-    and returning the response.
+    AgentService is responsible for doing the job
     """
 
-    def __init__(self, sub_agents, memory=None, streaming: bool = True):
+    def __init__(self, tools, memory=None, streaming: bool = True):
         """
-        Initialize the RouterAgentService.
+        Initialize the AgentService.
 
         Args:
-            sub_agents: The sub-agents to use for routing.
+            tools: The tools to use for agent.
             memory: The memory to use for storing conversation history.
             streaming (bool): Whether to enable streaming responses.
         """
-        self.sub_agents = sub_agents
+        self.tools = tools
         self.memory = memory
         self.streaming = streaming
         self.streaming_handler = None
@@ -88,22 +138,32 @@ class RouterAgentService:
                             stream=streaming,
                             callbacks=[self.streaming_handler] if self.streaming else None)
 
-        self.prompt = init_prompt(self.llm, AgentType.ROUTER_AGENT)
+        self.prompt = init_prompt(self.llm, AgentType.PATTERN_CORE_AGENT)
 
-        self.agent = init_agent(self.llm, self.sub_agents, self.prompt)
+        self.agent = init_agent(self.llm, self.tools, self.prompt)
 
         if streaming:
+            # Wrap each tool with the callback handler to ensure tool events are captured
+            wrapped_tools = []
+            for tool in self.tools:
+                # Create a copy of the tool with callbacks attached
+                tool_with_callbacks = tool.copy()
+                tool_with_callbacks.callbacks = [self.streaming_handler]
+                wrapped_tools.append(tool_with_callbacks)
+
+            # Make sure the streaming handler is registered for all events, including tool completion
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.sub_agents,
+                tools=wrapped_tools,  # Use the wrapped tools with callbacks
                 return_intermediate_steps=True,
                 verbose=True,
-                callbacks=[self.streaming_handler]
+                callbacks=[self.streaming_handler],
+                handle_tool_error=True  # Ensure tool errors are also captured
             )
         else:
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.sub_agents,
+                tools=self.tools,
                 return_intermediate_steps=True,
                 verbose=True
             )
