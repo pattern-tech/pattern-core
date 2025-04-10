@@ -1,23 +1,25 @@
+import json
+
 from uuid import UUID
 from typing import List
+from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from langchain_core.messages.human import HumanMessage
 
 from src.util.configuration import Config
-from src.agentflow.agents.hub import AgentHub
 from src.util.execptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
+from src.agentflow.tool.hub import ToolRegistery
 from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
+from src.agent.services.agent_service import AgentService
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
-from src.agent.services.agent_service import AgentService
 from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
+from src.agentflow.providers.chain_scan_tools import get_current_timestamp
 from src.conversation.repositories.conversation_repository import ConversationRepository
-
-from src.agentflow.tool_hub.hub import ToolRegistery
 
 
 class ConversationService:
@@ -207,10 +209,30 @@ class ConversationService:
         if conversation.project_id != project_id:
             raise NotFoundError("Project not found or is not owned by user")
 
-        # Select appropriate tools for the user's message using our new tool selector
-        selected_tools = ToolRegistery.select_tools_for_query(message)
+        all_user_messages = self.get_history(
+            db_session, user_id, conversation_id)
+        all_user_messages.append(message)
 
-        print(str([selected_tool.name for selected_tool in selected_tools]))
+        tool_selection_start_event = {
+            "type": "tool_selection_start",
+            "timestamp": str(datetime.now())
+        }
+        yield json.dumps(tool_selection_start_event) + "\n"
+
+        # Select appropriate tools for the user's message using our new tool selector
+        selected_tools = ToolRegistery.select_tools_for_query(
+            all_user_messages)
+
+        # langchain raise exception if the tools list is empty
+        if len(selected_tools) == 0:
+            selected_tools = [get_current_timestamp]
+
+        tool_selection_end_event = {
+            "type": "tool_selection_end",
+            "selected_tools": [selected_tool.name for selected_tool in selected_tools],
+            "timestamp": str(datetime.now())
+        }
+        yield json.dumps(tool_selection_end_event) + "\n"
 
         memory = self.memory_service.get_memory(conversation_id)
 
@@ -282,6 +304,22 @@ class ConversationService:
             })
             generated_id += 1
         return history
+
+    def get_user_messages(self, conversation_id: UUID):
+        """
+        Retrieves only the user (human) messages from a conversation.
+
+        Args:
+            conversation_id (UUID): ID of the conversation to get messages from
+
+        Returns:
+            list: List of HumanMessage objects from the conversation
+        """
+        memory = self.memory_service.get_memory(conversation_id)
+        # filter user messages
+        user_messages = [
+            message.content for message in memory.messages if isinstance(message, HumanMessage)]
+        return user_messages
 
     def rename_title(self, db_session: Session, conversation_id: UUID, user_id: UUID, message: str) -> str:
         """

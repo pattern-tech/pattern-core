@@ -48,12 +48,12 @@ class ToolSelector:
 
         return tool_descriptions
 
-    def select_tools(self, query: str, available_tools: List[Any]) -> List[Any]:
+    def select_tools(self, query: List[str], available_tools: List[Any]) -> List[Any]:
         """
         Select appropriate tools for a given user query.
 
         Args:
-            query (str): The user's query
+            query (List[str]): List of user queries
             available_tools (List[Any]): List of all available tool function references
 
         Returns:
@@ -67,7 +67,7 @@ class ToolSelector:
 
         # Get LLM response
         messages = [
-            ("system", "You are a tool selection assistant. Your job is to analyze a user query and select the most appropriate tools to answer it."),
+            ("system", "You are a tool selection assistant. Your job is to analyze a user chat conversation and select the most appropriate tools to answer user need."),
             ("human", prompt)
         ]
 
@@ -90,34 +90,38 @@ class ToolSelector:
             # Return all tools as fallback if parsing fails
             return available_tools
 
-    def _create_tool_selection_prompt(self, query: str, tool_descriptions: List[Dict[str, str]]) -> str:
+    def _create_tool_selection_prompt(self, query: List[str], tool_descriptions: List[Dict[str, str]]) -> str:
         """
         Create a prompt for the LLM to select appropriate tools.
 
         Args:
-            query (str): The user's query
+            query (List[str]): List of user queries
             tool_descriptions (List[Dict[str, str]]): List of tool descriptions
 
         Returns:
             str: The prompt for the LLM
         """
+        current_query = query[-1]
+        previous_queries = query[:-1]
+
         tools_json = json.dumps(tool_descriptions, indent=2)
 
         prompt = f"""
-User Query: {query}
+previous user queries: {str(previous_queries)}
+current user query : {str(current_query)}
 
 Available Tools:
 {tools_json}
 
 Instructions:
-- Analyze the user query carefully
-- Review each available tool and its description
-- Select the tools that are directly relevant to answering the query
-- If you are not sure if a tool is needed or not select it
-- Return your answer as a JSON array of tool names, like this: ["tool_name1", "tool_name2"]
-- If no tools are relevant, return an empty array: []
-- Do not include any explanation or additional text, just the JSON array
-- Break down the user task into smaller subtasks if needed
+1. Review the current user query alongside previous user queries to fully understand the context and user needs.
+2. Carefully examine each available tool and its description.
+3. Identify and select only those tools that are directly applicable to addressing the current query or are necessary based on the context provided by previous queries.
+4. If uncertainty exists about the necessity of a tool, include it.
+5. For complex queries, consider decomposing the task into smaller subtasks and select tools accordingly.
+6. Return your response strictly as a JSON array of tool names, formatted like this: ["tool_name1", "tool_name2"].
+7. If no tools are relevant, return an empty array: [].
+8. Do not include any explanation, commentary, or additional text—only the JSON array of selected tool names.
 
 Selected Tools:
 """

@@ -44,15 +44,39 @@ class StreamingCallbackHandler(BaseCallbackHandler):
             action: The action being performed by the agent.
             **kwargs: Additional keyword arguments.
         """
-        # Extract more detailed information about the tool being called
-        tool_name = getattr(action, "tool", None)
-        tool_input = getattr(action, "tool_input", {})
+        event = {
+            "type": "agent_start",
+            "timestamp": str(datetime.now())
+        }
+        self.queue.put_nowait(json.dumps(event) + "\n")
 
-        # Create a more detailed event for tool start
+    def on_agent_finish(self, action, **kwargs) -> None:
+        """
+        Handle agent finish events.
+
+        Args:
+            action: The action being performed by the agent.
+            **kwargs: Additional keyword arguments.
+        """
+        event = {
+            "type": "agent_finish",
+            "timestamp": str(datetime.now())
+        }
+        self.queue.put_nowait(json.dumps(event) + "\n")
+
+    def on_tool_start(self, serialized, input_str, **kwargs) -> None:
+        """
+        Handle tool start events.
+
+        Args:
+            serialized: The serialized input to the tool.
+            input_str: The string representation of the input.
+            **kwargs: Additional keyword arguments.
+        """
         event = {
             "type": "tool_start",
-            "tool": tool_name,
-            "tool_input": tool_input,
+            "tool_name": serialized["name"],
+            "params": input_str,
             "timestamp": str(datetime.now())
         }
         # Use NDJSON format
@@ -73,7 +97,7 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         # Create a detailed event for tool completion
         event = {
             "type": "tool_end",
-            "tool": tool_name,
+            "tool_name": tool_name,
             "output": observation,
             "timestamp": str(datetime.now())
         }
@@ -94,7 +118,7 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         # Create a detailed event for tool error
         event = {
             "type": "tool_error",
-            "tool": tool_name,
+            "tool_name": tool_name,
             "error": str(error),
             "timestamp": str(datetime.now())
         }
@@ -322,38 +346,6 @@ class AgentService:
                     "data": f"Invalid JSON in final buffer: {buffer}"
                 }
                 yield json.dumps(error_event) + "\n"
-
-        # Send a completion event to signal the end of streaming
-        try:
-            completion_event = {
-                "type": "completion",
-                "data": "Stream completed"
-            }
-            yield json.dumps(completion_event) + "\n"
-
-            # Wait for the task to complete and get the result
-            await task
-        except asyncio.CancelledError:
-            # Handle task cancellation gracefully
-            error_event = {
-                "type": "info",
-                "data": "Task was cancelled"
-            }
-            yield json.dumps(error_event) + "\n"
-        except ConnectionError as e:
-            # Handle connection errors specifically
-            error_event = {
-                "type": "error",
-                "data": f"Connection error: {str(e)}"
-            }
-            yield json.dumps(error_event) + "\n"
-        except Exception as e:
-            # Handle any errors during task execution
-            error_event = {
-                "type": "error",
-                "data": f"Task execution error: {str(e)}"
-            }
-            yield json.dumps(error_event) + "\n"
 
     def ask(self, message: str) -> Dict[str, Any]:
         """

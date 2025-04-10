@@ -51,7 +51,7 @@ def get_wallet_active_chains(wallet_address: str, output_include: list[str]) -> 
 
 @tool
 @handle_exceptions
-def get_wallet_token_balances(wallet_address: str, output_include: list[str], cursor: str = None) -> dict:
+def get_wallet_token_balances(wallet_address: str, output_include: list[str], cursor: str = "") -> dict:
     """
     Get token balances for a specific wallet address and their token prices in USD. (paginated)
     apply decimal conversion for balance
@@ -128,7 +128,7 @@ def get_wallet_stats(wallet_address: str, output_include: list[str]) -> dict:
 
 @tool
 @handle_exceptions
-def get_wallet_history(wallet_address: str, output_include: list[str], cursor: str = None) -> dict:
+def get_wallet_history(wallet_address: str, output_include: list[str], cursor: str = "") -> dict:
     """
     Retrieve the full transaction history of a specified wallet address, including sends, receives, token and NFT transfers
     and contract interactions. (paginated & in descending order)
@@ -211,7 +211,7 @@ def get_transaction_detail(transaction_hash: str, output_include: list[str]) -> 
 
 @tool
 @handle_exceptions
-def get_token_approvals(wallet_address: str, output_include: list[str], cursor: str = None) -> dict:
+def get_token_approvals(wallet_address: str, output_include: list[str], cursor: str = "") -> dict:
     """
     Get ERC20 approvals for one or many wallet addresses and/or contract addresses, ordered by block number in descending order.
 

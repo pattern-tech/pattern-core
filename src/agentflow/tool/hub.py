@@ -1,7 +1,7 @@
 from typing import List, Any
 
-from src.agentflow.utils.tools_index import get_all_tools
-from src.agentflow.utils.tool_selector import ToolSelector
+from src.agentflow.tool.tools_index import get_all_tools
+from src.agentflow.tool.tool_selector import ToolSelector
 
 
 class ToolRegistery:
@@ -11,7 +11,7 @@ class ToolRegistery:
     """
 
     providers = [
-        "ether_scan",
+        "chain_scan",
         "moralis",
     ]
 
