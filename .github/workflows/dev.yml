@@ -84,15 +84,10 @@ jobs:
               -e LOG_MAX_BYTES=${{ secrets.LOG_MAX_BYTES }} \
 
               ### services
-              -e ETH_RPC=${{ secrets.ETH_RPC }} \
               -e ETHER_SCAN_API_KEY=${{ secrets.ETHER_SCAN_API_KEY }} \
-              -e ARBITRUM_ONE_RPC=${{ secrets.ARBITRUM_ONE_RPC }} \
               -e ARBI_SCAN_API_KEY=${{ secrets.ARBI_SCAN_API_KEY }} \
-              -e BASE_RPC=${{ secrets.BASE_RPC }} \
               -e BASE_SCAN_API_KEY=${{ secrets.BASE_SCAN_API_KEY }} \
-              -e POLYGON_RPC=${{ secrets.POLYGON_RPC }} \
               -e POLYGON_SCAN_API_KEY=${{ secrets.POLYGON_SCAN_API_KEY }} \
-              -e FANTOM_RPC=${{ secrets.FANTOM_RPC }} \
               -e FTM_SCAN_API_KEY=${{ secrets.FTM_SCAN_API_KEY }} \
               
               patterntechnology/pattern-core-api:latest
