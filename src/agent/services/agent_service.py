@@ -1,7 +1,8 @@
 import json
 import asyncio
-from typing import Dict, Any, Optional, AsyncGenerator
+from typing import Dict, Any, AsyncGenerator
 
+from datetime import datetime
 from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
@@ -16,6 +17,7 @@ class StreamingCallbackHandler(BaseCallbackHandler):
     A callback handler that collects tokens and intermediate events in an asyncio queue.
     Uses a newline-delimited JSON (NDJSON) protocol for reliable streaming.
     Each event is a complete JSON object with a newline terminator.
+    Captures detailed information about tool execution including inputs and outputs.
     """
 
     def __init__(self):
@@ -43,30 +45,102 @@ class StreamingCallbackHandler(BaseCallbackHandler):
             **kwargs: Additional keyword arguments.
         """
         event = {
+            "type": "agent_start",
+            "timestamp": str(datetime.now())
+        }
+        self.queue.put_nowait(json.dumps(event) + "\n")
+
+    def on_agent_finish(self, action, **kwargs) -> None:
+        """
+        Handle agent finish events.
+
+        Args:
+            action: The action being performed by the agent.
+            **kwargs: Additional keyword arguments.
+        """
+        event = {
+            "type": "agent_finish",
+            "timestamp": str(datetime.now())
+        }
+        self.queue.put_nowait(json.dumps(event) + "\n")
+
+    def on_tool_start(self, serialized, input_str, **kwargs) -> None:
+        """
+        Handle tool start events.
+
+        Args:
+            serialized: The serialized input to the tool.
+            input_str: The string representation of the input.
+            **kwargs: Additional keyword arguments.
+        """
+        event = {
             "type": "tool_start",
-            "tool": getattr(action, "tool", None),
-            "tool_input": getattr(action, "tool_input", {})
+            "tool_name": serialized["name"],
+            "params": input_str,
+            "timestamp": str(datetime.now())
+        }
+        # Use NDJSON format
+        self.queue.put_nowait(json.dumps(event) + "\n")
+
+    def on_tool_end(self, output, **kwargs) -> None:
+        """
+        Handle tool completion events.
+
+        Args:
+            output: The output produced by the tool.
+            **kwargs: Additional keyword arguments.
+        """
+        # Extract information about the completed tool
+        observation = kwargs.get("observation", output)
+        tool_name = kwargs.get("name", None)
+
+        # Create a detailed event for tool completion
+        event = {
+            "type": "tool_end",
+            "tool_name": tool_name,
+            "output": observation,
+            "timestamp": str(datetime.now())
+        }
+        # Use NDJSON format
+        self.queue.put_nowait(json.dumps(event) + "\n")
+
+    def on_tool_error(self, error, **kwargs) -> None:
+        """
+        Handle tool error events.
+
+        Args:
+            error: The error that occurred during tool execution.
+            **kwargs: Additional keyword arguments.
+        """
+        # Extract information about the tool that caused the error
+        tool_name = kwargs.get("name", None)
+
+        # Create a detailed event for tool error
+        event = {
+            "type": "tool_error",
+            "tool_name": tool_name,
+            "error": str(error),
+            "timestamp": str(datetime.now())
         }
         # Use NDJSON format
         self.queue.put_nowait(json.dumps(event) + "\n")
 
 
-class RouterAgentService:
+class AgentService:
     """
-    RouterAgentService is responsible for routing the input message to the appropriate agent
-    and returning the response.
+    AgentService is responsible for doing the job
     """
 
-    def __init__(self, sub_agents, memory=None, streaming: bool = True):
+    def __init__(self, tools, memory=None, streaming: bool = True):
         """
-        Initialize the RouterAgentService.
+        Initialize the AgentService.
 
         Args:
-            sub_agents: The sub-agents to use for routing.
+            tools: The tools to use for agent.
             memory: The memory to use for storing conversation history.
             streaming (bool): Whether to enable streaming responses.
         """
-        self.sub_agents = sub_agents
+        self.tools = tools
         self.memory = memory
         self.streaming = streaming
         self.streaming_handler = None
@@ -88,22 +162,32 @@ class RouterAgentService:
                             stream=streaming,
                             callbacks=[self.streaming_handler] if self.streaming else None)
 
-        self.prompt = init_prompt(self.llm, AgentType.ROUTER_AGENT)
+        self.prompt = init_prompt(self.llm, AgentType.PATTERN_CORE_AGENT)
 
-        self.agent = init_agent(self.llm, self.sub_agents, self.prompt)
+        self.agent = init_agent(self.llm, self.tools, self.prompt)
 
         if streaming:
+            # Wrap each tool with the callback handler to ensure tool events are captured
+            wrapped_tools = []
+            for tool in self.tools:
+                # Create a copy of the tool with callbacks attached
+                tool_with_callbacks = tool.copy()
+                tool_with_callbacks.callbacks = [self.streaming_handler]
+                wrapped_tools.append(tool_with_callbacks)
+
+            # Make sure the streaming handler is registered for all events, including tool completion
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.sub_agents,
+                tools=wrapped_tools,  # Use the wrapped tools with callbacks
                 return_intermediate_steps=True,
                 verbose=True,
-                callbacks=[self.streaming_handler]
+                callbacks=[self.streaming_handler],
+                handle_tool_error=True  # Ensure tool errors are also captured
             )
         else:
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
-                tools=self.sub_agents,
+                tools=self.tools,
                 return_intermediate_steps=True,
                 verbose=True
             )
@@ -262,38 +346,6 @@ class RouterAgentService:
                     "data": f"Invalid JSON in final buffer: {buffer}"
                 }
                 yield json.dumps(error_event) + "\n"
-
-        # Send a completion event to signal the end of streaming
-        try:
-            completion_event = {
-                "type": "completion",
-                "data": "Stream completed"
-            }
-            yield json.dumps(completion_event) + "\n"
-
-            # Wait for the task to complete and get the result
-            await task
-        except asyncio.CancelledError:
-            # Handle task cancellation gracefully
-            error_event = {
-                "type": "info",
-                "data": "Task was cancelled"
-            }
-            yield json.dumps(error_event) + "\n"
-        except ConnectionError as e:
-            # Handle connection errors specifically
-            error_event = {
-                "type": "error",
-                "data": f"Connection error: {str(e)}"
-            }
-            yield json.dumps(error_event) + "\n"
-        except Exception as e:
-            # Handle any errors during task execution
-            error_event = {
-                "type": "error",
-                "data": f"Task execution error: {str(e)}"
-            }
-            yield json.dumps(error_event) + "\n"
 
     def ask(self, message: str) -> Dict[str, Any]:
         """
