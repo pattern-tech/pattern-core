@@ -51,7 +51,7 @@ def fetch_contract_abi(contract_address: str, chain_id: str, api_key: str) -> Di
 
     Args:
         contract_address (str): The contract address.
-        chain_id (str): The chain ID can be 1, 42161, 8453
+        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
         api_key (str): The decrypted Etherscan API key.
 
     Returns:
