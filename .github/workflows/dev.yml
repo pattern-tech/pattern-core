@@ -82,14 +82,11 @@ jobs:
               -e LOG_FILE_PATH=${{ secrets.LOG_FILE_PATH }} \
               -e LOG_BACKUP_COUNT=${{ secrets.LOG_BACKUP_COUNT }} \
               -e LOG_MAX_BYTES=${{ secrets.LOG_MAX_BYTES }} \
-
-              ### services
               -e ETHER_SCAN_API_KEY=${{ secrets.ETHER_SCAN_API_KEY }} \
               -e ARBI_SCAN_API_KEY=${{ secrets.ARBI_SCAN_API_KEY }} \
               -e BASE_SCAN_API_KEY=${{ secrets.BASE_SCAN_API_KEY }} \
               -e POLYGON_SCAN_API_KEY=${{ secrets.POLYGON_SCAN_API_KEY }} \
               -e FTM_SCAN_API_KEY=${{ secrets.FTM_SCAN_API_KEY }} \
-              
               patterntechnology/pattern-core-api:latest
 
             # Wait a few seconds to give the container time to start
