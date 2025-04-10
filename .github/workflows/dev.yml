@@ -87,7 +87,7 @@ jobs:
               -e BASE_SCAN_API_KEY=${{ secrets.BASE_SCAN_API_KEY }} \
               -e POLYGON_SCAN_API_KEY=${{ secrets.POLYGON_SCAN_API_KEY }} \
               -e FTM_SCAN_API_KEY=${{ secrets.FTM_SCAN_API_KEY }} \
-              -e ETH_RPC=${{ vars.ETH_RPC }}
+              -e ETH_RPC=${{ vars.ETH_RPC }} \
               -e ARBITRUM_ONE_RPC=${{ vars.ARBITRUM_ONE_RPC }} \
               -e POLYGON_RPC=${{ vars.POLYGON_RPC }} \
               -e FANTOM_RPC=${{ vars.FANTOM_RPC }} \
