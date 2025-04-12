@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
-from src.util.execptions import NotFoundError
+from src.util.exceptions import NotFoundError
 from src.auth.utils.get_token import authenticate_user
 from src.project.services.project_service import ProjectService
 from src.util.response import global_response, GlobalResponse, ExceptionResponse
@@ -231,9 +231,9 @@ def update_project(
             "description": "Project not found"
         },
         400: {
-                "model": ExceptionResponse,
-                "description": "Bad request received"
-            }
+            "model": ExceptionResponse,
+            "description": "Bad request received"
+        }
     }
 )
 def delete_project(

@@ -2,7 +2,7 @@ import os
 import json
 
 from src.util.singleton import Singleton
-from src.util.execptions import *
+from src.util.exceptions import *
 
 
 class Config(metaclass=Singleton):

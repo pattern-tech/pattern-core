@@ -405,7 +405,7 @@ def get_block_transactions(block_number: int, chain_id: str, output_include: Lis
     for result in transactions:
         final_results.append({item: result[item]
                               for item in result.keys() if item in output_include})
-    return final_results
+    return str(final_results)
 
 
 @tool

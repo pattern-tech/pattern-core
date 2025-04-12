@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field, EmailStr
 
-from src.util.execptions import *
+from src.util.exceptions import *
 from src.db.models import UserModel
 from src.db.sql_alchemy import Database
 from src.share.base_types import WalletAddress

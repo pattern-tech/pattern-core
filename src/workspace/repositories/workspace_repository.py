@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from src.db.models import Workspace
-from src.util.execptions import NotFoundError
+from src.util.exceptions import NotFoundError
 from src.share.base_repository import BaseRepository
 
 

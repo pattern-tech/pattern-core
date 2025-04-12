@@ -1,63 +1,43 @@
+"""
+MORALIS API v2.2
+"""
 import requests
 
-from typing import Any
 from moralis import evm_api
 from langchain.tools import tool
 
 from src.util.configuration import Config
+from src.util.exceptions import NotSupportedError
 from src.agentflow.utils.shared_tools import handle_exceptions
 
 _config = Config.get_config()
 _moralis_config = Config.get_service_config(_config, "MORALIS")
 
-_MORALIS_URL = "https://deep-index.moralis.io/api/v2"
+_MORALIS_URL = "https://deep-index.moralis.io/api/v2.2"
 
-@tool
-@handle_exceptions
-def get_wallet_active_chains(wallet_address: str, output_include: list[str]) -> list[dict[str, Any]]:
+
+def check_chain_supported(chain: str) -> bool:
     """
-    Get active chains for a wallet address across all chains
-
-    Args:
-        wallet_address (str): Ethereum wallet address
-        output_include (list[str]):
-            A list of field names to include in in the output.
-
-
-    Returns:
-        List[dict[str, Any]]:
-            A list of dictionaries where each dictionary only contains the keys
-            listed in `output_include` (if they exist in the source data).
-            Possible fields include:
-
-            - chain, chain_id, first_transaction, last_transaction
+    Moralis supported chains in v2.2
     """
-    params = {
-        "address": wallet_address
-    }
-
-    result = evm_api.wallets.get_wallet_active_chains(
-        api_key=_moralis_config["api_key"],
-        params=params,
-    )
-
-    results = result["active_chains"]
-    final_results = []
-    for result in results:
-        final_results.append({item: result[item]
-                              for item in result.keys() if item in output_include})
-    return final_results
+    supported_chains = ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38",
+                        "gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
+    if chain in supported_chains:
+        return True
+    raise NotSupportedError(
+        f"chain {chain} is not supported. supported chains are : {supported_chains}")
 
 
 @tool
 @handle_exceptions
-def get_wallet_token_balances(wallet_address: str, output_include: list[str], cursor: str = "") -> dict:
+def get_wallet_token_balances(wallet_address: str, chain: str, output_include: list[str], cursor: str = "") -> dict:
     """
     Get token balances for a specific wallet address and their token prices in USD. (paginated)
     apply decimal conversion for balance
 
     Args:
         wallet_address (str): Ethereum wallet address
+        chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
         cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
 
@@ -72,8 +52,10 @@ def get_wallet_token_balances(wallet_address: str, output_include: list[str], cu
               usd_price, usd_price_24hr_percent_change, usd_price_24hr_usd_change, usd_value,
               usd_value_24hr_usd_change, native_token, portfolio_percentage
     """
+    check_chain_supported(chain)
+
     params = {
-        "chain": "eth",
+        "chain": chain,
         "address": wallet_address
     }
 
@@ -97,12 +79,14 @@ def get_wallet_token_balances(wallet_address: str, output_include: list[str], cu
 
 @tool
 @handle_exceptions
-def get_wallet_stats(wallet_address: str, output_include: list[str]) -> dict:
+def get_wallet_stats(wallet_address: str, chain: str, output_include: list[str]) -> dict:
     """
     Get the stats for a wallet address.
 
     Args:
         wallet_address (str): Ethereum wallet address
+        chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
+        output_include (list[str]): A list of field names to include in the output.
 
     Returns:
         List[dict[str, Any]]:
@@ -112,8 +96,10 @@ def get_wallet_stats(wallet_address: str, output_include: list[str]) -> dict:
 
             - nfts, collections, transactions, nft_transfers, token_transfers
     """
+    check_chain_supported(chain)
+
     params = {
-        "chain": "eth",
+        "chain": chain,
         "address": wallet_address
     }
 
@@ -128,13 +114,14 @@ def get_wallet_stats(wallet_address: str, output_include: list[str]) -> dict:
 
 @tool
 @handle_exceptions
-def get_wallet_history(wallet_address: str, output_include: list[str], cursor: str = "") -> dict:
+def get_wallet_history(wallet_address: str, chain: str, output_include: list[str], cursor: str = "") -> dict:
     """
     Retrieve the full transaction history of a specified wallet address, including sends, receives, token and NFT transfers
     and contract interactions. (paginated & in descending order)
 
     Args:
         wallet_address (str): Ethereum wallet address
+        chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
         cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
 
@@ -149,8 +136,10 @@ def get_wallet_history(wallet_address: str, output_include: list[str], cursor: s
               value, receipt_contract_address, block_timestamp, block_number, block_hash, internal_transactions,
               nft_transfers, erc20_transfer, native_transfers
     """
+    check_chain_supported(chain)
+
     params = {
-        "chain": "eth",
+        "chain": chain,
         "order": "DESC",
         "address": wallet_address
     }
@@ -174,12 +163,13 @@ def get_wallet_history(wallet_address: str, output_include: list[str], cursor: s
 
 @tool
 @handle_exceptions
-def get_transaction_detail(transaction_hash: str, output_include: list[str]) -> dict:
+def get_transaction_detail(transaction_hash: str, chain: str, output_include: list[str]) -> dict:
     """
     Get the contents of a transaction by the given transaction hash.
 
     Args:
         transaction_hash (str): transaction hash to be decoded
+        chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
 
     Returns:
@@ -195,8 +185,10 @@ def get_transaction_detail(transaction_hash: str, output_include: list[str]) -> 
 
 
     """
+    check_chain_supported(chain)
+
     params = {
-        "chain": "eth",
+        "chain": chain,
         "transaction_hash": transaction_hash
     }
 
@@ -211,12 +203,13 @@ def get_transaction_detail(transaction_hash: str, output_include: list[str]) -> 
 
 @tool
 @handle_exceptions
-def get_token_approvals(wallet_address: str, output_include: list[str], cursor: str = "") -> dict:
+def get_token_approvals(wallet_address: str, chain: str, output_include: list[str], cursor: str = "") -> dict:
     """
     Get ERC20 approvals for one or many wallet addresses and/or contract addresses, ordered by block number in descending order.
 
     Args:
         wallet_address (str): Ethereum wallet address
+        chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
         cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
 
@@ -228,10 +221,12 @@ def get_token_approvals(wallet_address: str, output_include: list[str], cursor: 
 
             - block_number, block_timestamp, transaction_hash, value, value_formatted, token, spender
     """
+    check_chain_supported(chain)
+
     base_url = _MORALIS_URL
     api_url = f"{base_url}/wallets/{wallet_address}/approvals"
 
-    params = {'chain': 'eth'}
+    params = {'chain': chain}
 
     if cursor:
         params["cursor"] = cursor

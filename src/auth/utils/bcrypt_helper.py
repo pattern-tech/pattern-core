@@ -4,7 +4,7 @@ import bcrypt
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 from passlib.context import CryptContext
-from src.util.execptions import JWTDecodeError
+from src.util.exceptions import JWTDecodeError
 
 load_dotenv()
 

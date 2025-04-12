@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
-from src.util.execptions import NotFoundError
+from src.util.exceptions import NotFoundError
 from src.auth.utils.get_token import authenticate_user
 from src.workspace.services.workspace_service import WorkspaceService
 from src.util.response import global_response, GlobalResponse, ExceptionResponse
@@ -52,7 +52,6 @@ class WorkspaceOutput(BaseModel):
     created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
     updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
     deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
-
 
     class Config:
         from_attributes = True
