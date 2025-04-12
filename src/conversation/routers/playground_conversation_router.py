@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.db.sql_alchemy import Database
 from src.auth.utils.get_token import authenticate_user
-from src.util.execptions import NotFoundError, RateLimitError
+from src.util.exceptions import NotFoundError, RateLimitError
 from src.project.services.project_service import ProjectService
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.services.conversation_service import ConversationService

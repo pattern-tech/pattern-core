@@ -85,3 +85,11 @@ class RateLimitError(Exception):
     def __init__(self, message="rate limit exceeded"):
         self.message = message
         super().__init__(self.message)
+
+
+class NotSupportedError(Exception):
+    """Exception raised when something is not supported yet"""
+
+    def __init__(self, message="is not supported yet"):
+        self.message = message
+        super().__init__(self.message)

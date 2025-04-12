@@ -3,7 +3,7 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from src.db.models import Project
-from src.util.execptions import NotFoundError
+from src.util.exceptions import NotFoundError
 from src.project.repositories.project_repository import ProjectRepository
 from src.workspace.repositories.workspace_repository import WorkspaceRepository
 

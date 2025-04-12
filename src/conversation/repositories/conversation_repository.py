@@ -3,8 +3,9 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 
 from src.db.models import Conversation
-from src.util.execptions import NotFoundError
+from src.util.exceptions import NotFoundError
 from src.share.base_repository import BaseRepository
+
 
 class ConversationRepository(BaseRepository[Conversation]):
     """

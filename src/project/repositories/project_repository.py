@@ -3,8 +3,9 @@ from typing import Optional, List, Set
 from sqlalchemy.orm import Session
 
 from src.db.models import Project
-from src.util.execptions import NotFoundError
+from src.util.exceptions import NotFoundError
 from src.share.base_repository import BaseRepository
+
 
 class ProjectRepository(BaseRepository[Project]):
     """

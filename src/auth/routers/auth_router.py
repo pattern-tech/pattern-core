@@ -9,7 +9,7 @@ from src.auth.services.auth_service import (
     RegisterInput,
     VerifyInput
 )
-from src.util.execptions import *
+from src.util.exceptions import *
 from src.db.sql_alchemy import Database
 from src.util.response import global_response, GlobalResponse, ExceptionResponse
 

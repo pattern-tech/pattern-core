@@ -1,4 +1,4 @@
-from src.util.execptions import JWTDecodeError
+from src.util.exceptions import JWTDecodeError
 from fastapi import Depends, HTTPException, Request, status
 from src.auth.utils.bcrypt_helper import decode_access_token
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -58,7 +58,9 @@ def authenticate_user(
         decode_token = decode_access_token(token)
         return decode_token["user_id"]
     except JWTDecodeError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception as e:
         # Handle any other unexpected errors with a 400 Bad Request
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

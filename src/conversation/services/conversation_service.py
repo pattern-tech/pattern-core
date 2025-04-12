@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from langchain_core.messages.human import HumanMessage
 
 from src.util.configuration import Config
-from src.util.execptions import NotFoundError
+from src.util.exceptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
 from src.agentflow.tool.hub import ToolRegistery
 from src.agentflow.utils.shared_tools import init_llm
