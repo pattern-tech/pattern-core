@@ -684,6 +684,9 @@ def call_contract_function(contract_address: str, chain_id: str, function_name: 
             raise Exception(
                 f"Function '{function_name}' is not a read-only function and might modify state or require a transaction.")
 
+        # Get function outputs for later use
+        function_outputs = function_entry.get('outputs', [])
+
         # Call the function with provided parameters
         result = function_obj(*function_params).call()
 
@@ -697,40 +700,43 @@ def call_contract_function(contract_address: str, chain_id: str, function_name: 
         elif isinstance(result, bytes):
             processed_result = web3.to_hex(result)
             result_type = "bytes (hex)"
-        elif isinstance(result, tuple):
-            # Handle named tuples (common in Solidity returns)
-            if hasattr(result, '_asdict'):
-                processed_result = dict(result._asdict())
+        # Handle both tuple and list results - Web3.py may return either depending on the version
+        elif isinstance(result, (tuple, list)):
+            # If we have output definitions, create a dictionary with proper names
+            if function_outputs and len(function_outputs) == len(result):
+                processed_result = {}
+                for i, output in enumerate(function_outputs):
+                    output_name = output.get('name')
+                    if not output_name:  # If name is empty, use index
+                        output_name = f"output_{i}"
+
+                    value = result[i]
+                    processed_result[output_name] = value
+
+                    # Handle special types
+                    if isinstance(value, bytes):
+                        processed_result[output_name] = web3.to_hex(value)
+                    # For large integers, preserve the original value
+                    # but also provide the ether conversion for convenience
+                    elif isinstance(value, int) and value > 10**10:
+                        processed_result[f"{output_name}_eth"] = web3.from_wei(
+                            value, 'ether')
+
                 result_type = "struct"
             else:
+                # Fallback to list if we can't match outputs
                 processed_result = list(result)
-                result_type = "tuple"
-
-            # Convert any bytes in the result to hex
-            if isinstance(processed_result, dict):
-                for key, value in processed_result.items():
-                    if isinstance(value, bytes):
-                        processed_result[key] = web3.to_hex(value)
-                    # Large ints might be wei values
-                    elif isinstance(value, int) and value > 10**10:
-                        processed_result[f"{key}_eth"] = web3.from_wei(
-                            value, 'ether')
-            elif isinstance(processed_result, list):
                 processed_result = [web3.to_hex(v) if isinstance(
                     v, bytes) else v for v in processed_result]
-        elif isinstance(result, list):
-            processed_result = result
-            result_type = "array"
-            # Convert any bytes in the list to hex
-            for i, item in enumerate(processed_result):
-                if isinstance(item, bytes):
-                    processed_result[i] = web3.to_hex(item)
+                result_type = "tuple"
 
-        return {
+        response = {
             "success": True,
             "result": processed_result,
-            "result_type": result_type
+            "result_type": function_outputs,
         }
+
+        return response
 
     except Exception as e:
         return {

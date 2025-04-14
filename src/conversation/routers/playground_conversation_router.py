@@ -58,22 +58,22 @@ class CreateConversationInput(BaseModel):
     name: str
     project_id: UUID
     conversation_id: Optional[UUID] = None
-    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
-    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
-    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True
 
 
 class ConversationOutput(BaseModel):
-    """
+    """`
     Schema for conversation output.
     """
     id: UUID
     name: str
     project_id: UUID
     chat_history: List[Dict]
+    created_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    updated_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
+    deleted_at: datetime = Field(None, example="2025-03-15T15:30:20+03:30")
 
     class Config:
         from_attributes = True
