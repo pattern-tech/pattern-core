@@ -222,7 +222,21 @@ def get_contract_abi(contract_address: str, chain_id: str) -> Dict:
         Dict: The contract ABI.
     """
     api_key = _get_chain_config(chain_id)["API_KEY"]
-    return fetch_contract_abi(contract_address, chain_id, api_key)
+
+    final_output = {"proxy": [], "implementation": []}
+
+    response = fetch_contract_source_code(contract_address, chain_id, api_key)
+
+    current_address = contract_address
+    while int(response.get('Proxy', 0)):
+        final_output["proxy"].append(json.loads(response["ABI"]))
+        current_address = response["Implementation"]
+        response = fetch_contract_source_code(
+            current_address, chain_id, api_key)
+
+    final_output["implementation"].append(json.loads(response["ABI"]))
+
+    return final_output
 
 
 @tool
@@ -663,7 +677,17 @@ def call_contract_function(contract_address: str, chain_id: str, function_name: 
     try:
         # Get the contract ABI
         contract_address = Web3.to_checksum_address(contract_address)
-        abi = fetch_contract_abi(contract_address, chain_id, api_key)
+        implementation_contract_address = contract_address
+        # Check if the contract address is a proxy and get the implementation address
+        if int(fetch_contract_source_code(contract_address, chain_id, api_key).get('Proxy', 0)):
+            implementation_contract_address = fetch_contract_source_code(
+                contract_address, chain_id, api_key)["Implementation"]
+            implementation_contract_address = Web3.to_checksum_address(
+                implementation_contract_address)
+
+        abi = fetch_contract_abi(
+            implementation_contract_address, chain_id, api_key)
+
         contract = web3.eth.contract(address=contract_address, abi=abi)
 
         # Find the function in the ABI
