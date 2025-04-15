@@ -73,7 +73,7 @@ def get_wallet_token_balances(wallet_address: str, chain: str, output_include: l
         final_results.append({item: result[item]
                               for item in result.keys() if item in output_include})
 
-    return {"cursor": api_result.get(["cursor"], None),
+    return {"cursor": api_result.get("cursor",None),
             "results": final_results}
 
 
@@ -157,7 +157,7 @@ def get_wallet_transactions(wallet_address: str, chain: str, output_include: lis
         final_results.append({item: result[item]
                               for item in result.keys() if item in output_include})
 
-    return {"cursor": api_result.get(["cursor"], None),
+    return {"cursor": api_result.get("cursor", None),
             "results": final_results}
 
 
@@ -250,5 +250,5 @@ def get_token_approvals(wallet_address: str, chain: str, output_include: list[st
         final_results.append({item: result[item]
                               for item in result.keys() if item in output_include})
 
-    return {"cursor": api_result.get(["cursor"], None),
+    return {"cursor": api_result.get("cursor", None),
             "results": final_results}

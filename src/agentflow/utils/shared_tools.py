@@ -202,7 +202,7 @@ def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, 
     if service == "openai":
         return ChatOpenAI(
             model=model_name,
-            streaming=False,
+            streaming=stream,
             api_key=api_key,
             callbacks=callbacks
         )
