@@ -32,11 +32,11 @@ def check_chain_supported(chain: str) -> bool:
 @handle_exceptions
 def get_wallet_token_balances(wallet_address: str, chain: str, output_include: list[str], cursor: str = "") -> dict:
     """
-    Get token balances for a specific wallet address and their token prices in USD. (paginated)
+    Get token balances for a specific wallet address in a specific chian. (paginated)
     apply decimal conversion for balance
 
     Args:
-        wallet_address (str): Ethereum wallet address
+        wallet_address (str):  Wallet address
         chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
         cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
@@ -81,10 +81,10 @@ def get_wallet_token_balances(wallet_address: str, chain: str, output_include: l
 @handle_exceptions
 def get_wallet_stats(wallet_address: str, chain: str, output_include: list[str]) -> dict:
     """
-    Get the stats for a wallet address.
+    Get the stats for a wallet address in a specific chain.
 
     Args:
-        wallet_address (str): Ethereum wallet address
+        wallet_address (str):  Wallet address
         chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
 
@@ -117,10 +117,10 @@ def get_wallet_stats(wallet_address: str, chain: str, output_include: list[str])
 def get_wallet_history(wallet_address: str, chain: str, output_include: list[str], cursor: str = "") -> dict:
     """
     Retrieve the full transaction history of a specified wallet address, including sends, receives, token and NFT transfers
-    and contract interactions. (paginated & in descending order)
+    and contract interactions in a specific chain. (paginated & in descending order)
 
     Args:
-        wallet_address (str): Ethereum wallet address
+        wallet_address (str):  Wallet address
         chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
         cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
@@ -165,7 +165,7 @@ def get_wallet_history(wallet_address: str, chain: str, output_include: list[str
 @handle_exceptions
 def get_transaction_detail(transaction_hash: str, chain: str, output_include: list[str]) -> dict:
     """
-    Get the contents of a transaction by the given transaction hash.
+    Get the contents of a transaction for a specific chain by the given transaction hash.
 
     Args:
         transaction_hash (str): transaction hash to be decoded
@@ -205,10 +205,10 @@ def get_transaction_detail(transaction_hash: str, chain: str, output_include: li
 @handle_exceptions
 def get_token_approvals(wallet_address: str, chain: str, output_include: list[str], cursor: str = "") -> dict:
     """
-    Get ERC20 approvals for one or many wallet addresses and/or contract addresses, ordered by block number in descending order.
+    Get ERC20 approvals for one or many wallet addresses for a specific chain and/or contract addresses, ordered by block number in descending order.
 
     Args:
-        wallet_address (str): Ethereum wallet address
+        wallet_address (str):  Wallet address
         chain (str): The chain ID can be ["eth", "0x1", "polygon", "0x89", "bsc", "0x38", "avalanche", "0xa86a", "fantom", "0xfa", "palm", "0x2a15c308d", "cronos", "0x19", "arbitrum", "0xa4b1", "chiliz", "0x15b38","gnosis", "0x64", "base", "0x2105", "optimism", "0xa", "linea", "0xe708", "moonbeam", "0x504", "moonriver", "0x505", "flow", "0x2eb", "ronin", "0x7e4", "lisk", "0x46f", "pulse", "0x171"]
         output_include (list[str]): A list of field names to include in the output.
         cursor (str): The cursor returned in the previous response (used for getting the next page). end of page cursor is None
