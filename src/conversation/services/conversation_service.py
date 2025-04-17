@@ -10,7 +10,6 @@ from langchain_core.messages.human import HumanMessage
 from src.util.configuration import Config
 from src.util.exceptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
-from src.agentflow.tool.hub import ToolRegistery
 from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
 from src.agent.services.agent_service import AgentService
@@ -18,8 +17,9 @@ from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
-from src.agentflow.providers.chain_scan_tools import get_current_timestamp
 from src.conversation.repositories.conversation_repository import ConversationRepository
+
+from src.agentflow.MCR.dri_selector import DRISelector
 
 
 class ConversationService:
@@ -220,7 +220,7 @@ class ConversationService:
         yield json.dumps(tool_selection_start_event) + "\n"
 
         # Select appropriate tools for the user's message using our new tool selector
-        selected_tools = ToolRegistery.select_tools_for_query(
+        selected_tools = DRISelector.select_DRI(
             all_user_messages)
 
         # langchain raise exception if the tools list is empty
