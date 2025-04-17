@@ -182,12 +182,16 @@ class AgentService:
                 return_intermediate_steps=True,
                 verbose=True,
                 callbacks=[self.streaming_handler],
+                max_iterations=20,
+                max_execution_time=60*3,  # second
                 handle_tool_error=True  # Ensure tool errors are also captured
             )
         else:
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
                 tools=self.tools,
+                max_iterations=20,
+                max_execution_time=60*3,  # second
                 return_intermediate_steps=True,
                 verbose=True
             )
