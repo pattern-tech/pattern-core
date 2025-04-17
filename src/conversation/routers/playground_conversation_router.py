@@ -426,7 +426,13 @@ async def send_message(
                                                   project_id,
                                                   input.message_type,
                                                   input.stream),
-                media_type="text/plain"
+                media_type="text/event-stream",
+                headers={
+                    "Content-Type": "text/event-stream",
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
             )
         else:
             response = None

@@ -252,3 +252,4 @@ def get_token_approvals(wallet_address: str, chain: str, output_include: list[st
 
     return {"cursor": api_result.get("cursor", None),
             "results": final_results}
+
