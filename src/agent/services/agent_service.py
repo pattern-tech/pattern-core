@@ -146,9 +146,9 @@ class AgentService:
         self.streaming_handler = None
 
         # Default timeout values that can be adjusted if needed
-        self.token_timeout = 0.5  # Increased from 0.01
-        self.buffer_timeout = 0.1  # Increased from 0.005
-        self.poll_interval = 0.1  # Increased from 0.01
+        self.token_timeout = 0.2
+        self.buffer_timeout = 0.05
+        self.poll_interval = 0.1
 
         # Set up the streaming callback if streaming is enabled.
         if streaming:
