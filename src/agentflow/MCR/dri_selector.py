@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional, Callable
 from src.util.configuration import Config
 from src.agentflow.MCR.mcr import get_mcr_for_llm
 from src.agentflow.utils.shared_tools import init_llm
-from src.agentflow.prompts.prompt_hub import DRI_SELECTION_PROMPT
+from src.agentflow.prompts.prompt_hub import DRI_SELECTION_SYSTEM_PROMPT, DRI_SELECTION_USER_PROMPT
 
 
 class DRISelector:
@@ -56,24 +56,24 @@ class DRISelector:
 
         # Get LLM response
         messages = [
-            ("system", DRI_SELECTION_PROMPT.format(MCR=MCR)),
-            ("human", "selected DIRs: ")
+            ("system", DRI_SELECTION_SYSTEM_PROMPT),
+            ("human", DRI_SELECTION_USER_PROMPT.format(
+                previous_user_queries=query[:-1],
+                user_task=query[-1],
+                MCR=MCR
+            ))
         ]
 
         # Use the static method to get the LLM
         llm = DRISelector._get_llm()
         response = llm.invoke(messages)
 
-        print(f"LLM response: {response.content}")
-
         # Parse the response to get selected tool names
         try:
-            DIR_IDs = DRISelector._parse_DIR_selection_response(
+            message, result = DRISelector._parse_DIR_selection_response(
                 response.content)
 
-            print(DIR_IDs)
-
-            return DIR_IDs
+            return (message, result)
 
         except Exception as e:
             print(f"Error parsing DIR from LLM response: {e}")
@@ -81,40 +81,57 @@ class DRISelector:
             return MCR
 
     @staticmethod
-    def _parse_DIR_selection_response(response: str) -> List[str]:
+    def _parse_DIR_selection_response(response: str):
         """
-        Parse the LLM response to extract selected DIR IDs.
+        Parse the LLM response to extract selected DIR IDs or identify missing inputs or unsupported tasks.
 
         Args:
             response (str): The LLM's response
 
         Returns:
-            List[str]: List of selected DIR IDs
+            Tuple[str, Any]: A tuple containing:
+                - message type ("selected_DRI", "missing_input", or "not_supported_task")
+                - result (list of DIRs or message string)
         """
-        # Clean up the response to extract just the JSON part
         response = response.strip()
 
-        # Handle potential formatting issues
-        if not response.startswith('['):
-            # Try to find the JSON array in the response
-            start_idx = response.find('[')
-            end_idx = response.rfind(']')
+        # Check for tool selection format
+        tool_start = response.find("<tool>")
+        tool_end = response.find("</tool>")
+        if tool_start != -1 and tool_end != -1:
+            tool_content = response[tool_start + 6:tool_end].strip()
+            try:
+                selected_DIRs = json.loads(tool_content)
+                if isinstance(selected_DIRs, list):
+                    return "selected_DRI", selected_DIRs
+            except json.JSONDecodeError as e:
+                print(f"Error parsing DIR IDs: {e}")
+                return "not_supported_task", []
 
-            if start_idx != -1 and end_idx != -1:
-                response = response[start_idx:end_idx+1]
-            else:
-                # If no JSON array is found, return an empty list
-                return []
+        # Check for missing input format
+        missing_start = response.find("<missing>")
+        missing_end = response.find("</missing>")
+        if missing_start != -1 and missing_end != -1:
+            missing_message = response[missing_start + 9:missing_end].strip()
+            return "missing_input", missing_message
 
+        # Check for not supported format
+        not_supported_start = response.find("<not_supported>")
+        not_supported_end = response.find("</not_supported>")
+        if not_supported_start != -1 and not_supported_end != -1:
+            not_supported_message = response[not_supported_start +
+                                             15:not_supported_end].strip()
+            return "not_supported_task", not_supported_message
+
+        # If none of the expected formats are found, try to handle legacy format or return error
+        print("Warning: Response didn't match expected format. Attempting legacy parsing.")
         try:
-            # Parse the JSON array
-            DIR_IDs = json.loads(response)
-
-            # Ensure it's a list of strings
-            if isinstance(DIR_IDs, list) and all(isinstance(item, str) for item in DIR_IDs):
-                return DIR_IDs
-            else:
-                return []
+            if response.startswith('[') and response.endswith(']'):
+                selected_DIRs = json.loads(response)
+                if isinstance(selected_DIRs, list):
+                    return "selected_DRI", selected_DIRs
         except json.JSONDecodeError:
-            # If parsing fails, return an empty list
-            return []
+            pass
+
+        # Default fallback for unrecognized formats
+        return "not_supported_task", "Could not parse response format"

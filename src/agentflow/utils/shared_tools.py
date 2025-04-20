@@ -3,7 +3,7 @@ import functools
 import threading
 
 from functools import wraps
-from typing import Any, TypeVar
+from typing import Any, TypeVar, List, Optional
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
@@ -19,6 +19,7 @@ from langchain.agents import (
 from src.share.logging import Logging
 from src.util.configuration import Config
 from src.agentflow.utils.enum import AgentType, Prompt
+from src.agentflow.llm.llm_wrapper import create_llm_wrapper, LLMWrapper
 
 T = TypeVar('T')
 
@@ -177,125 +178,18 @@ def handle_exceptions(func: callable) -> callable:
     return wrapper
 
 
-def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, callbacks=None):
+def init_llm(service: str, model_name: str, api_key: str, stream: bool = False, callbacks: Optional[List[Any]] = None) -> LLMWrapper:
     """
-    Returns an instance of a language model based on the specified service.
+    Initialize an LLM wrapper based on the specified service.
 
     Args:
-        service (str): The name of the service to use (e.g., "openai", "groq", "fireworks",
-            "together", "huggingface", "ollama").
-        model_name (str): The name of the model to use.
-        api_key (str): The API key for the specified service.
-        stream (bool, optional): Whether to enable streaming for the model. Defaults to False.
-        callbacks (StreamingCallbackHandler, optional): callback functions for the model. Defaults to None.
+        service: The name of the LLM service (e.g., "openai", "anthropic")
+        model_name: The name of the model to use
+        api_key: API key for authentication
+        stream: Whether to stream the response
+        callbacks: Optional callbacks for the LLM
 
     Returns:
-        An instance of the specified language model.
-
-    Raises:
-        NotImplementedError: If the specified service is not supported.
+        An instance of an LLMWrapper implementation
     """
-    config = Config.get_config()
-
-    service = config["llm"]["provider"]
-
-    if service == "openai":
-        return ChatOpenAI(
-            model=model_name,
-            streaming=stream,
-            api_key=api_key,
-            callbacks=callbacks
-        )
-    elif service == "google":
-        return ChatGoogleGenerativeAI(
-            model=model_name,
-            api_key=api_key,
-            streaming=stream,
-            callbacks=callbacks
-        )
-    elif service == "groq":
-        return ChatGroq(
-            model=model_name,
-            api_key=api_key,
-            streaming=stream,
-            callbacks=callbacks
-        )
-    elif service == "fireworks":
-        return ChatFireworks(
-            model=model_name,
-            api_key=api_key,
-            streaming=stream,
-            callbacks=callbacks
-        )
-    elif service == "together":
-        return ChatTogether(
-            model=model_name,
-            together_api_key=api_key,
-            streaming=stream,
-            callbacks=callbacks
-        )
-    elif service == "huggingface":
-        pipeline_kwargs = {
-            "max_new_tokens": 512,
-            "do_sample": False,
-            "repetition_penalty": 1.03,
-        }
-        model = HuggingFacePipeline.from_model_id(
-            model_id=model_name,
-            task="text-generation",
-            pipeline_kwargs=pipeline_kwargs,
-            device_map="cpu"
-        )
-        return ChatHuggingFace(llm=model, callbacks=callbacks)
-    elif service == "ollama":
-        return ChatOllama(
-            model=model_name,
-            streaming=stream,
-            callbacks=callbacks
-        )
-    else:
-        raise NotImplementedError(f"Service {service} is not supported.")
-
-
-def init_agent(llm, tools, prompt):
-    """
-    Initialize an agent and prompt based on the specified language model.
-
-    Args:
-        llm: The language model instance to use.
-        tools: The tools to use with the agent.
-        prompt: The prompt to use with the agent.
-
-    Returns:
-        tuple: A tuple containing the agent and prompt for the specified language model.
-    """
-    if isinstance(llm, ChatOpenAI):
-        agent = create_openai_functions_agent(llm, tools, prompt)
-    elif isinstance(llm, ChatOllama):
-        agent = create_react_agent(llm, tools, prompt)
-    else:
-        agent = create_tool_calling_agent(llm, tools, prompt)
-
-    return agent
-
-
-def init_prompt(llm: Any, agent_type: AgentType):
-    """
-    Initialize a prompt based on the specified language model and agent type.
-
-    Args:
-        llm: The language model instance to use.
-        agent_type: The type of agent to use.
-
-    Returns:
-        Prompt: The prompt to use with the agent.
-    """
-    if isinstance(llm, ChatOllama):
-        return Prompt.REACT_AGENT
-    else:
-        if agent_type == AgentType.ROUTER_AGENT:
-            return Prompt.ROUTER_AGENT
-        elif agent_type == AgentType.PATTERN_CORE_AGENT:
-            return Prompt.PATTERN_CORE_AGENT
-        else:
-            return Prompt.BLOCKCHAIN_AGENT
+    return create_llm_wrapper(service, model_name, api_key, stream, callbacks)

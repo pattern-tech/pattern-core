@@ -12,14 +12,15 @@ from src.util.exceptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
 from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
-from src.agent.services.agent_service import AgentService
-from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
 from src.agentflow.MCR.dri_selector import DRISelector
+from src.agentflow.core.code_writing import CodeGenerator
+from src.agentflow.MCR.mcr import get_mcr_for_llm
+from src.agentflow.prompts.prompt_hub import CODE_WRITING_SYSTEM_PROMPT
 
 
 class ConversationService:
@@ -30,7 +31,7 @@ class ConversationService:
     def __init__(self):
         self.repository = ConversationRepository()
         self.project_repository = ProjectRepository()
-        self.memory_service = MemoryService()
+        # self.memory_service = MemoryService()
         self.project_service = ProjectService()
         self.query_usage_service = QueryUsageService()
         self.user_service = UserService()
@@ -209,9 +210,11 @@ class ConversationService:
         if conversation.project_id != project_id:
             raise NotFoundError("Project not found or is not owned by user")
 
-        all_user_messages = self.get_history(
-            db_session, user_id, conversation_id)
-        all_user_messages.append(message)
+        # all_user_messages = self.get_history(
+        #     db_session, user_id, conversation_id)
+        # all_user_messages.append(message)
+
+        all_user_messages = [message]
 
         tool_selection_start_event = {
             "type": "tool_selection_start",
@@ -220,49 +223,208 @@ class ConversationService:
         yield json.dumps(tool_selection_start_event) + "\n"
 
         # Select appropriate tools for the user's message using our new tool selector
-        selected_tools = DRISelector.select_DRI(
+        message, result = DRISelector.select_DRI(
             all_user_messages)
 
-        # langchain raise exception if the tools list is empty
-        if len(selected_tools) == 0:
-            selected_tools = [get_current_timestamp]
+        print(message, result)
 
-        tool_selection_end_event = {
-            "type": "tool_selection_end",
-            "selected_tools": [selected_tool.name for selected_tool in selected_tools],
+        if message == "missing_input":
+            yield json.dumps({"type": "missing_input", "details": result}) + "\n"
+            return
+        elif message == "not_supported_task":
+            yield json.dumps({"type": "not_supported_task", "details": result}) + "\n"
+            return
+        else:
+            selected_DIRs = result
+
+        DRI_selection_end_event = {
+            "type": "dri_selection_end",
+            "selected_DRI": selected_DIRs,  # This should now be a list of DIR IDs
             "timestamp": str(datetime.now())
         }
-        yield json.dumps(tool_selection_end_event) + "\n"
+        yield json.dumps(DRI_selection_end_event) + "\n"
 
-        memory = self.memory_service.get_memory(conversation_id)
+        make_request_fn = """
+import json
+import requests
+from typing import Dict, List, Optional
 
-        agent = AgentService(
-            tools=selected_tools, memory=memory, streaming=stream)
+MCR_GRAPHQL_ENDPOINT="https://sepolia.easscan.org/graphql"
+MCR_SCHEMA_ID="0x1063266f9efb29be0c03da45219f1224f926859fd96a656c1083ad3a9d4d2243"
 
-        if stream:
-            try:
-                # Stream tokens as they become available.
-                async for token in agent.stream(message):
-                    yield token
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-                )
-        else:
-            result = agent.ask(message)
+def get_mcr() -> List[Dict]:
+    endpoint = MCR_GRAPHQL_ENDPOINT
+    schema_id = MCR_SCHEMA_ID
 
-            intermediate_steps = []
-            for step in result["intermediate_steps"]:
-                intermediate_steps.append({
-                    "function_name": step[0].tool,
-                    "arguments": step[0].tool_input,
-                    "output": step[1]
-                })
-
-            yield {
-                "response": result["output"],
-                "intermediate_steps": intermediate_steps
+    query = \"""
+        query {
+            schema(where: {id: "%s"}) {
+                attestations {
+                    id,
+                    decodedDataJson
+                },
             }
+        }
+        \""" % schema_id
+
+    # Prepare the request
+    headers = {"Content-Type": "application/json"}
+    payload = {"query": query}
+    MCR = []
+
+    try:
+        # Send the GraphQL request
+        response = requests.post(endpoint, json=payload, headers=headers)
+        response.raise_for_status()  # Raise exception for error responses
+
+        data = response.json()
+
+        # Process the response
+        if "data" in data and "schema" in data["data"] and "attestations" in data["data"]["schema"]:
+            attestations = data["data"]["schema"]["attestations"]
+
+            for attestation in attestations:
+                decoded_data = json.loads(attestation["decodedDataJson"])
+
+                # Create a new MCR entry
+                mcr_entry = {field["name"]: field["value"]["value"]
+                             for field in decoded_data}
+
+                # Add ID from attestation ID
+                mcr_entry["ID"] = attestation["id"]
+
+                # Add to MCR list
+                MCR.append(mcr_entry)
+
+        return MCR
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching MCR data: {e}")
+        return MCR
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON response: {e}")
+        return MCR
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return MCR
+
+
+def get_dri(id: str) -> Optional[Dict]:
+    for dri in get_mcr():
+        if dri["ID"] == id:
+            return dri
+    return None
+
+
+def replace_variables(input_string: str, variables_dict: Dict[str, any]) -> str:
+    result = input_string
+
+    for var_name, var_value in variables_dict.items():
+        placeholder = "${" + var_name + "}"
+        result = result.replace(placeholder, str(var_value))
+
+    return result
+
+
+def authorize(data_source: str) -> Dict[str, str]:
+    if data_source == "MORALIS":
+        api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImU4YTc3MDBhLWFhYjctNDAzYi04MzFmLTk3ZDBlMzdmOTU5NSIsIm9yZ0lkIjoiNDIzMzg0IiwidXNlcklkIjoiNDM1NDM0IiwidHlwZUlkIjoiMzc0YjhmY2QtZjFmNS00MWE2LTlkYzctNGZhZGIzNDliYjZkIiwidHlwZSI6IlBST0pFQ1QiLCJpYXQiOjE3MzU1NTQxODcsImV4cCI6NDg5MTMxNDE4N30.tqC1yhPANbcLWsUi_Oe24ETdivsZZzJBUyTu32qyROk"
+        if not api_key:
+            raise ValueError("MORALIS_API_KEY environment variable not set")
+        return {
+            "X-API-Key": api_key,
+        }
+    return {}
+
+
+def get_base_url(data_source: str) -> str:
+    if data_source == "MORALIS":
+        return "https://deep-index.moralis.io"
+    else:
+        raise ValueError(f"Unsupported data source: {data_source}")
+
+
+def make_request(
+    ID: str,
+    input_data: Dict
+) -> Dict:
+
+    try:
+        dri = get_dri(ID)
+        if not dri:
+            raise ValueError(f"No DRI found with the given ID: {ID}")
+
+        if dri["TYPE"] == "REST":
+            endpoint = replace_variables(dri["ENDPOINT"], input_data)
+            endpoint = json.loads(endpoint)
+
+            method = endpoint["METHOD"]
+            data_source = dri["DATASOURCE"]
+
+            data = endpoint.get("QUERY", {})
+
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+
+            # Add authorization headers
+            headers.update(authorize(data_source.upper()))
+
+            url = f"{get_base_url(data_source)}{endpoint['URL']}"
+
+            response = requests.request(
+                method=method,
+                url=url,
+                headers=headers,
+                data=json.dumps(data) if data else None,
+            )
+
+            return {str(response.status_code) : response.json()}
+    except Exception as e:
+        print(f"Error making request: {e}")
+        return e
+"""
+
+        code_generator = CodeGenerator()
+        code_generator.set_system_prompt(
+            CODE_WRITING_SYSTEM_PROMPT.format(MCR=selected_DIRs))
+        code_generator.set_chat_history(all_user_messages)
+        code_generator.set_MCR(selected_DIRs)
+        result, error, code = code_generator.generate_and_execute(
+            make_request_fn)
+
+        yield json.dumps({"raw_data": result}) + "\n"
+
+        # memory = self.memory_service.get_memory(conversation_id)
+
+        # agent = AgentService(
+        #     tools=selected_tools, memory=memory, streaming=stream)
+
+        # if stream:
+        #     try:
+        #         # Stream tokens as they become available.
+        #         async for token in agent.stream(message):
+        #             yield token
+        #     except Exception as e:
+        #         raise HTTPException(
+        #             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        #         )
+        # else:
+        #     result = agent.ask(message)
+
+        #     intermediate_steps = []
+        #     for step in result["intermediate_steps"]:
+        #         intermediate_steps.append({
+        #             "function_name": step[0].tool,
+        #             "arguments": step[0].tool_input,
+        #             "output": step[1]
+        #         })
+
+        #     yield {
+        #         "response": result["output"],
+        #         "intermediate_steps": intermediate_steps
+        #     }
 
         query_usage = QueryUsage(
             user_id=user_id,

@@ -54,8 +54,8 @@ def get_mcr() -> List[Dict]:
                 mcr_entry = {field["name"]: field["value"]["value"]
                              for field in decoded_data}
 
-                # Add DRI_ID from attestation ID
-                mcr_entry["DRI_ID"] = attestation["id"]
+                # Add ID from attestation ID
+                mcr_entry["ID"] = attestation["id"]
 
                 # Add to MCR list
                 MCR.append(mcr_entry)
@@ -90,7 +90,7 @@ def get_mcr_for_llm() -> List[Dict]:
             "DESCRIPTION": DRI["DESCRIPTION"],
             "INPUT_SCHEMA": json.loads(DRI["INPUT_SCHEMA"]),
             "OUTPUT_SCHEMA": json.loads(DRI["OUTPUT_SCHEMA"]),
-            "DRI_ID": DRI["DRI_ID"]
+            "ID": DRI["ID"]
         })
     return MCR_FOR_LLM
 
@@ -106,7 +106,7 @@ def get_dri(id: str) -> Optional[Dict]:
         Dict or None: The MCR entry with the specified ID, or None if not found
     """
     for dri in get_mcr():
-        if dri["DRI_ID"] == id:
+        if dri["ID"] == id:
             return dri
     return None
 
@@ -171,14 +171,14 @@ def replace_variables(input_string: str, variables_dict: Dict[str, any]) -> str:
 
 
 def make_request(
-    DRI_ID: str,
+    ID: str,
     input_data: Dict
 ) -> Union[Dict, Exception]:
     """
     Makes an HTTP request to a specified endpoint with given parameters based on DRI.
 
     Args:
-        DRI_ID (str): The ID of Data Retrieval Instruction
+        ID (str): The ID of Data Retrieval Instruction
         input_data (Dict): Input data for the request, used to populate variable placeholders
 
     Returns:
@@ -189,9 +189,9 @@ def make_request(
         Exception: If any error occurs during the request process
     """
     try:
-        dri = get_dri(DRI_ID)
+        dri = get_dri(ID)
         if not dri:
-            raise ValueError(f"No DRI found with the given ID: {DRI_ID}")
+            raise ValueError(f"No DRI found with the given ID: {ID}")
 
         if dri["TYPE"] == "REST":
             endpoint = replace_variables(dri["ENDPOINT"], input_data)
