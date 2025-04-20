@@ -54,6 +54,9 @@ class DRISelector:
         print(f"MCR: {MCR}")
         print("-----------------------------------")
 
+        print(f"previous : {query[:-1]}")
+        print(f"current : {query[-1]}")
+
         # Get LLM response
         messages = [
             ("system", DRI_SELECTION_SYSTEM_PROMPT),

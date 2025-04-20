@@ -189,6 +189,22 @@ class Conversation(ParentBase):
     user = relationship("UserModel", back_populates="conversations")
 
 
+class ChatHistory(ParentBase):
+    __tablename__ = "chat_history"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        unique=True,
+        nullable=False,
+    )
+    session_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    type = Column(String, nullable=False)  # 'human', 'ai', 'system', etc.
+    content = Column(Text, nullable=False)
+    meta_data = Column(JSONB, nullable=True)
+
+
 def init_db():
     username = os.environ.get("POSTGRES_USERNAME")
     password = os.environ.get("POSTGRES_PASSWORD")

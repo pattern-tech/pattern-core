@@ -17,6 +17,7 @@ from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
+from src.memory.services.memory_service import MemoryService
 from src.agentflow.MCR.dri_selector import DRISelector
 from src.agentflow.core.code_writing import CodeGenerator
 from src.agentflow.MCR.mcr import get_mcr_for_llm
@@ -31,7 +32,7 @@ class ConversationService:
     def __init__(self):
         self.repository = ConversationRepository()
         self.project_repository = ProjectRepository()
-        # self.memory_service = MemoryService()
+        self.memory_service = MemoryService()
         self.project_service = ProjectService()
         self.query_usage_service = QueryUsageService()
         self.user_service = UserService()
@@ -64,6 +65,9 @@ class ConversationService:
         # conversation id is generated in frontend
         if conversation_id:
             conversation.id = conversation_id
+
+        # Create a new memory session for this conversation
+        session_id = self.memory_service.create_new_memory()
 
         return self.repository.create(db_session, conversation)
 
@@ -210,11 +214,13 @@ class ConversationService:
         if conversation.project_id != project_id:
             raise NotFoundError("Project not found or is not owned by user")
 
-        # all_user_messages = self.get_history(
-        #     db_session, user_id, conversation_id)
-        # all_user_messages.append(message)
+        # Store the incoming user message in the database
+        session_id = str(conversation_id)
+        print(f"message: {message}")
+        self.memory_service.add_user_message(db_session, session_id, message)
 
-        all_user_messages = [message]
+        chat_history = self.get_history(
+            db_session, user_id, conversation_id)
 
         tool_selection_start_event = {
             "type": "tool_selection_start",
@@ -223,15 +229,16 @@ class ConversationService:
         yield json.dumps(tool_selection_start_event) + "\n"
 
         # Select appropriate tools for the user's message using our new tool selector
-        message, result = DRISelector.select_DRI(
-            all_user_messages)
+        message, result = DRISelector.select_DRI(chat_history)
 
         print(message, result)
 
         if message == "missing_input":
+            self.memory_service.add_ai_message(db_session, session_id, result)
             yield json.dumps({"type": "missing_input", "details": result}) + "\n"
             return
         elif message == "not_supported_task":
+            self.memory_service.add_ai_message(db_session, session_id, result)
             yield json.dumps({"type": "not_supported_task", "details": result}) + "\n"
             return
         else:
@@ -389,42 +396,16 @@ def make_request(
         code_generator = CodeGenerator()
         code_generator.set_system_prompt(
             CODE_WRITING_SYSTEM_PROMPT.format(MCR=selected_DIRs))
-        code_generator.set_chat_history(all_user_messages)
+        code_generator.set_chat_history(chat_history)
         code_generator.set_MCR(selected_DIRs)
         result, error, code = code_generator.generate_and_execute(
             make_request_fn)
 
+        # Store AI response in the database
+        ai_response = json.dumps({"raw_data": result})
+        self.memory_service.add_ai_message(db_session, session_id, ai_response)
+
         yield json.dumps({"raw_data": result}) + "\n"
-
-        # memory = self.memory_service.get_memory(conversation_id)
-
-        # agent = AgentService(
-        #     tools=selected_tools, memory=memory, streaming=stream)
-
-        # if stream:
-        #     try:
-        #         # Stream tokens as they become available.
-        #         async for token in agent.stream(message):
-        #             yield token
-        #     except Exception as e:
-        #         raise HTTPException(
-        #             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        #         )
-        # else:
-        #     result = agent.ask(message)
-
-        #     intermediate_steps = []
-        #     for step in result["intermediate_steps"]:
-        #         intermediate_steps.append({
-        #             "function_name": step[0].tool,
-        #             "arguments": step[0].tool_input,
-        #             "output": step[1]
-        #         })
-
-        #     yield {
-        #         "response": result["output"],
-        #         "intermediate_steps": intermediate_steps
-        #     }
 
         query_usage = QueryUsage(
             user_id=user_id,
@@ -454,34 +435,35 @@ def make_request(
                 - additional_kwargs (dict): Additional message metadata
                 - response_metadata (dict): Response metadata for AI messages
         """
-        memory = self.memory_service.get_memory(conversation_id)
+        session_id = str(conversation_id)
+        messages = self.memory_service.get_messages(db_session, session_id)
 
         history = []
-        generated_id = 0
-        for message in memory.messages:
+        for idx, msg in enumerate(messages):
             history.append({
-                "id": generated_id,
-                "role": "human" if isinstance(message, HumanMessage) else "ai",
-                "content": message.content,
+                "id": idx,
+                "role": msg["type"],  # "human", "ai", or "system"
+                "content": msg["content"],
+                "created_at": msg["created_at"],
+                "metadata": msg["metadata"]
             })
-            generated_id += 1
         return history
 
-    def get_user_messages(self, conversation_id: UUID):
+    def get_user_messages(self, db_session: Session, conversation_id: UUID):
         """
         Retrieves only the user (human) messages from a conversation.
 
         Args:
+            db_session (Session): Database session
             conversation_id (UUID): ID of the conversation to get messages from
 
         Returns:
-            list: List of HumanMessage objects from the conversation
+            list: List of user messages from the conversation
         """
-        memory = self.memory_service.get_memory(conversation_id)
-        # filter user messages
-        user_messages = [
-            message.content for message in memory.messages if isinstance(message, HumanMessage)]
-        return user_messages
+        session_id = str(conversation_id)
+        messages = self.memory_service.get_messages(
+            db_session, session_id, message_type="human")
+        return [msg["content"] for msg in messages]
 
     def rename_title(self, db_session: Session, conversation_id: UUID, user_id: UUID, message: str) -> str:
         """

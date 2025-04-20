@@ -53,14 +53,15 @@ Please fix the code and return only the corrected code. Make sure the fixed code
 DRI_SELECTION_SYSTEM_PROMPT = """You are a tool selection assistant. Your job is to analyze a user chat conversation and select the most appropriate tools to answer user need."""
 
 DRI_SELECTION_USER_PROMPT = """
-previous user queries: {previous_user_queries}
+chat history: {previous_user_queries}
 current user query : {user_task}
 
 Available Tools:
 {MCR}
 
 Instructions:
-- Review the current user query alongside previous user queries to fully understand the context and user needs.
+- Review the current user query alongside chat history to fully understand the context and user needs.
+- May be some inputs are in chat history and not in the current user query, so consider all inputs in chat history and current user query
 - Carefully examine each available tool and its description.
 - <Important> Pay attention to input_schema of the tool and the user input to make sure the input_data is fully compatible with the input_schema especially in enums input </Important>
 - Identify and select only those tools that are directly applicable to addressing the current query or are necessary based on the context provided by previous queries.
