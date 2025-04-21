@@ -51,11 +51,10 @@ class DRISelector:
         # Get MCR
         MCR = get_mcr_for_llm()
 
-        print(f"MCR: {MCR}")
+        for DRI in MCR:
+            print(json.dumps(
+                {"ID": DRI["ID"], "DESCRIPTION": DRI["DESCRIPTION"]}, indent=1))
         print("-----------------------------------")
-
-        print(f"previous : {query[:-1]}")
-        print(f"current : {query[-1]}")
 
         # Get LLM response
         messages = [
@@ -123,7 +122,7 @@ class DRISelector:
         not_supported_end = response.find("</not_supported>")
         if not_supported_start != -1 and not_supported_end != -1:
             not_supported_message = response[not_supported_start +
-                                             15:not_supported_end].strip()
+                                             15: not_supported_end].strip()
             return "not_supported_task", not_supported_message
 
         # If none of the expected formats are found, try to handle legacy format or return error

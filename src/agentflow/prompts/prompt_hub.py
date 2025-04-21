@@ -8,6 +8,8 @@ Each DIR has:
 
 - for getting data there is a function called 'make_request' that takes the ID and input_data as parameters and returns the data
 - the function 'make_request' is already defined and will be attached at the top of the code you will generate
+- The result of 'make_request' function contains status code and the output is different according each status code (defined in output_schema)
+- The output of the function 'make_request' is standard json data and you can use it as a dictionary
 - You can use this function to get the data So do not define it again
 - You should use the function 'make_request' to get the data from the DRI
 - You should fill the input_data base on user input in the input schema of the DRI
@@ -22,6 +24,7 @@ def make_request(ID: str, input_data: dict) -> dict:
     .
     .
     .
+    return {{str(response.status_code) : response.json()}}
 """
 
 CODE_WRITING_USER_PROMPT="""

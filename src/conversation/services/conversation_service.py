@@ -255,28 +255,33 @@ class ConversationService:
 import json
 import requests
 from typing import Dict, List, Optional
+import os
 
 MCR_GRAPHQL_ENDPOINT="https://sepolia.easscan.org/graphql"
 MCR_SCHEMA_ID="0x1063266f9efb29be0c03da45219f1224f926859fd96a656c1083ad3a9d4d2243"
 
 def get_mcr() -> List[Dict]:
-    endpoint = MCR_GRAPHQL_ENDPOINT
-    schema_id = MCR_SCHEMA_ID
+
+    # Get configuration from environment variables with defaults
+    endpoint = os.getenv("MCR_GRAPHQL_ENDPOINT",
+                         "https://sepolia.easscan.org/graphql")
+    schema_id = os.getenv("MCR_SCHEMA_ID")
 
     query = \"""
-        query {
-            schema(where: {id: "%s"}) {
-                attestations {
-                    id,
-                    decodedDataJson
-                },
-            }
+    query {
+        schema(where: {id: "%s"}) {
+            attestations {
+                id,
+                decodedDataJson
+            },
         }
-        \""" % schema_id
+    }
+    \""" % schema_id
 
     # Prepare the request
     headers = {"Content-Type": "application/json"}
     payload = {"query": query}
+
     MCR = []
 
     try:
@@ -314,8 +319,6 @@ def get_mcr() -> List[Dict]:
     except Exception as e:
         print(f"Unexpected error: {e}")
         return MCR
-
-
 def get_dri(id: str) -> Optional[Dict]:
     for dri in get_mcr():
         if dri["ID"] == id:
@@ -386,8 +389,8 @@ def make_request(
                 headers=headers,
                 data=json.dumps(data) if data else None,
             )
-
             return {str(response.status_code) : response.json()}
+
     except Exception as e:
         print(f"Error making request: {e}")
         return e
@@ -402,8 +405,7 @@ def make_request(
             make_request_fn)
 
         # Store AI response in the database
-        ai_response = json.dumps({"raw_data": result})
-        self.memory_service.add_ai_message(db_session, session_id, ai_response)
+        self.memory_service.add_ai_message(db_session, session_id, str(result))
 
         yield json.dumps({"raw_data": result}) + "\n"
 
