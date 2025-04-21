@@ -13,6 +13,7 @@ class AgentType(Enum):
     BLOCKCHAIN_AGENT = "blockchain_agent"
     REACT_AGENT = "react_agent"
     PATTERN_CORE_AGENT = "pattern_core_agent"
+    MCR_AGENT = "mcr_agent"
 
 
 class Prompt():
@@ -28,3 +29,4 @@ class Prompt():
     ROUTER_AGENT = hub.pull("pattern-agent/pattern-agent")
     REACT_AGENT = hub.pull("hwchase17/react")
     PATTERN_CORE_AGENT = hub.pull("pattern-agent/pattern-core-agent")
+    MCR_AGENT = hub.pull("pattern-agent/mcr-agent")

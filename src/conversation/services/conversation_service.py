@@ -21,6 +21,9 @@ from src.query_usage.services.query_usage_service import QueryUsageService
 from src.agentflow.providers.chain_scan_tools import get_current_timestamp
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
+from src.agentflow.MCR.dri_selection import DRISelector
+from src.agentflow.MCR.mcr import make_request, get_dri
+
 
 class ConversationService:
     """
@@ -209,9 +212,9 @@ class ConversationService:
         if conversation.project_id != project_id:
             raise NotFoundError("Project not found or is not owned by user")
 
-        all_user_messages = self.get_history(
+        chat_history = self.get_history(
             db_session, user_id, conversation_id)
-        all_user_messages.append(message)
+        chat_history.append(message)
 
         tool_selection_start_event = {
             "type": "tool_selection_start",
@@ -219,25 +222,55 @@ class ConversationService:
         }
         yield json.dumps(tool_selection_start_event) + "\n"
 
-        # Select appropriate tools for the user's message using our new tool selector
-        selected_tools = ToolRegistery.select_tools_for_query(
-            all_user_messages)
+        # ---------- v2.1.0 ----------
 
-        # langchain raise exception if the tools list is empty
-        if len(selected_tools) == 0:
-            selected_tools = [get_current_timestamp]
+        status, selection_message = DRISelector().select_DRI(chat_history)
+
+        print(f"status: {status}")
+        print(f"selection_message: {selection_message}")
+
+        if status == "selected_DRI":
+            selected_instructions = selection_message
+        elif status == "missing_input":
+            missing_input_event = {
+                "type": "missing_input",
+                "detail": selection_message,
+                "timestamp": str(datetime.now())
+            }
+            yield json.dumps(missing_input_event) + "\n"
+            self.memory_service.add_message(
+                conversation_id, message, role="user")
+            self.memory_service.add_message(
+                conversation_id, selection_message, role="ai")
+            return
+        elif status == "not_supported_task":
+            not_supported_event = {
+                "type": "not_supported_task",
+                "detail": selection_message,
+                "timestamp": str(datetime.now())
+            }
+            yield json.dumps(not_supported_event) + "\n"
+            self.memory_service.add_message(
+                conversation_id, message, role="user")
+            self.memory_service.add_message(
+                conversation_id, selection_message, role="ai")
+            return
 
         tool_selection_end_event = {
             "type": "tool_selection_end",
-            "selected_tools": [selected_tool.name for selected_tool in selected_tools],
+            "selected_tools": selected_instructions,
             "timestamp": str(datetime.now())
         }
         yield json.dumps(tool_selection_end_event) + "\n"
 
+        selected_DRIs = []
+        for dri_id in selected_instructions:
+            selected_DRIs.append(get_dri(dri_id))
+
         memory = self.memory_service.get_memory(conversation_id)
 
         agent = AgentService(
-            tools=selected_tools, memory=memory, streaming=stream)
+            tools=[make_request], MCR=selected_DRIs, memory=memory, streaming=stream)
 
         if stream:
             try:

@@ -66,6 +66,24 @@ class MemoryService:
         )
         return (session_id, memory)
 
+    def add_message(self, session_id, message, role, table_name="chat_history"):
+        """
+        Adds a message to the chat history for a given session ID.
+
+        Args:
+            session_id (str): The unique identifier for the chat session
+            message (str): The message to add
+            role (str): The role of the message sender (e.g., "user", "assistant")
+            table_name (str): The name of the database table to use. Defaults to "chat_history"
+        """
+        memory = self.get_memory(session_id, table_name)
+        if role == "user":
+            memory.add_user_message(message)
+        elif role == "ai":
+            memory.add_ai_message(message)
+        else:
+            raise ValueError("Invalid role. Use 'user' or 'ai'.")
+
     def get_memory(self, session_id, table_name="chat_history"):
         """
         Retrieves an existing memory instance for a given session ID.

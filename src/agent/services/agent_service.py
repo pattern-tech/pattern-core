@@ -131,16 +131,18 @@ class AgentService:
     AgentService is responsible for doing the job
     """
 
-    def __init__(self, tools, memory=None, streaming: bool = True):
+    def __init__(self, tools, MCR, memory=None, streaming: bool = True):
         """
         Initialize the AgentService.
 
         Args:
-            tools: The tools to use for agent.
-            memory: The memory to use for storing conversation history.
-            streaming (bool): Whether to enable streaming responses.
+            tools: The tools to use for agent
+            MCR: Model Context Registry
+            memory: The memory to use for storing conversation history
+            streaming (bool): Whether to enable streaming responses
         """
         self.tools = tools
+        self.MCR = MCR
         self.memory = memory
         self.streaming = streaming
         self.streaming_handler = None
@@ -162,7 +164,7 @@ class AgentService:
                             stream=streaming,
                             callbacks=[self.streaming_handler] if self.streaming else None)
 
-        self.prompt = init_prompt(self.llm, AgentType.PATTERN_CORE_AGENT)
+        self.prompt = init_prompt(self.llm, AgentType.MCR_AGENT)
 
         self.agent = init_agent(self.llm, self.tools, self.prompt)
 
@@ -263,13 +265,13 @@ class AgentService:
             task = loop.run_in_executor(
                 None,
                 lambda: self.agent_with_chat_history.invoke(
-                    input={"input": message},
+                    input={"input": message, "MCR": self.MCR},
                     config={"configurable": {"session_id": "ـ"}}
                 )
             )
         else:
             task = asyncio.create_task(
-                self.agent_executor.arun({"input": message})
+                self.agent_executor.arun({"input": message, "MCR": self.MCR})
             )
 
         buffer = ""  # Initialize an empty buffer for accumulating incomplete JSON
@@ -363,8 +365,8 @@ class AgentService:
         """
         if self.memory:
             return self.agent_with_chat_history.invoke(
-                input={"input": message},
+                input={"input": message, "MCR": self.MCR},
                 config={"configurable": {"session_id": "ـ"}}
             )
         else:
-            return self.agent_executor.invoke({"input": message})
+            return self.agent_executor.invoke({"input": message, "MCR": self.MCR})

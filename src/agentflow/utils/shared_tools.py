@@ -297,5 +297,8 @@ def init_prompt(llm: Any, agent_type: AgentType):
             return Prompt.ROUTER_AGENT
         elif agent_type == AgentType.PATTERN_CORE_AGENT:
             return Prompt.PATTERN_CORE_AGENT
+        elif agent_type == AgentType.MCR_AGENT:
+            return Prompt.MCR_AGENT
         else:
             return Prompt.BLOCKCHAIN_AGENT
+        
