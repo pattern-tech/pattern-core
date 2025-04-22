@@ -7,6 +7,7 @@ from langchain.agents import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
+from src.share.logging import Logging
 from src.util.configuration import Config
 from src.agentflow.utils.enum import AgentType
 from src.agentflow.utils.shared_tools import init_llm, init_agent, init_prompt
@@ -141,6 +142,9 @@ class AgentService:
             memory: The memory to use for storing conversation history
             streaming (bool): Whether to enable streaming responses
         """
+        self._logger = Logging().get_logger()
+        self._logger.info("Initializing AgentService")
+
         self.tools = tools
         self.MCR = MCR
         self.memory = memory
@@ -154,21 +158,28 @@ class AgentService:
 
         # Set up the streaming callback if streaming is enabled.
         if streaming:
+            self._logger.debug("Setting up StreamingCallbackHandler")
             self.streaming_handler = StreamingCallbackHandler()
 
         config = Config.get_config()
 
+        self._logger.info(
+            f"Initializing LLM provider: {config['llm']['provider']}, model: {config['llm']['model']}")
         self.llm = init_llm(service=config["llm"]["provider"],
                             model_name=config["llm"]["model"],
                             api_key=config["llm"]["api_key"],
                             stream=streaming,
                             callbacks=[self.streaming_handler] if self.streaming else None)
 
+        self._logger.debug("Initializing agent prompt")
         self.prompt = init_prompt(self.llm, AgentType.MCR_AGENT)
 
+        self._logger.debug("Initializing agent with tools and prompt")
         self.agent = init_agent(self.llm, self.tools, self.prompt)
 
         if streaming:
+            self._logger.debug(
+                "Setting up streaming agent executor with callbacks")
             # Wrap each tool with the callback handler to ensure tool events are captured
             wrapped_tools = []
             for tool in self.tools:
@@ -189,6 +200,7 @@ class AgentService:
                 handle_tool_error=True  # Ensure tool errors are also captured
             )
         else:
+            self._logger.debug("Setting up non-streaming agent executor")
             self.agent_executor = AgentExecutor(
                 agent=self.agent,
                 tools=self.tools,
@@ -199,6 +211,7 @@ class AgentService:
             )
 
         if self.memory:
+            self._logger.debug("Setting up agent with conversation history")
             self.agent_with_chat_history = RunnableWithMessageHistory(
                 self.agent_executor,
                 lambda session_id: memory,
@@ -245,22 +258,31 @@ class AgentService:
             It supports both memory and non-memory modes, adapting the execution method accordingly.
             Includes a heartbeat mechanism to keep the connection alive during long processing.
         """
+        self._logger.info("Starting streaming response to message")
+        self._logger.debug(f"Message: {message[:50]}..." if len(
+            message) > 50 else f"Message: {message}")
+
         if not self.streaming or not self.streaming_handler:
-            raise ValueError("Streaming is not enabled")
+            error_msg = "Streaming is not enabled"
+            self._logger.error(error_msg)
+            raise ValueError(error_msg)
 
         # Clear any leftover tokens
         while not self.streaming_handler.queue.empty():
             self.streaming_handler.queue.get_nowait()
+        self._logger.debug("Cleared existing tokens from queue")
 
         # Send an initial heartbeat message to inform the client that processing has started
         init_heartbeat_event = {
             "type": "heartbeat",
             "data": "processing_started"
         }
+        self._logger.debug("Sending initial heartbeat event")
         yield json.dumps(init_heartbeat_event) + "\n"
 
         # Start the agent task based on memory configuration
         if self.memory:
+            self._logger.debug("Using memory-based agent execution")
             loop = asyncio.get_running_loop()
             task = loop.run_in_executor(
                 None,
@@ -270,6 +292,7 @@ class AgentService:
                 )
             )
         else:
+            self._logger.debug("Using non-memory agent execution")
             task = asyncio.create_task(
                 self.agent_executor.arun({"input": message, "MCR": self.MCR})
             )
@@ -277,8 +300,10 @@ class AgentService:
         buffer = ""  # Initialize an empty buffer for accumulating incomplete JSON
         last_activity = asyncio.get_event_loop().time()  # Track the last activity time
         heartbeat_interval = 15.0  # Send heartbeat every 15 seconds
+        total_tokens_processed = 0
 
         # Continue processing while the task is running or queue has items
+        self._logger.debug("Starting token processing loop")
         while not task.done() or not self.streaming_handler.queue.empty():
             try:
                 # Try to get a token with a timeout to maintain responsiveness
@@ -286,6 +311,11 @@ class AgentService:
                     self.streaming_handler.queue.get(),
                     timeout=self.token_timeout
                 )
+
+                total_tokens_processed += 1
+                if total_tokens_processed % 100 == 0:
+                    self._logger.debug(
+                        f"Processed {total_tokens_processed} tokens so far")
 
                 # Update the last activity time when we receive a token
                 last_activity = asyncio.get_event_loop().time()
@@ -308,6 +338,8 @@ class AgentService:
                         "type": "heartbeat",
                         "data": "still_processing"
                     }
+                    self._logger.debug(
+                        "Sending heartbeat event due to inactivity")
                     yield json.dumps(heartbeat_event) + "\n"
                     last_activity = current_time  # Reset the activity timer
 
@@ -316,6 +348,7 @@ class AgentService:
                 continue
             except asyncio.CancelledError:
                 # Handle task cancellation gracefully
+                self._logger.warning("Stream was cancelled")
                 error_event = {
                     "type": "info",
                     "data": "Stream was cancelled"
@@ -324,6 +357,8 @@ class AgentService:
                 break
             except ConnectionError as e:
                 # Handle connection errors specifically
+                self._logger.error(
+                    f"Connection error during streaming: {str(e)}")
                 error_event = {
                     "type": "error",
                     "data": f"Connection error: {str(e)}"
@@ -332,6 +367,8 @@ class AgentService:
                 break
             except Exception as e:
                 # Handle any parsing or processing errors
+                self._logger.error(
+                    f"Error during streaming: {str(e)}", exc_info=True)
                 error_event = {
                     "type": "error",
                     "data": f"Streaming error: {str(e)}"
@@ -339,6 +376,8 @@ class AgentService:
                 yield json.dumps(error_event) + "\n"
                 # Continue processing despite errors
 
+        self._logger.info(
+            f"Streaming completed. Processed {total_tokens_processed} tokens.")
         # If there's anything left in the buffer after task completion, process it
         if buffer:
             try:
@@ -347,6 +386,7 @@ class AgentService:
                 yield buffer if buffer.endswith("\n") else buffer + "\n"
             except json.JSONDecodeError:
                 # If it's not valid JSON, wrap it in an error event
+                self._logger.warning(f"Invalid JSON in final buffer: {buffer}")
                 error_event = {
                     "type": "error",
                     "data": f"Invalid JSON in final buffer: {buffer}"
@@ -363,10 +403,34 @@ class AgentService:
         Returns:
             Dict[str, Any]: The response from the agent.
         """
-        if self.memory:
-            return self.agent_with_chat_history.invoke(
-                input={"input": message, "MCR": self.MCR},
-                config={"configurable": {"session_id": "ـ"}}
-            )
-        else:
-            return self.agent_executor.invoke({"input": message, "MCR": self.MCR})
+        self._logger.info("Processing non-streaming request")
+        self._logger.debug(f"Message: {message[:50]}..." if len(
+            message) > 50 else f"Message: {message}")
+
+        try:
+            if self.memory:
+                self._logger.debug("Using memory-based agent execution")
+                response = self.agent_with_chat_history.invoke(
+                    input={"input": message, "MCR": self.MCR},
+                    config={"configurable": {"session_id": "ـ"}}
+                )
+            else:
+                self._logger.debug("Using non-memory agent execution")
+                response = self.agent_executor.invoke(
+                    {"input": message, "MCR": self.MCR})
+
+            output_length = len(response.get("output", ""))
+            steps_count = len(response.get("intermediate_steps", []))
+            self._logger.info(
+                f"Request completed successfully. Output length: {output_length}, Steps: {steps_count}")
+
+            # Log each tool use
+            for idx, step in enumerate(response.get("intermediate_steps", [])):
+                self._logger.info(f"Tool execution {idx+1}: {step[0].tool}")
+
+            return response
+
+        except Exception as e:
+            self._logger.error(
+                f"Error during agent request: {str(e)}", exc_info=True)
+            raise

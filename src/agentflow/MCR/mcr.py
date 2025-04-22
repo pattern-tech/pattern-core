@@ -4,6 +4,10 @@ import requests
 
 from langchain.tools import tool
 from typing import List, Dict, Optional, Union
+from src.share.logging import Logging
+
+# Initialize logger
+_logger = Logging().get_logger()
 
 
 def get_mcr() -> List[Dict]:
@@ -17,10 +21,14 @@ def get_mcr() -> List[Dict]:
     Returns:
         List[Dict]: List of MCR entries with their properties
     """
+    _logger.info("Fetching MCR data from GraphQL endpoint")
+
     # Get configuration from environment variables with defaults
     endpoint = os.getenv("MCR_GRAPHQL_ENDPOINT",
                          "https://sepolia.easscan.org/graphql")
     schema_id = os.getenv("MCR_SCHEMA_ID")
+
+    _logger.debug(f"Using endpoint: {endpoint}, schema_id: {schema_id}")
 
     query = """
     query {
@@ -41,14 +49,18 @@ def get_mcr() -> List[Dict]:
 
     try:
         # Send the GraphQL request
+        _logger.debug("Sending GraphQL request to fetch MCR data")
         response = requests.post(endpoint, json=payload, headers=headers)
         response.raise_for_status()  # Raise exception for error responses
 
         data = response.json()
 
+        _logger.debug("GraphQL response received successfully")
+
         # Process the response
         if "data" in data and "schema" in data["data"] and "attestations" in data["data"]["schema"]:
             attestations = data["data"]["schema"]["attestations"]
+            _logger.info(f"Retrieved {len(attestations)} MCR attestations")
 
             for attestation in attestations:
                 decoded_data = json.loads(attestation["decodedDataJson"])
@@ -63,16 +75,17 @@ def get_mcr() -> List[Dict]:
                 # Add to MCR list
                 MCR.append(mcr_entry)
 
+        _logger.info(f"Processed {len(MCR)} MCR entries")
         return MCR
 
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching MCR data: {e}")
+        _logger.error(f"Error fetching MCR data: {e}", exc_info=True)
         return MCR
     except json.JSONDecodeError as e:
-        print(f"Error decoding JSON response: {e}")
+        _logger.error(f"Error decoding JSON response: {e}", exc_info=True)
         return MCR
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        _logger.error(f"Unexpected error in get_mcr: {e}", exc_info=True)
         return MCR
 
 
@@ -86,6 +99,7 @@ def get_mcr_for_llm() -> List[Dict]:
     Returns:
         List[Dict]: Simplified MCR data optimized for LLM consumption
     """
+    _logger.info("Preparing MCR data for LLM consumption")
     MCR_FOR_LLM = []
 
     for DRI in get_mcr():
@@ -95,6 +109,7 @@ def get_mcr_for_llm() -> List[Dict]:
             "OUTPUT_SCHEMA": json.loads(DRI["OUTPUT_SCHEMA"]),
             "ID": DRI["ID"]
         })
+    _logger.info(f"Prepared {len(MCR_FOR_LLM)} MCR entries for LLM")
     return MCR_FOR_LLM
 
 
@@ -108,9 +123,12 @@ def get_dri(id: str) -> Optional[Dict]:
     Returns:
         Dict or None: The MCR entry with the specified ID, or None if not found
     """
+    _logger.debug(f"Looking up DRI with ID: {id}")
     for dri in get_mcr():
         if dri["ID"] == id:
+            _logger.debug(f"Found DRI with ID: {id}")
             return dri
+    _logger.warning(f"DRI with ID {id} not found")
     return None
 
 
@@ -124,9 +142,11 @@ def authenticate(data_source: str) -> Dict[str, str]:
     Returns:
         Dict[str, str]: Dictionary with authenticate headers
     """
+    _logger.debug(f"Generating authentication headers for {data_source}")
     if data_source == "MORALIS":
         api_key = os.getenv("MORALIS_API_KEY")
         if not api_key:
+            _logger.error("MORALIS_API_KEY environment variable not set")
             raise ValueError("MORALIS_API_KEY environment variable not set")
         return {
             "X-API-Key": api_key,
@@ -147,9 +167,11 @@ def get_base_url(data_source: str) -> str:
     Raises:
         ValueError: If the data source is not supported
     """
+    _logger.debug(f"Getting base URL for data source: {data_source}")
     if data_source == "MORALIS":
         return "https://deep-index.moralis.io"
     else:
+        _logger.error(f"Unsupported data source: {data_source}")
         raise ValueError(f"Unsupported data source: {data_source}")
 
 
@@ -164,6 +186,7 @@ def replace_variables(input_string: str, variables_dict: Dict[str, any]) -> str:
     Returns:
         str: The string with all variables replaced by their values
     """
+    _logger.debug("Replacing variables in template string")
     result = input_string
 
     for var_name, var_value in variables_dict.items():
@@ -185,12 +208,17 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
     Returns:
         Dict: JSON response from the API
     """
+    _logger.info(f"Retrieving data using DRI ID: {ID}")
+    _logger.debug(f"Input data: {json.dumps(input_data)}")
+
     try:
         dri = get_dri(ID)
         if not dri:
+            _logger.error(f"No DRI found with the given ID: {ID}")
             raise ValueError(f"No DRI found with the given ID: {ID}")
 
         if dri["TYPE"] == "REST":
+            _logger.debug(f"Processing REST DRI: {ID}")
             endpoint = replace_variables(dri["ENDPOINT"], input_data)
             endpoint = json.loads(endpoint)
 
@@ -198,6 +226,8 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
             data_source = dri["DATASOURCE"]
 
             data = endpoint.get("QUERY", {})
+            _logger.debug(
+                f"Prepared request - Method: {method}, Data source: {data_source}")
 
             headers = {
                 "Content-Type": "application/json",
@@ -208,6 +238,7 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
             headers.update(authenticate(data_source.upper()))
 
             url = f"{get_base_url(data_source)}{endpoint['URL']}"
+            _logger.info(f"Sending {method} request to {url}")
 
             response = requests.request(
                 method=method,
@@ -215,11 +246,18 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
                 headers=headers,
                 data=json.dumps(data) if data else None,
             )
+
+            _logger.info(
+                f"Received response with status code: {response.status_code}")
+            if response.status_code != 200:
+                _logger.warning(
+                    f"Non-200 response: {response.status_code}, Content: {response.text[:200]}...")
+
             return {
                 "status_code": response.status_code,
                 "response": response.json() if response.status_code == 200 else response.text
             }
 
     except Exception as e:
-        print(f"Error making request: {e}")
-        return e
+        _logger.error(f"Error making request: {str(e)}", exc_info=True)
+        return {"error": str(e)}

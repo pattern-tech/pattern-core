@@ -1,11 +1,12 @@
 import json
 
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Tuple
 
 from src.util.configuration import Config
 from src.agentflow.MCR.mcr import get_mcr_for_llm
 from src.agentflow.utils.shared_tools import init_llm
 from src.agentflow.prompts.prompt_hub import DRI_SELECTION_SYSTEM_PROMPT, DRI_SELECTION_USER_PROMPT
+from src.share.logging import Logging
 
 
 class DRISelector:
@@ -16,7 +17,13 @@ class DRISelector:
 
     def __init__(self):
         """Initialize the ToolSelector with an LLM."""
+        self._logger = Logging().get_logger()
+        self._logger.info("Initializing DRISelector")
+
         config = Config.get_config()
+        self._logger.debug(
+            f"Using LLM provider: {config['llm']['provider']}, model: {config['llm']['model']}")
+
         self.llm = init_llm(
             service=config["llm"]["provider"],
             model_name=config["llm"]["model"],
@@ -25,7 +32,7 @@ class DRISelector:
             callbacks=None,
         )
 
-    def select_DRI(self, query: List[str]) -> List[Any]:
+    def select_DRI(self, query: List[str]) -> Tuple[str, Any]:
         """
         Select appropriate DRIs for a given user query.
 
@@ -33,12 +40,18 @@ class DRISelector:
             query (List[str]): List of user queries
 
         Returns:
-            List[Any]: List of selected DRIs
+            Tuple[str, Any]: A tuple containing:
+                - status type ("selected_DRI", "missing_input", etc.)
+                - result data (list of DIRs or message string)
         """
         # Get MCR
         MCR = get_mcr_for_llm()
+        self._logger.debug(
+            f"Retrieved {len(MCR)} MCR entries for DRI selection")
 
         for DRI in MCR:
+            self._logger.debug(
+                f"Available DRI: {DRI['ID']} - {DRI['DESCRIPTION'][:50]}...")
             print(json.dumps(
                 {"ID": DRI["ID"], "DESCRIPTION": DRI["DESCRIPTION"]}, indent=1))
         print("-----------------------------------")
@@ -53,22 +66,32 @@ class DRISelector:
             ))
         ]
 
-        # Use the static method to get the LLM
-        response = self.llm.invoke(messages)
+        self._logger.info(
+            f"Sending DRI selection request to LLM for user query: {query[-1][:50]}...")
 
-        # Parse the response to get selected tool names
+        # Use the LLM to get a response
         try:
+            response = self.llm.invoke(messages)
+            self._logger.debug("Received response from LLM")
+
+            # Parse the response to get selected tool names
             message, result = self._parse_DIR_selection_response(
                 response.content)
+
+            if message == "selected_DRI":
+                self._logger.info(f"Selected {len(result)} DRIs: {result}")
+            else:
+                self._logger.info(
+                    f"DRI selection result: {message} - {result}")
 
             return (message, result)
 
         except Exception as e:
-            print(f"Error parsing DIR from LLM response: {e}")
-            # Return MCR as fallback if parsing fails
-            return MCR
+            self._logger.error(
+                f"Error in LLM DRI selection: {e}", exc_info=True)
+            return "not_supported_task", f"Error in DRI selection: {str(e)}"
 
-    def _parse_DIR_selection_response(self, response: str):
+    def _parse_DIR_selection_response(self, response: str) -> Tuple[str, Any]:
         """
         Parse the LLM response to extract selected DIR IDs or identify missing inputs or unsupported tasks.
 
@@ -80,7 +103,9 @@ class DRISelector:
                 - status type ("selected_DRI", "missing_input", or "not_supported_task")
                 - message (list of DIRs or message string)
         """
+        self._logger.debug("Parsing DRI selection response")
         response = response.strip()
+        self._logger.debug(f"Raw LLM response: {response[:100]}...")
 
         # Check for tool selection format
         tool_start = response.find("<tool>")
@@ -90,8 +115,11 @@ class DRISelector:
             try:
                 selected_DIRs = json.loads(tool_content)
                 if isinstance(selected_DIRs, list):
+                    self._logger.info(
+                        f"Successfully parsed {len(selected_DIRs)} DRIs from response")
                     return "selected_DRI", selected_DIRs
             except json.JSONDecodeError as e:
+                self._logger.error(f"Error parsing DIR IDs from response: {e}")
                 print(f"Error parsing DIR IDs: {e}")
                 return "not_supported_task", []
 
@@ -100,6 +128,7 @@ class DRISelector:
         missing_end = response.find("</missing>")
         if missing_start != -1 and missing_end != -1:
             missing_message = response[missing_start + 9:missing_end].strip()
+            self._logger.info(f"Detected missing input: {missing_message}")
             return "missing_input", missing_message
 
         # Check for not supported format
@@ -108,23 +137,34 @@ class DRISelector:
         if not_supported_start != -1 and not_supported_end != -1:
             not_supported_message = response[not_supported_start +
                                              15: not_supported_end].strip()
+            self._logger.info(f"Task not supported: {not_supported_message}")
             return "not_supported_task", not_supported_message
 
+        # Check for general response format
         general_start = response.find("<general>")
         general_end = response.find("</general>")
         if general_start != -1 and general_end != -1:
             general_message = response[general_start + 9:general_end].strip()
+            self._logger.info(f"General response: {general_message}")
             return "general", general_message
 
         # If none of the expected formats are found, try to handle legacy format or return error
+        self._logger.warning(
+            "Response didn't match expected format. Attempting legacy parsing.")
         print("Warning: Response didn't match expected format. Attempting legacy parsing.")
         try:
             if response.startswith('[') and response.endswith(']'):
                 selected_DIRs = json.loads(response)
                 if isinstance(selected_DIRs, list):
+                    self._logger.info(
+                        f"Successfully parsed {len(selected_DIRs)} DRIs using legacy format")
                     return "selected_DRI", selected_DIRs
         except json.JSONDecodeError:
+            self._logger.error(
+                "Failed to parse response as JSON array in legacy format")
             pass
 
         # Default fallback for unrecognized formats
+        self._logger.error(
+            f"Could not parse response format: {response[:50]}...")
         return "not_supported_task", "Could not parse response format"

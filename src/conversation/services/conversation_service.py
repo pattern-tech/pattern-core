@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from langchain_core.messages.human import HumanMessage
 
+from src.share.logging import Logging
 from src.util.configuration import Config
 from src.util.exceptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
@@ -22,19 +23,20 @@ from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
 
-
 class ConversationService:
     """
     Service class for handling conversation-related business logic.
     """
 
     def __init__(self):
-        self.repository = ConversationRepository()
-        self.project_repository = ProjectRepository()
+        self.user_service = UserService()
         self.memory_service = MemoryService()
         self.project_service = ProjectService()
+        self.repository = ConversationRepository()
+        self.project_repository = ProjectRepository()
         self.query_usage_service = QueryUsageService()
-        self.user_service = UserService()
+
+        self._logger = Logging().get_logger()
 
     def create_conversation(
         self, db_session: Session, name: str, project_id: UUID, user_id: UUID, conversation_id: UUID = None
@@ -53,9 +55,13 @@ class ConversationService:
             Conversation: The created conversation instance.
         """
         if name.strip() == "":
+            self._logger.error(
+                f"Failed to create conversation: Name is empty. User: {user_id}")
             raise Exception("Name is required")
 
         if not self.project_repository.get_by_id(db_session, project_id, user_id):
+            self._logger.error(
+                f"Failed to create conversation: Project not exists or not owned by user. User: {user_id}, Project: {project_id}")
             raise NotFoundError("Project not exists or not owned by user")
 
         conversation = Conversation(
@@ -200,19 +206,30 @@ class ConversationService:
         Raises:
             Exception: If associated project is not found
         """
+        self._logger.info(
+            f"Processing message for user {user_id}, conversation {conversation_id}, project {project_id}")
+        self._logger.debug(
+            f"Message type: {message_type}, Streaming: {stream}")
+
         conversation = self.repository.get_by_id(
             db_session, conversation_id, user_id)
 
         if not conversation:
+            self._logger.error(
+                f"Conversation not found: {conversation_id}, user: {user_id}")
             raise NotFoundError(
                 "Conversation not found or is not owned by user")
 
         if conversation.project_id != project_id:
+            self._logger.error(
+                f"Project mismatch: expected {conversation.project_id}, got {project_id}")
             raise NotFoundError("Project not found or is not owned by user")
 
         chat_history = self.get_history(
             db_session, user_id, conversation_id)
         chat_history.append(message)
+        self._logger.debug(
+            f"Conversation {conversation_id}: Chat history retrieved, message appended")
 
         tool_selection_start_event = {
             "type": "tool_selection_start",
@@ -224,12 +241,16 @@ class ConversationService:
 
         status, selection_message = DRISelector().select_DRI(chat_history)
 
-        print(f"status: {status}")
-        print(f"selection_message: {selection_message}")
+        self._logger.info(
+            f"DRI selection for conversation {conversation_id}: status={status}")
 
         if status == "selected_DRI":
+            self._logger.info(
+                f"Selected DRIs for conversation {conversation_id}: {selection_message}")
             selected_instructions = selection_message
         elif status == "missing_input":
+            self._logger.info(
+                f"Missing input for conversation {conversation_id}: {selection_message}")
             missing_input_event = {
                 "type": "missing_input",
                 "detail": selection_message,
@@ -242,6 +263,8 @@ class ConversationService:
                 conversation_id, selection_message, role="ai")
             return
         elif status == "not_supported_task":
+            self._logger.info(
+                f"Unsupported task for conversation {conversation_id}: {selection_message}")
             not_supported_event = {
                 "type": "not_supported_task",
                 "detail": selection_message,
@@ -254,6 +277,8 @@ class ConversationService:
                 conversation_id, selection_message, role="ai")
             return
         elif status == "general":
+            self._logger.info(
+                f"General response for conversation {conversation_id}: {selection_message}")
             general_event = {
                 "type": "general",
                 "detail": selection_message,
@@ -277,22 +302,45 @@ class ConversationService:
         for dri_id in selected_instructions:
             selected_DRIs.append(get_dri(dri_id))
 
+        self._logger.info(
+            f"Retrieved {len(selected_DRIs)} DRIs for conversation {conversation_id}")
+
         memory = self.memory_service.get_memory(conversation_id)
 
+        self._logger.info(
+            f"Creating agent for conversation {conversation_id}, streaming={stream}")
         agent = AgentService(
             tools=[retrieve_data], MCR=selected_DRIs, memory=memory, streaming=stream)
 
         if stream:
             try:
+                self._logger.info(
+                    f"Starting streaming for conversation {conversation_id}")
                 # Stream tokens as they become available.
+                token_count = 0
                 async for token in agent.stream(message):
+                    token_count += 1
+                    if token_count % 50 == 0:  # Log every 50 tokens to avoid excessive logging
+                        self._logger.debug(
+                            f"Streamed {token_count} tokens for conversation {conversation_id}")
                     yield token
+                self._logger.info(
+                    f"Streaming completed for conversation {conversation_id}, total tokens: {token_count}")
             except Exception as e:
+                self._logger.error(
+                    f"Error during streaming for conversation {conversation_id}: {str(e)}", exc_info=True)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
                 )
         else:
+            self._logger.info(
+                f"Requesting non-streaming response for conversation {conversation_id}")
             result = agent.ask(message)
+
+            self._logger.info(
+                f"Response received for conversation {conversation_id}, length: {len(result.get('output', ''))}")
+            self._logger.debug(
+                f"Intermediate steps: {len(result.get('intermediate_steps', []))}")
 
             intermediate_steps = []
             for step in result["intermediate_steps"]:
@@ -301,12 +349,14 @@ class ConversationService:
                     "arguments": step[0].tool_input,
                     "output": step[1]
                 })
+                self._logger.debug(f"Tool used: {step[0].tool}")
 
             yield {
                 "response": result["output"],
                 "intermediate_steps": intermediate_steps
             }
 
+        self._logger.info(f"Recording query usage for user {user_id}")
         query_usage = QueryUsage(
             user_id=user_id,
             provider="morpheus",
@@ -377,7 +427,13 @@ class ConversationService:
         Returns:
             str: The new title of the conversation.
         """
+        self._logger.info(
+            f"Generating title for conversation {conversation_id}, user {user_id}")
+
         config = Config.get_config()
+        self._logger.debug(
+            f"Using LLM provider: {config['llm']['provider']}, model: {config['llm']['model']}")
+
         self.llm = init_llm(service=config["llm"]["provider"],
                             model_name=config["llm"]["model"],
                             api_key=config["llm"]["api_key"],
@@ -391,7 +447,11 @@ class ConversationService:
             ("human", f"{message}"),
         ]
 
+        self._logger.debug(
+            f"Sending title generation request to LLM for conversation {conversation_id}")
         title = self.llm.invoke(messages)
+        self._logger.info(
+            f"Title generated for conversation {conversation_id}: '{title.content}'")
 
         self.repository.update(db_session, conversation_id, {
                                "name": title.content}, user_id)
