@@ -10,19 +10,17 @@ from langchain_core.messages.human import HumanMessage
 from src.util.configuration import Config
 from src.util.exceptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
-from src.agentflow.tool.hub import ToolRegistery
 from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
+from src.agentflow.MCR.dri_selection import DRISelector
+from src.agentflow.MCR.mcr import retrieve_data, get_dri
 from src.agent.services.agent_service import AgentService
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
-from src.agentflow.providers.chain_scan_tools import get_current_timestamp
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
-from src.agentflow.MCR.dri_selection import DRISelector
-from src.agentflow.MCR.mcr import make_request, get_dri
 
 
 class ConversationService:
@@ -255,6 +253,18 @@ class ConversationService:
             self.memory_service.add_message(
                 conversation_id, selection_message, role="ai")
             return
+        elif status == "general":
+            general_event = {
+                "type": "general",
+                "detail": selection_message,
+                "timestamp": str(datetime.now())
+            }
+            yield json.dumps(general_event) + "\n"
+            self.memory_service.add_message(
+                conversation_id, message, role="user")
+            self.memory_service.add_message(
+                conversation_id, selection_message, role="ai")
+            return
 
         tool_selection_end_event = {
             "type": "tool_selection_end",
@@ -270,7 +280,7 @@ class ConversationService:
         memory = self.memory_service.get_memory(conversation_id)
 
         agent = AgentService(
-            tools=[make_request], MCR=selected_DRIs, memory=memory, streaming=stream)
+            tools=[retrieve_data], MCR=selected_DRIs, memory=memory, streaming=stream)
 
         if stream:
             try:

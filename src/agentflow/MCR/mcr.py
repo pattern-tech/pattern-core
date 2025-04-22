@@ -174,9 +174,9 @@ def replace_variables(input_string: str, variables_dict: Dict[str, any]) -> str:
 
 
 @tool
-def make_request(ID: str, input_data: Dict) -> Dict:
+def retrieve_data(ID: str, input_data: Dict) -> Dict:
     """
-    Makes an HTTP request to a specified endpoint with given parameters based on DRI.
+    Retrieve data from a specified data source using the provided DRI ID and input data.
 
     Args:
         ID (str): The ID of Data Retrieval Instruction

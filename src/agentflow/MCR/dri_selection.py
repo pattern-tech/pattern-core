@@ -110,6 +110,12 @@ class DRISelector:
                                              15: not_supported_end].strip()
             return "not_supported_task", not_supported_message
 
+        general_start = response.find("<general>")
+        general_end = response.find("</general>")
+        if general_start != -1 and general_end != -1:
+            general_message = response[general_start + 9:general_end].strip()
+            return "general", general_message
+
         # If none of the expected formats are found, try to handle legacy format or return error
         print("Warning: Response didn't match expected format. Attempting legacy parsing.")
         try:
