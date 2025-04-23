@@ -47,17 +47,12 @@ class DRISelector:
         # Get MCR
         MCR = get_mcr_for_llm()
 
-        print(MCR)
-
         self._logger.debug(
             f"Retrieved {len(MCR)} MCR entries for DRI selection")
 
         for DRI in MCR:
             self._logger.debug(
                 f"Available DRI: {DRI['ID']} - {DRI['DESCRIPTION'][:50]}...")
-            print(json.dumps(
-                {"ID": DRI["ID"], "DESCRIPTION": DRI["DESCRIPTION"]}, indent=1))
-        print("-----------------------------------")
 
         # Get LLM response
         messages = [
@@ -123,7 +118,6 @@ class DRISelector:
                     return "selected_DRI", selected_DIRs
             except json.JSONDecodeError as e:
                 self._logger.error(f"Error parsing DIR IDs from response: {e}")
-                print(f"Error parsing DIR IDs: {e}")
                 return "not_supported_task", []
 
         # Check for missing input format
@@ -154,7 +148,6 @@ class DRISelector:
         # If none of the expected formats are found, try to handle legacy format or return error
         self._logger.warning(
             "Response didn't match expected format. Attempting legacy parsing.")
-        print("Warning: Response didn't match expected format. Attempting legacy parsing.")
         try:
             if response.startswith('[') and response.endswith(']'):
                 selected_DIRs = json.loads(response)
