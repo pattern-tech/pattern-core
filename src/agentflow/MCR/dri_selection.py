@@ -120,31 +120,6 @@ class DRISelector:
                 self._logger.error(f"Error parsing DIR IDs from response: {e}")
                 return "not_supported_task", []
 
-        # Check for missing input format
-        missing_start = response.find("<missing>")
-        missing_end = response.find("</missing>")
-        if missing_start != -1 and missing_end != -1:
-            missing_message = response[missing_start + 9:missing_end].strip()
-            self._logger.info(f"Detected missing input: {missing_message}")
-            return "missing_input", missing_message
-
-        # Check for not supported format
-        not_supported_start = response.find("<not_supported>")
-        not_supported_end = response.find("</not_supported>")
-        if not_supported_start != -1 and not_supported_end != -1:
-            not_supported_message = response[not_supported_start +
-                                             15: not_supported_end].strip()
-            self._logger.info(f"Task not supported: {not_supported_message}")
-            return "not_supported_task", not_supported_message
-
-        # Check for general response format
-        general_start = response.find("<general>")
-        general_end = response.find("</general>")
-        if general_start != -1 and general_end != -1:
-            general_message = response[general_start + 9:general_end].strip()
-            self._logger.info(f"General response: {general_message}")
-            return "general", general_message
-
         # If none of the expected formats are found, try to handle legacy format or return error
         self._logger.warning(
             "Response didn't match expected format. Attempting legacy parsing.")

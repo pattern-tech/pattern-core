@@ -231,11 +231,11 @@ class ConversationService:
         self._logger.debug(
             f"Conversation {conversation_id}: Chat history retrieved, message appended")
 
-        tool_selection_start_event = {
-            "type": "tool_selection_start",
+        instruction_selection_start_event = {
+            "type": "instruction_selection_start",
             "timestamp": str(datetime.now())
         }
-        yield json.dumps(tool_selection_start_event) + "\n"
+        yield json.dumps(instruction_selection_start_event) + "\n"
 
         # ---------- v2.1.0 ----------
 
@@ -248,55 +248,13 @@ class ConversationService:
             self._logger.info(
                 f"Selected DRIs for conversation {conversation_id}: {selection_message}")
             selected_instructions = selection_message
-        elif status == "missing_input":
-            self._logger.info(
-                f"Missing input for conversation {conversation_id}: {selection_message}")
-            missing_input_event = {
-                "type": "missing_input",
-                "detail": selection_message,
-                "timestamp": str(datetime.now())
-            }
-            yield json.dumps(missing_input_event) + "\n"
-            self.memory_service.add_message(
-                conversation_id, message, role="user")
-            self.memory_service.add_message(
-                conversation_id, selection_message, role="ai")
-            return
-        elif status == "not_supported_task":
-            self._logger.info(
-                f"Unsupported task for conversation {conversation_id}: {selection_message}")
-            not_supported_event = {
-                "type": "not_supported_task",
-                "detail": selection_message,
-                "timestamp": str(datetime.now())
-            }
-            yield json.dumps(not_supported_event) + "\n"
-            self.memory_service.add_message(
-                conversation_id, message, role="user")
-            self.memory_service.add_message(
-                conversation_id, selection_message, role="ai")
-            return
-        elif status == "general":
-            self._logger.info(
-                f"General response for conversation {conversation_id}: {selection_message}")
-            general_event = {
-                "type": "general",
-                "detail": selection_message,
-                "timestamp": str(datetime.now())
-            }
-            yield json.dumps(general_event) + "\n"
-            self.memory_service.add_message(
-                conversation_id, message, role="user")
-            self.memory_service.add_message(
-                conversation_id, selection_message, role="ai")
-            return
 
-        tool_selection_end_event = {
-            "type": "tool_selection_end",
-            "selected_tools": selected_instructions,
+        instruction_selection_end_event = {
+            "type": "instruction_selection_end",
+            "instructions": selected_instructions,
             "timestamp": str(datetime.now())
         }
-        yield json.dumps(tool_selection_end_event) + "\n"
+        yield json.dumps(instruction_selection_end_event) + "\n"
 
         selected_DRIs = []
         for dri_id in selected_instructions:

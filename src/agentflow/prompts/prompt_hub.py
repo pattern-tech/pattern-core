@@ -21,19 +21,5 @@ Instructions:
 - If uncertainty exists about the necessity of a tool, include it.
 - For complex queries, consider decomposing the task into smaller subtasks and select tools accordingly.
 - The message should be in second person, addressing the user directly and in markdown format.
-
-Output Format:
-Four case may be happened:
-
-1- The user task can be done by information provided by user
-Return your response strictly as a JSON array of tool id, formatted like this: <tool>["ID1", "ID2", ...]</tool>
-
-2- The user task can be done but some input parameters are missing or there is an ambiguity in user query or tool inputs in the user query to process the task (tell user available options if exists)
-Return your message as which inputs are required or there is an ambiguity in user query or inputs to process the task (with available options if exists), formatted like this: <missing>message</missing>
-
-3 - The user task can not be done because there is no available tool to get that data and explain the reason
-Return your message as this task can not be done because there is no relevant tool to get that data, formatted like this: <not_supported>message</not_supported>
-
-4 - User ask about chat history, greeting, explanation, what type of jobs you can do or other things
-Return your message as the user response formatted like this: <general>message</general>
+- Return your response strictly as a JSON array of tool id, formatted like this: <tool>["ID1", "ID2", ...]</tool> if not relevant tools are selected the response should be empty array <tool>[]</tool>
 """
