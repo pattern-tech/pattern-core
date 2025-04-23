@@ -32,13 +32,18 @@ def get_mcr() -> List[Dict]:
 
     query = """
     query {
-      schema(where:{id:"%s"}) {
-        attestations {
-          id,
-          decodedDataJson
-        },
-      }
-    }
+        schema(where: {id: "%s"}) {
+            attestations(where: {
+            revoked: {
+                equals: false
+            }
+            })
+            {
+            id
+            decodedDataJson
+            }
+        }
+}
     """ % schema_id
 
     # Prepare the request
@@ -223,7 +228,14 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
             endpoint = json.loads(endpoint)
 
             method = endpoint["METHOD"]
-            data_source = dri["DATASOURCE"]
+            data_source = dri["DATA_SOURCE"]
+
+            query_params = {}
+            for param in endpoint.get("QUERY_PARAMS", []):
+                param_name = param["name"]
+                param_value = input_data.get(param_name, None)
+                if param_value is not None:
+                    query_params[param_name] = param_value
 
             data = endpoint.get("QUERY", {})
             _logger.debug(
@@ -244,6 +256,7 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
                 method=method,
                 url=url,
                 headers=headers,
+                params=query_params,
                 data=json.dumps(data) if data else None,
             )
 
@@ -254,8 +267,7 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
                     f"Non-200 response: {response.status_code}, Content: {response.text[:200]}...")
 
             return {
-                "status_code": response.status_code,
-                "response": response.json() if response.status_code == 200 else response.text
+                str(response.status_code): response.json() if response.status_code == 200 else response.text
             }
 
     except Exception as e:

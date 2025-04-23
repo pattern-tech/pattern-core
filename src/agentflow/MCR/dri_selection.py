@@ -46,6 +46,9 @@ class DRISelector:
         """
         # Get MCR
         MCR = get_mcr_for_llm()
+
+        print(MCR)
+
         self._logger.debug(
             f"Retrieved {len(MCR)} MCR entries for DRI selection")
 
