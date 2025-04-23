@@ -203,7 +203,7 @@ def replace_variables(input_string: str, variables_dict: Dict[str, any]) -> str:
 
 
 @tool
-def retrieve_data(ID: str, input_data: Dict) -> Dict:
+def retrieve_data(ID: str, input_data: Dict = {}) -> Dict:
     """
     Retrieve data from a specified data source using the provided DRI ID and input data.
 
@@ -212,16 +212,36 @@ def retrieve_data(ID: str, input_data: Dict) -> Dict:
         input_data (Dict): Input data for the request, used to populate variable placeholders
 
     Returns:
-        Dict: JSON response from the API
+        Dict: JSON response from the API or error message with missing parameters
     """
     _logger.info(f"Retrieving data using DRI ID: {ID}")
     _logger.debug(f"Input data: {json.dumps(input_data)}")
+
+    # Ensure input_data is not None
+    if input_data is None:
+        input_data = {}
 
     try:
         dri = get_dri(ID)
         if not dri:
             _logger.error(f"No DRI found with the given ID: {ID}")
             raise ValueError(f"No DRI found with the given ID: {ID}")
+
+        # Get the input schema to check for required parameters
+        input_schema = json.loads(dri["INPUT_SCHEMA"])
+        missing_params = []
+
+        # Check if the input schema has required fields
+        if "required" in input_schema and isinstance(input_schema["required"], list):
+            for required_param in input_schema["required"]:
+                if required_param not in input_data:
+                    missing_params.append(required_param)
+
+        # If there are missing parameters, return an error message
+        if missing_params:
+            error_msg = f"Missing required parameters: {', '.join(missing_params)}. Please provide these parameters."
+            _logger.warning(error_msg)
+            return error_msg
 
         if dri["TYPE"] == "REST":
             _logger.debug(f"Processing REST DRI: {ID}")
