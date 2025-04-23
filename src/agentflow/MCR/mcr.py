@@ -110,6 +110,7 @@ def get_mcr_for_llm() -> List[Dict]:
     for DRI in get_mcr():
         MCR_FOR_LLM.append({
             "DESCRIPTION": DRI["DESCRIPTION"],
+            "TAG": DRI["TAG"],
             "INPUT_SCHEMA": json.loads(DRI["INPUT_SCHEMA"]),
             "OUTPUT_SCHEMA": json.loads(DRI["OUTPUT_SCHEMA"]),
             "ID": DRI["ID"]
