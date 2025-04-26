@@ -1,10 +1,14 @@
 import os
+import ast
 import json
 import requests
 
 from langchain.tools import tool
 from typing import List, Dict, Optional, Union
+
 from src.share.logging import Logging
+from src.agentflow.MCR.authentication import APIKeyAuth
+from src.agentflow.MCR.authentication import authenticate
 
 # Initialize logger
 _logger = Logging().get_logger()
@@ -138,28 +142,6 @@ def get_dri(id: str) -> Optional[Dict]:
     return None
 
 
-def authenticate(data_source: str) -> Dict[str, str]:
-    """
-    Provides authentication headers for a specific data source.
-
-    Args:
-        data_source (str): The data source identifier (e.g., "MORALIS")
-
-    Returns:
-        Dict[str, str]: Dictionary with authenticate headers
-    """
-    _logger.debug(f"Generating authentication headers for {data_source}")
-    if data_source == "MORALIS":
-        api_key = os.getenv("MORALIS_API_KEY")
-        if not api_key:
-            _logger.error("MORALIS_API_KEY environment variable not set")
-            raise ValueError("MORALIS_API_KEY environment variable not set")
-        return {
-            "X-API-Key": api_key,
-        }
-    return {}
-
-
 def get_base_url(data_source: str) -> str:
     """
     Returns the base URL for a given data source.
@@ -181,116 +163,182 @@ def get_base_url(data_source: str) -> str:
         raise ValueError(f"Unsupported data source: {data_source}")
 
 
-def replace_variables(input_string: str, variables_dict: Dict[str, any]) -> str:
+def replace_variables(input_string: str, variables_dict: Dict[str, any], input_schema: Dict[str, any]) -> str:
     """
     Replace all occurrences of ${variable_name} in the input string with values from the dictionary.
 
     Args:
         input_string (str): The input string containing variables in ${...} format
         variables_dict (dict): Dictionary containing variable names and their values
+        input_schema (dict): The input schema containing type information for variables
 
     Returns:
         str: The string with all variables replaced by their values
     """
-    _logger.debug("Replacing variables in template string")
-    result = input_string
+    if not variables_dict:
+        return input_string
 
+    # Split the input string to handle first part and rest separately
+    parts = input_string.split(",", 1)
+    first_part = parts[0]
+    second_part = parts[1] if len(parts) > 1 else ""
+
+    # Process each variable replacement
     for var_name, var_value in variables_dict.items():
-        placeholder = "${" + var_name + "}"
-        result = result.replace(placeholder, str(var_value))
+        # Get variable type from schema if available
+        var_type = input_schema.get(var_name, {}).get("type", None)
+
+        # Replace in the first part (always as string without quotes)
+        placeholder = f"${{var_name}}"
+        first_part = first_part.replace(f"${{{var_name}}}", str(var_value))
+
+        # Replace in the second part based on type
+        if var_type == "string":
+            # String values should not have quotes added
+            second_part = second_part.replace(
+                f"${{{var_name}}}", str(var_value))
+        else:
+            # Non-string values need to have their quotes removed
+            second_part = second_part.replace(
+                f'"${{{var_name}}}"', str(var_value))
+
+    # Recombine the parts
+    result = first_part + ("," + second_part if second_part else "")
 
     return result
 
 
+def _validate_required_params(input_schema: Dict, input_data: Dict) -> List[str]:
+    """
+    Validates that all required parameters are present in the input data.
+
+    Args:
+        input_schema (Dict): Schema defining required parameters
+        input_data (Dict): User provided input data
+
+    Returns:
+        List[str]: List of missing parameter names, empty if all required params are present
+    """
+    missing_params = []
+    if "required" in input_schema and isinstance(input_schema["required"], list):
+        for required_param in input_schema["required"]:
+            if required_param not in input_data:
+                missing_params.append(required_param)
+    return missing_params
+
+
+def _process_rest_dri(dri: Dict, input_data: Dict, input_schema: Dict) -> Dict:
+    """
+    Process a REST DRI request.
+
+    Args:
+        dri (Dict): The DRI definition
+        input_data (Dict): User provided input data
+        input_schema (Dict): Schema for input validation
+
+    Returns:
+        Dict: API response or error message
+    """
+    _logger.debug(f"Processing REST DRI: {dri['ID']}")
+
+    try:
+        # Replace variables in endpoint definition
+        endpoint_str = replace_variables(
+            dri["ENDPOINT"], input_data, input_schema)
+        endpoint = ast.literal_eval(endpoint_str)
+
+        # Extract request parameters
+        method = endpoint.get("METHOD", "GET")
+        data_source = dri["DATA_SOURCE"]
+
+        # Prepare request parameters
+        url = f"{get_base_url(data_source)}{endpoint['URL']}"
+        query_params = endpoint.get("QUERY_PARAM")
+        body = endpoint.get("BODY")
+
+        # Get authentication for the data source
+        auth = authenticate(data_source.upper())
+
+        _logger.info(f"Sending {method} request to {url}")
+        _logger.debug(
+            f"Query params: {json.dumps(query_params) if query_params else 'None'}")
+        _logger.debug(f"Request body: {json.dumps(body) if body else 'None'}")
+
+        # Make the request
+        response = requests.request(
+            method=method,
+            url=url,
+            params=query_params,
+            json=body if body else None,
+            auth=auth,
+            timeout=30  # Add timeout for safety
+        )
+
+        _logger.info(
+            f"Received response with status code: {response.status_code}")
+
+        # Handle response based on status code
+        if response.status_code != 200:
+            _logger.warning(
+                f"Non-200 response: {response.status_code}, Content: {response.text[:200]}...")
+
+        # Try to parse as JSON, fall back to text if that fails
+        try:
+            response_data = response.json() if response.status_code == 200 else response.text
+        except json.JSONDecodeError:
+            response_data = response.text
+
+        return {str(response.status_code): response_data}
+
+    except Exception as e:
+        error_msg = f"Error processing REST DRI: {str(e)}"
+        _logger.error(error_msg, exc_info=True)
+        return {"error": error_msg}
+
+
 @tool
-def retrieve_data(ID: str, input_data: Dict = {}) -> Dict:
+def retrieve_data(ID: str, input_data: Dict = None) -> Dict:
     """
     Retrieve data from a specified data source using the provided DRI ID and input data.
 
     Args:
         ID (str): The ID of Data Retrieval Instruction
-        input_data (Dict): Input data for the request, used to populate variable placeholders
+        input_data (Dict, optional): Input data for the request, used to populate variable placeholders
 
     Returns:
         Dict: JSON response from the API or error message with missing parameters
     """
     _logger.info(f"Retrieving data using DRI ID: {ID}")
+
+    # Initialize input_data if None
+    input_data = input_data or {}
     _logger.debug(f"Input data: {json.dumps(input_data)}")
 
-    # Ensure input_data is not None
-    if input_data is None:
-        input_data = {}
-
     try:
+        # Get DRI definition
         dri = get_dri(ID)
         if not dri:
-            _logger.error(f"No DRI found with the given ID: {ID}")
-            raise ValueError(f"No DRI found with the given ID: {ID}")
+            error_msg = f"No DRI found with the given ID: {ID}"
+            _logger.error(error_msg)
+            return {"error": error_msg}
 
-        # Get the input schema to check for required parameters
+        # Parse input schema
         input_schema = json.loads(dri["INPUT_SCHEMA"])
-        missing_params = []
 
-        # Check if the input schema has required fields
-        if "required" in input_schema and isinstance(input_schema["required"], list):
-            for required_param in input_schema["required"]:
-                if required_param not in input_data:
-                    missing_params.append(required_param)
-
-        # If there are missing parameters, return an error message
-        if missing_params:
+        # Validate required parameters
+        if missing_params := _validate_required_params(input_schema, input_data):
             error_msg = f"Missing required parameters: {', '.join(missing_params)}. Please provide these parameters."
             _logger.warning(error_msg)
-            return error_msg
+            return {"error": error_msg}
 
+        # Process REST DRI
         if dri["TYPE"] == "REST":
-            _logger.debug(f"Processing REST DRI: {ID}")
-            endpoint = replace_variables(dri["ENDPOINT"], input_data)
-            endpoint = json.loads(endpoint)
+            return _process_rest_dri(dri, input_data, input_schema)
 
-            method = endpoint["METHOD"]
-            data_source = dri["DATA_SOURCE"]
-
-            query_params = {}
-            for param in endpoint.get("QUERY_PARAMS", []):
-                param_name = param["name"]
-                param_value = input_data.get(param_name, None)
-                if param_value is not None:
-                    query_params[param_name] = param_value
-
-            data = endpoint.get("QUERY", {})
-            _logger.debug(
-                f"Prepared request - Method: {method}, Data source: {data_source}")
-
-            headers = {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-
-            # Add authorization headers
-            headers.update(authenticate(data_source.upper()))
-
-            url = f"{get_base_url(data_source)}{endpoint['URL']}"
-            _logger.info(f"Sending {method} request to {url}")
-
-            response = requests.request(
-                method=method,
-                url=url,
-                headers=headers,
-                params=query_params,
-                data=json.dumps(data) if data else None,
-            )
-
-            _logger.info(
-                f"Received response with status code: {response.status_code}")
-            if response.status_code != 200:
-                _logger.warning(
-                    f"Non-200 response: {response.status_code}, Content: {response.text[:200]}...")
-
-            return {
-                str(response.status_code): response.json() if response.status_code == 200 else response.text
-            }
+        # Handle other DRI types if implemented in the future
+        return {"error": f"Unsupported DRI type: {dri['TYPE']}"}
 
     except Exception as e:
-        _logger.error(f"Error making request: {str(e)}", exc_info=True)
+        _logger.error(
+            f"Error processing retrieve_data: {str(e)}", exc_info=True)
         return {"error": str(e)}
