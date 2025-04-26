@@ -231,11 +231,11 @@ class ConversationService:
         self._logger.debug(
             f"Conversation {conversation_id}: Chat history retrieved, message appended")
 
-        instruction_selection_start_event = {
-            "type": "instruction_selection_start",
-            "timestamp": str(datetime.now())
-        }
-        yield json.dumps(instruction_selection_start_event) + "\n"
+        # instruction_selection_start_event = {
+        #     "type": "instruction_selection_start",
+        #     "timestamp": str(datetime.now())
+        # }
+        # yield json.dumps(instruction_selection_start_event) + "\n"
 
         # ---------- v2.1.0 ----------
 
@@ -249,12 +249,12 @@ class ConversationService:
                 f"Selected DRIs for conversation {conversation_id}: {selection_message}")
             selected_instructions = selection_message
 
-        instruction_selection_end_event = {
-            "type": "instruction_selection_end",
-            "instructions": selected_instructions,
-            "timestamp": str(datetime.now())
-        }
-        yield json.dumps(instruction_selection_end_event) + "\n"
+        # instruction_selection_end_event = {
+        #     "type": "instruction_selection_end",
+        #     "instructions": selected_instructions,
+        #     "timestamp": str(datetime.now())
+        # }
+        # yield json.dumps(instruction_selection_end_event) + "\n"
 
         selected_DRIs = []
         for dri_id in selected_instructions:
