@@ -16,4 +16,4 @@ EXPOSE 8000
 
 ENV MODULE_NAME="src.main"
 
-CMD ["sh", "-c", "make watch prod"]
+CMD ["sh", "-c", "make prod"]

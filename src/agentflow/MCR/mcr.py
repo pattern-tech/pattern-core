@@ -156,11 +156,11 @@ def get_base_url(data_source: str) -> str:
         ValueError: If the data source is not supported
     """
     _logger.debug(f"Getting base URL for data source: {data_source}")
-    if data_source == "MORALIS":
-        return "https://deep-index.moralis.io"
+    if os.getenv(f"{data_source}_BASE_URL" , None):
+        return os.getenv(f"{data_source}_BASE_URL")
     else:
         _logger.error(f"Unsupported data source: {data_source}")
-        raise ValueError(f"Unsupported data source: {data_source}")
+        raise ValueError(f"Unsupported data source: {data_source}. {data_source}_BASE_URL not set")
 
 
 def replace_variables(input_string: str, variables_dict: Dict[str, any], input_schema: Dict[str, any]) -> str:
@@ -189,11 +189,11 @@ def replace_variables(input_string: str, variables_dict: Dict[str, any], input_s
         var_type = input_schema.get(var_name, {}).get("type", None)
 
         # Replace in the first part (always as string without quotes)
-        placeholder = f"${{var_name}}"
+        placeholder = f"${{{var_name}}}"
         first_part = first_part.replace(f"${{{var_name}}}", str(var_value))
 
         # Replace in the second part based on type
-        if var_type == "string":
+        if var_type == "string" and var_value is not None:
             # String values should not have quotes added
             second_part = second_part.replace(
                 f"${{{var_name}}}", str(var_value))
@@ -245,6 +245,7 @@ def _process_rest_dri(dri: Dict, input_data: Dict, input_schema: Dict) -> Dict:
         # Replace variables in endpoint definition
         endpoint_str = replace_variables(
             dri["ENDPOINT"], input_data, input_schema)
+
         endpoint = ast.literal_eval(endpoint_str)
 
         # Extract request parameters
@@ -253,24 +254,34 @@ def _process_rest_dri(dri: Dict, input_data: Dict, input_schema: Dict) -> Dict:
 
         # Prepare request parameters
         url = f"{get_base_url(data_source)}{endpoint['URL']}"
-        query_params = endpoint.get("QUERY_PARAM")
+        query_params = endpoint.get("QUERY_PARAMS")
         body = endpoint.get("BODY")
+
+        # remove keys with None values
+        query_params = {k: v for k, v in query_params.items(
+        ) if v is not None} if query_params else None
+        body = {k: v for k, v in body.items() if v is not None} if body else None
 
         # Get authentication for the data source
         auth = authenticate(data_source.upper())
 
+        headers = {
+            "Content-Type": "application/json"
+        }
+
         _logger.info(f"Sending {method} request to {url}")
-        _logger.debug(
+        _logger.info(
             f"Query params: {json.dumps(query_params) if query_params else 'None'}")
-        _logger.debug(f"Request body: {json.dumps(body) if body else 'None'}")
+        _logger.info(f"Request body: {json.dumps(body) if body else 'None'}")
 
         # Make the request
         response = requests.request(
             method=method,
             url=url,
             params=query_params,
-            json=body if body else None,
+            data=body,
             auth=auth,
+            headers=headers,
             timeout=30  # Add timeout for safety
         )
 
@@ -302,11 +313,11 @@ def retrieve_data(ID: str, input_data: Dict = None) -> Dict:
     Retrieve data from a specified data source using the provided DRI ID and input data.
 
     Args:
-        ID (str): The ID of Data Retrieval Instruction
-        input_data (Dict, optional): Input data for the request, used to populate variable placeholders
+        ID (str): The ID of instruction to retrieve data
+        input_data (Dict, optional): actual data which should be passed according to the input schema
 
     Returns:
-        Dict: JSON response from the API or error message with missing parameters
+        Dict: JSON response from the DRI or error message
     """
     _logger.info(f"Retrieving data using DRI ID: {ID}")
 
