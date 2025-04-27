@@ -47,10 +47,14 @@ class DRISelector:
         # Get MCR
         MCR = get_mcr_for_llm()
 
+        # filter id and description
+        MCR_filtered = [
+            {"ID": DRI["ID"], "DESCRIPTION": DRI["DESCRIPTION"]} for DRI in MCR]
+
         self._logger.debug(
             f"Retrieved {len(MCR)} MCR entries for DRI selection")
 
-        for DRI in MCR:
+        for DRI in MCR_filtered:
             self._logger.debug(
                 f"Available DRI: {DRI['ID']} - {DRI['DESCRIPTION'][:50]}...")
 
@@ -60,7 +64,7 @@ class DRISelector:
             ("human", DRI_SELECTION_USER_PROMPT.format(
                 previous_user_queries=query[:-1],
                 user_task=query[-1],
-                MCR=MCR
+                MCR=MCR_filtered
             ))
         ]
 
