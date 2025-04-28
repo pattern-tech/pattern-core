@@ -122,3 +122,21 @@ class UserRepository(BaseRepository[UserModel]):
             List[WhiteList]: A list of all whitelisted users.
         """
         return db_session.query(WhiteList).all()
+
+    def create_whitelist_entry(self, db_session: Session, user_id: UUID, max_query: int = 20) -> WhiteList:
+        """
+        Creates a whitelist entry for a user with a default max query limit of 20.
+
+        Args:
+            db_session (Session): The database session to use.
+            user_id (UUID): The unique identifier of the user to whitelist.
+            max_query (int): The maximum number of queries allowed for this user.
+
+        Returns:
+            WhiteList: The created whitelist entry.
+        """
+        whitelist_entry = WhiteList(user_id=user_id, max_query=max_query)
+        db_session.add(whitelist_entry)
+        db_session.commit()
+        db_session.refresh(whitelist_entry)
+        return whitelist_entry

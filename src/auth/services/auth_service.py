@@ -81,7 +81,7 @@ class AuthService:
         existing_user = db.query(UserModel).filter_by(
             wallet_address=input.wallet_address).first()
         if existing_user:
-            raise AlreadyExistsError("User already exists")
+            raise AlreadyExistsError("User already exists with this wallet address")
 
         # # Create a new user record
         if input.email and input.password:
