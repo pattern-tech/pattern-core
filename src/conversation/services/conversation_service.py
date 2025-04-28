@@ -30,10 +30,11 @@ class ConversationService:
     def __init__(self):
         self.repository = ConversationRepository()
         self.project_repository = ProjectRepository()
+
+        self.user_service = UserService()
         self.memory_service = MemoryService()
         self.project_service = ProjectService()
         self.query_usage_service = QueryUsageService()
-        self.user_service = UserService()
 
     def create_conversation(
         self, db_session: Session, name: str, project_id: UUID, user_id: UUID, conversation_id: UUID = None

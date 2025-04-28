@@ -59,6 +59,10 @@ class TodayQueryUsage(BaseModel):
     today_query_count: int = Field(..., example=2)
     remaining_query_allowance: int = Field(..., example=3)
     max_query_allowance_per_day: int = Field(..., example=5)
+    # Base allowance from whitelist
+    whitelist_allowance: int = Field(..., example=20)
+    # Additional allowance from staked tokens
+    token_based_allowance: int = Field(..., example=5)
     next_reset_time: datetime = Field(..., example="2025-03-15T15:30:20+03:30")
 
 
@@ -142,14 +146,23 @@ def get_user_daily_query_usages(
         dict: A dictionary containing:
             - today_query_count: Number of queries used today
             - max_query_allowance_per_day: Total number of allowed queries per day
+            - whitelist_allowance: Base query allowance from whitelist (default 20)
+            - token_based_allowance: Additional allowance from staked tokens
             - remaining_queries_today: Number of remaining queries for today
             - next_reset_time: The datetime when the query usage will reset to zero
     """
     try:
-        # Get the max query allowance for this user
-        max_query_allowance = service.get_user_max_query_allowance(db, user_id)
+        # Get the user's base whitelist allowance
+        whitelist_allowance = service.get_user_whitelist_allowance(db, user_id)
 
-        # Get today's query count using the new repository method
+        # Get the token-based allowance using our new dedicated method
+        token_based_allowance = service.get_user_token_based_allowance(
+            db, user_id)
+
+        # Calculate total max query allowance (whitelist + token-based)
+        max_query_allowance = whitelist_allowance + token_based_allowance
+
+        # Get today's query count
         today_query_count, _, next_reset_time = service.get_user_query_count_for_today(
             db, user_id, provider)
 

@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import List
 from sqlalchemy.orm import Session
 
-from src.db.models import UserModel, WhiteList
+from src.db.models import UserModel, WhiteList, UsageSetting
 from src.user.repositories.user_repository import UserRepository
 
 
@@ -13,7 +13,7 @@ class UserService:
     def create_user(self, db_session: Session, wallet_address: str, chain_id: int, email: str = None, password: str = None,
                     ) -> UserModel:
         """
-        Creates a new user.
+        Creates a new user and automatically whitelists them with the default max query value from database.
 
         Args:
             db_session (Session): The database session.
@@ -30,6 +30,16 @@ class UserService:
         _user = UserModel(wallet_address=wallet_address,
                           chain_id=chain_id, email=email, password=password)
         user = self.repository.create(db_session, _user)
+
+        default_max_query = 0
+        usage_settings = db_session.query(UsageSetting).filter(
+            UsageSetting.provider == "pattern").first()
+        if usage_settings:
+            default_max_query = usage_settings.max_query
+
+        # Automatically whitelist the user with the default query credits from database
+        self.repository.create_whitelist_entry(
+            db_session, user.id, max_query=default_max_query)
 
         return user
 

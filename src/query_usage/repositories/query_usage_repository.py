@@ -140,6 +140,25 @@ class QueryUsageRepository(BaseRepository[QueryUsage]):
 
         return result_count, result_oldest, next_reset
 
+    def get_user_whitelist_allowance(self, db_session: Session, user_id: UUID) -> Optional[int]:
+        """
+        Retrieves the user's whitelist max_query allowance directly from the database.
+
+        Args:
+            db_session (Session): The database session to use.
+            user_id (UUID): The unique identifier of the user.
+
+        Returns:
+            Optional[int]: The user's max query allowance from the whitelist, or None if not whitelisted.
+        """
+        from src.db.models import WhiteList
+
+        whitelist_entry = db_session.query(WhiteList.max_query)\
+            .filter(WhiteList.user_id == user_id)\
+            .first()
+
+        return whitelist_entry.max_query if whitelist_entry else None
+
     def update(self, db_session, id: UUID) -> None:
         pass
 

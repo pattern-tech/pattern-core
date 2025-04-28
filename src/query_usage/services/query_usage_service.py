@@ -77,6 +77,9 @@ class QueryUsageService(BaseService):
     def get_user_max_query_allowance(self, db_session: Session, user_id: UUID) -> int:
         """
         Retrieves the maximum number of queries a user is allowed to make.
+        This is calculated as the sum of:
+        1. User's whitelist allowance
+        2. Allowance based on staked Morpheus tokens
 
         Args:
             db_session (Session): The database session.
@@ -84,38 +87,66 @@ class QueryUsageService(BaseService):
 
         Returns:
             int: The maximum number of queries the user is allowed to make.
-
-        Raises:
-            Exception: If the user has not staked any Morpheus tokens.
         """
         user = self.user_service.get_user(db_session, user_id)
 
-        whitelist = self.user_service.get_whitelist(db_session)
+        # Get the user's base whitelist allowance using the dedicated method
+        whitelist_allowance = self.get_user_whitelist_allowance(
+            db_session, user_id)
 
-        # check user payment
-        for wl in whitelist:
-            if str(user_id) == str(wl.user_id):
-                max_allowed_query = wl.max_query
-                return max_allowed_query
+        # Calculate additional allowance based on staked tokens
+        token_based_allowance = self.get_user_token_based_allowance(
+            db_session, user_id)
 
+        # Total allowance is the sum of whitelist allowance and token-based allowance
+        max_allowed_query = whitelist_allowance + token_based_allowance
+
+        return max_allowed_query
+
+    def get_user_token_based_allowance(self, db_session: Session, user_id: UUID) -> int:
+        """
+        Calculates a user's token-based query allowance based on their staked MOR tokens.
+
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user.
+
+        Returns:
+            int: The token-based query allowance (0 if no tokens are staked)
+        """
+        user = self.user_service.get_user(db_session, user_id)
+
+        token_based_allowance = 0
         staked_morpheus = get_user_staked_tokens(
             wallet_address=user.wallet_address.lower(), provider="morpheus")
 
-        if staked_morpheus == 0:
-            raise RateLimitError(
-                "You need to stake Morpheus tokens to use this service")
+        if staked_morpheus > 0:
+            usage_setting = self.get_usage_setting(db_session)
+            for setting in usage_setting:
+                if setting.provider == "morpheus":
+                    token_based_allowance = setting.max_query * \
+                        int(int(staked_morpheus) / 1e18)
+                    break
 
-        usage_setting = self.get_usage_setting(
-            db_session)
+        return token_based_allowance
 
-        max_allowed_query = 0
-        for setting in usage_setting:
-            if setting.provider == "morpheus":
-                max_allowed_query = setting.max_query * \
-                    int(int(staked_morpheus) / 1e18)
-                break
+    def get_user_whitelist_allowance(self, db_session: Session, user_id: UUID) -> int:
+        """
+        Retrieves the base query allowance for a user from the whitelist using a direct database query.
 
-        return max_allowed_query
+        Args:
+            db_session (Session): The database session.
+            user_id (UUID): The ID of the user.
+
+        Returns:
+            int: The base query allowance from the whitelist (default: 0 if not whitelisted)
+        """
+        # Use the repository to directly query the database for whitelist allowance
+        allowance = self.repository.get_user_whitelist_allowance(
+            db_session, user_id)
+
+        # Return the allowance if found, otherwise return 0
+        return allowance if allowance is not None else 0
 
     def get_user_query_count_for_today(self, db_session: Session, user_id: UUID, provider: Optional[str] = None) -> Tuple[int, Optional[datetime]]:
         """
