@@ -12,7 +12,6 @@ from langchain_together import ChatTogether
 from langchain_fireworks import ChatFireworks
 from langchain.agents import create_react_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
 from langchain.agents import (
     create_openai_functions_agent, create_tool_calling_agent, create_react_agent)
 

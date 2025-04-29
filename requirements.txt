@@ -28,7 +28,6 @@ langchain-fireworks==0.2.7
 langchain-google-genai==2.0.7
 langchain-google-vertexai==2.0.9
 langchain-groq==0.2.4
-langchain-huggingface==0.1.2
 sentry-sdk==2.22.0
 siwe==4.4.0
 bcrypt==4.0.1
