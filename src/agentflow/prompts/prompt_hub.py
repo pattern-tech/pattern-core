@@ -18,6 +18,7 @@ Instructions:
 - Only ask for clarification when essential parameters are missing or there is **critical ambiguity** that could lead to incorrect tool usage otherwise do not need confirmation
 - Favor action over inaction: if the ambiguity is minor or manageable, select the most appropriate tools based on available context.
 - If multiple tools are needed, include all of them.
+- IF there are multiple tools that do the same thing include them all.
 - If uncertainty exists about the necessity of a tool, include it.
 - For complex queries, consider decomposing the task into smaller subtasks and select tools accordingly.
 - The message should be in second person, addressing the user directly and in markdown format.

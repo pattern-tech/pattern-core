@@ -258,7 +258,17 @@ class ConversationService:
 
         selected_DRIs = []
         for dri_id in selected_instructions:
-            selected_DRIs.append(get_dri(dri_id))
+            dir = get_dri(dri_id)
+            selected_DRIs.append({
+                "ID": dir["ID"],
+                "TAGS": dir["TAGS"],
+                "DESCRIPTION": dir["DESCRIPTION"],
+                "INPUT_SCHEMA": dir["INPUT_SCHEMA"],
+                "OUTPUT_SCHEMA": dir["OUTPUT_SCHEMA"],
+            })
+
+        print("selected DIRs: ", [{"ID": DRI["ID"], "DESCRIPTION": DRI["DESCRIPTION"]}
+              for DRI in selected_DRIs])
 
         self._logger.info(
             f"Retrieved {len(selected_DRIs)} DRIs for conversation {conversation_id}")
