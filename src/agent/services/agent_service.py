@@ -99,7 +99,7 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         event = {
             "type": "tool_end",
             "tool_name": tool_name,
-            "output": observation,
+            "output": str(observation),
             "timestamp": str(datetime.now())
         }
         # Use NDJSON format

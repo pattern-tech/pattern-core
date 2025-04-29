@@ -14,13 +14,13 @@ from src.db.models import Conversation, QueryUsage
 from src.agentflow.utils.shared_tools import init_llm
 from src.user.services.user_service import UserService
 from src.agentflow.MCR.dri_selection import DRISelector
-from src.agentflow.MCR.mcr import retrieve_data, get_dri
 from src.agent.services.agent_service import AgentService
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
 from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
 from src.conversation.repositories.conversation_repository import ConversationRepository
+from src.agentflow.MCR.mcr import retrieve_data, get_dri, call_contract_function, get_contract_abi
 
 
 class ConversationService:
@@ -278,7 +278,10 @@ class ConversationService:
         self._logger.info(
             f"Creating agent for conversation {conversation_id}, streaming={stream}")
         agent = AgentService(
-            tools=[retrieve_data], MCR=selected_DRIs, memory=memory, streaming=stream)
+            tools=[retrieve_data, call_contract_function, get_contract_abi],
+            MCR=selected_DRIs,
+            memory=memory,
+            streaming=stream)
 
         if stream:
             try:

@@ -32,3 +32,4 @@ langchain-huggingface==0.1.2
 sentry-sdk==2.22.0
 siwe==4.4.0
 bcrypt==4.0.1
+sshtunnel==0.4.0

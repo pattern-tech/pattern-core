@@ -38,18 +38,17 @@ def authenticate(data_source: str) -> Optional[requests.auth.AuthBase]:
 
     data_source = "_".join(data_source.upper().split())
 
+    api_key = os.getenv(f"{data_source}_API_KEY", None)
+
     if data_source == "EVM_API":
-        api_key = os.getenv(f"{data_source}_API_KEY", None)
         _logger.debug(f"Using {data_source} API key for authentication")
-        return APIKeyAuth(api_key)
-    elif data_source == "ERGO_EXPLORER_API_V1":
-        api_key = os.getenv(f"{data_source}_API_KEY", None)
-        _logger.debug(f"Using {data_source} API key for authentication")
+        if not api_key:
+            _logger.error(
+                f"{data_source}_API_KEY environment variable not set")
+            raise ValueError(
+                f"{data_source}_API_KEY environment variable not set")
         return APIKeyAuth(api_key)
     else:
         _logger.info(
             f"No API key found for {data_source}, skipping authentication")
         return None
-    if not api_key:
-        _logger.error(f"{data_source}_API_KEY environment variable not set")
-        raise ValueError(f"{data_source}_API_KEY environment variable not set")
