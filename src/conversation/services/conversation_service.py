@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from langchain_core.messages.human import HumanMessage
 
+from src.share.logging import Logging
 from src.util.configuration import Config
 from src.util.exceptions import NotFoundError
 from src.db.models import Conversation, QueryUsage
@@ -35,6 +36,7 @@ class ConversationService:
         self.memory_service = MemoryService()
         self.project_service = ProjectService()
         self.query_usage_service = QueryUsageService()
+        self.logger = Logging().get_logger()
 
     def create_conversation(
         self, db_session: Session, name: str, project_id: UUID, user_id: UUID, conversation_id: UUID = None
@@ -200,24 +202,35 @@ class ConversationService:
         Raises:
             Exception: If associated project is not found
         """
+        self.logger.info(
+            f"[MESSAGE_PROCESSING_STARTED] user_id={user_id} conversation_id={conversation_id} project_id={project_id} message_type={message_type}")
+
         conversation = self.repository.get_by_id(
             db_session, conversation_id, user_id)
 
         if not conversation:
+            self.logger.error(
+                f"[CONVERSATION_NOT_FOUND] user_id={user_id} conversation_id={conversation_id}")
             raise NotFoundError(
                 "Conversation not found or is not owned by user")
 
         if conversation.project_id != project_id:
+            self.logger.error(
+                f"[PROJECT_MISMATCH] user_id={user_id} conversation_id={conversation_id} expected_project={conversation.project_id} received_project={project_id}")
             raise NotFoundError("Project not found or is not owned by user")
 
         all_user_messages = self.get_history(
             db_session, user_id, conversation_id)
         all_user_messages.append(message)
+        self.logger.info(
+            f"[MESSAGE_HISTORY_LOADED] user_id={user_id} conversation_id={conversation_id} history_length={len(all_user_messages)}")
 
         tool_selection_start_event = {
             "type": "tool_selection_start",
             "timestamp": str(datetime.now())
         }
+        self.logger.info(
+            f"[TOOL_SELECTION_STARTED] user_id={user_id} conversation_id={conversation_id}")
         yield json.dumps(tool_selection_start_event) + "\n"
 
         # Select appropriate tools for the user's message using our new tool selector
@@ -226,6 +239,8 @@ class ConversationService:
 
         # langchain raise exception if the tools list is empty
         if len(selected_tools) == 0:
+            self.logger.info(
+                f"[NO_TOOLS_SELECTED] user_id={user_id} conversation_id={conversation_id} - using default tool")
             selected_tools = [get_current_timestamp]
 
         tool_selection_end_event = {
@@ -233,37 +248,68 @@ class ConversationService:
             "selected_tools": [selected_tool.name for selected_tool in selected_tools],
             "timestamp": str(datetime.now())
         }
+        self.logger.info(
+            f"[TOOL_SELECTION_COMPLETED] user_id={user_id} conversation_id={conversation_id} selected_tools={[tool.name for tool in selected_tools]}")
         yield json.dumps(tool_selection_end_event) + "\n"
 
         memory = self.memory_service.get_memory(conversation_id)
+        self.logger.info(
+            f"[MEMORY_LOADED] user_id={user_id} conversation_id={conversation_id}")
 
+        self.logger.info(
+            f"[AGENT_CREATION_STARTED] user_id={user_id} conversation_id={conversation_id} stream={stream}")
         agent = AgentService(
             tools=selected_tools, memory=memory, streaming=stream)
+        self.logger.info(
+            f"[AGENT_CREATION_COMPLETED] user_id={user_id} conversation_id={conversation_id}")
 
         if stream:
+            self.logger.info(
+                f"[STREAM_PROCESSING_STARTED] user_id={user_id} conversation_id={conversation_id}")
             try:
                 # Stream tokens as they become available.
+                token_count = 0
                 async for token in agent.stream(message):
+                    token_count += 1
                     yield token
+                self.logger.info(
+                    f"[STREAM_PROCESSING_COMPLETED] user_id={user_id} conversation_id={conversation_id} total_tokens={token_count}")
             except Exception as e:
+                self.logger.error(
+                    f"[STREAM_PROCESSING_ERROR] user_id={user_id} conversation_id={conversation_id} error={str(e)}", exc_info=True)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
                 )
         else:
-            result = agent.ask(message)
+            self.logger.info(
+                f"[FULL_PROCESSING_STARTED] user_id={user_id} conversation_id={conversation_id}")
+            try:
+                result = agent.ask(message)
+                self.logger.info(
+                    f"[AGENT_RESPONSE_RECEIVED] user_id={user_id} conversation_id={conversation_id} response_length={len(result['output'])}")
 
-            intermediate_steps = []
-            for step in result["intermediate_steps"]:
-                intermediate_steps.append({
-                    "function_name": step[0].tool,
-                    "arguments": step[0].tool_input,
-                    "output": step[1]
-                })
+                intermediate_steps = []
+                for step in result["intermediate_steps"]:
+                    intermediate_steps.append({
+                        "function_name": step[0].tool,
+                        "arguments": step[0].tool_input,
+                        "output": step[1]
+                    })
+                self.logger.info(
+                    f"[INTERMEDIATE_STEPS_PROCESSED] user_id={user_id} conversation_id={conversation_id} step_count={len(intermediate_steps)}")
 
-            yield {
-                "response": result["output"],
-                "intermediate_steps": intermediate_steps
-            }
+                yield {
+                    "response": result["output"],
+                    "intermediate_steps": intermediate_steps
+                }
+                self.logger.info(
+                    f"[FULL_PROCESSING_COMPLETED] user_id={user_id} conversation_id={conversation_id}")
+            except Exception as e:
+                self.logger.error(
+                    f"[FULL_PROCESSING_ERROR] user_id={user_id} conversation_id={conversation_id} error={str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+                )
 
         query_usage = QueryUsage(
             user_id=user_id,
@@ -271,6 +317,8 @@ class ConversationService:
         )
         self.query_usage_service.create_query_usage(
             db_session, query_usage)
+        self.logger.info(
+            f"[QUERY_USAGE_RECORDED] user_id={user_id} conversation_id={conversation_id} provider=morpheus")
 
     def get_history(
         self,

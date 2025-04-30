@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.share.logging import Logging
 from src.db.sql_alchemy import Database
 from src.auth.utils.get_token import authenticate_user
 from src.util.exceptions import NotFoundError, RateLimitError
@@ -17,6 +18,7 @@ from src.util.response import global_response, GlobalResponse, ExceptionResponse
 
 router = APIRouter(prefix="/playground/conversation")
 database = Database()
+logger = Logging().get_logger()
 
 
 def get_db():
@@ -326,7 +328,7 @@ def update_conversation(
         400: {
                 "model": ExceptionResponse,
                 "description": "Bad request received"
-                }
+            }
     },
 )
 def delete_conversation(
@@ -406,18 +408,27 @@ async def send_message(
         metadata: The chat history metadata.
     """
     try:
+        logger.info(
+            f"[USER_MESSAGE_RECEIVED] user_id={user_id} conversation_id={conversation_id} project_id={project_id} message_type={input.message_type} stream={input.stream}")
 
         max_query_allowance = query_usage_service.get_user_max_query_allowance(
             db, user_id)
 
         is_eligible = query_usage_service.check_user_eligibility(
             db, user_id, max_query_allowance)
+        logger.info(
+            f"[USER_ELIGIBILITY_CHECK] user_id={user_id} is_eligible={is_eligible} max_query_allowance={max_query_allowance}")
+
         if not is_eligible:
+            logger.warning(
+                f"[RATE_LIMIT_EXCEEDED] user_id={user_id} max_query_allowance={max_query_allowance}")
             raise RateLimitError(
                 "You have reached your daily query limit. Please try again tomorrow or stake more to get more credit."
             )
 
         if input.stream:
+            logger.info(
+                f"[STREAMING_RESPONSE_STARTED] user_id={user_id} conversation_id={conversation_id}")
             return StreamingResponse(
                 conversation_service.send_message(db,
                                                   input.message,
@@ -435,6 +446,8 @@ async def send_message(
                 },
             )
         else:
+            logger.info(
+                f"[FULL_RESPONSE_REQUESTED] user_id={user_id} conversation_id={conversation_id}")
             response = None
             async for item in conversation_service.send_message(
                 db,
@@ -447,16 +460,24 @@ async def send_message(
             ):
                 response = item
             metadata = {"intermediate_steps": response["intermediate_steps"]}
+            logger.info(
+                f"[FULL_RESPONSE_COMPLETED] user_id={user_id} conversation_id={conversation_id} steps_count={len(response['intermediate_steps'])}")
             return global_response(content=response["response"], metadata=metadata)
 
     except NotFoundError as e:
+        logger.error(
+            f"[NOT_FOUND_ERROR] user_id={user_id} conversation_id={conversation_id} error={str(e)}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(e)
         )
     except RateLimitError as e:
+        logger.error(
+            f"[RATE_LIMIT_ERROR] user_id={user_id} conversation_id={conversation_id} error={str(e)}")
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(e))
     except Exception as e:
+        logger.error(
+            f"[SEND_MESSAGE_ERROR] user_id={user_id} conversation_id={conversation_id} error={str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
