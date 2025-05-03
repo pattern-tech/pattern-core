@@ -11,6 +11,7 @@ class ToolRegistery:
     """
 
     providers = [
+        "basic",
         "chain_scan",
         "evm_moralis",
         "solana_moralis",

@@ -17,9 +17,9 @@ from src.user.services.user_service import UserService
 from src.agent.services.agent_service import AgentService
 from src.agent.services.memory_service import MemoryService
 from src.project.services.project_service import ProjectService
+from src.agentflow.providers.basic_tools import get_current_timestamp
 from src.project.repositories.project_repository import ProjectRepository
 from src.query_usage.services.query_usage_service import QueryUsageService
-from src.agentflow.providers.chain_scan_tools import get_current_timestamp
 from src.conversation.repositories.conversation_repository import ConversationRepository
 
 

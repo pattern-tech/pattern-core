@@ -85,7 +85,7 @@ def custom_openapi():
 
     openapi_schema = get_openapi(
         title="Pattern-Core API",
-        version="1.0.0",
+        version="2.0.0",
         description="Pattern Core API Documentation for:\n"
                     "- CRUD user, workspace, project, and conversation\n"
                     "- Sending message to agent\n"

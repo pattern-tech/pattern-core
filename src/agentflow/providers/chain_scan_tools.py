@@ -145,40 +145,6 @@ def timestamp_to_block_number(timestamp: int, chain_id: str, api_key: str) -> in
 
 @tool
 @handle_exceptions
-def get_current_timestamp() -> int:
-    """
-    Get the current Unix timestamp.
-
-    Returns:
-        int: The current timestamp.
-    """
-    return int(time.time())
-
-
-@tool
-@handle_exceptions
-def convert_to_timestamp(date_str: str) -> int:
-    """
-    Convert a natural language date string into a Unix timestamp.
-
-    Args:
-        date_str (str): A human-readable date (e.g., "one month ago", "12/3/2020").
-
-    Returns:
-        int: The Unix timestamp corresponding to the provided date.
-
-    Raises:
-        ValueError: If the date string cannot be parsed.
-    """
-    parsed_date = dateparser.parse(date_str)
-    if parsed_date:
-        return int(time.mktime(parsed_date.timetuple()))
-    else:
-        raise ValueError(f"Could not parse the date string: {date_str}")
-
-
-@tool
-@handle_exceptions
 def get_contract_source_code(contract_address: str, chain_id: str) -> str:
     """
     Retrieve the source code of a smart contract.
