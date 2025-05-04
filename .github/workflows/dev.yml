@@ -92,6 +92,7 @@ jobs:
               -e POLYGON_RPC=${{ vars.POLYGON_RPC }} \
               -e FANTOM_RPC=${{ vars.FANTOM_RPC }} \
               -e BASE_RPC=${{ vars.BASE_RPC }} \
+              -e SOLSCAN_API_KEY=${{ secrets.SOLSCAN_API_KEY }} \
               patterntechnology/pattern-core-api:latest
 
             # Wait a few seconds to give the container time to start

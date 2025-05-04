@@ -299,3 +299,15 @@ def init_prompt(llm: Any, agent_type: AgentType):
             return Prompt.PATTERN_CORE_AGENT
         else:
             return Prompt.BLOCKCHAIN_AGENT
+
+
+def log_method(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Green color
+        print(f"\033[32mRunning function: {func.__name__}\033[0m")
+        result = func(*args, **kwargs)
+        print(f"Execution completed. Result: {result}")
+        print("----------------------------------------")
+        return result
+    return wrapper

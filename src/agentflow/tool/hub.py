@@ -11,8 +11,10 @@ class ToolRegistery:
     """
 
     providers = [
+        "basic",
         "chain_scan",
-        "moralis",
+        "evm_moralis",
+        "solana_moralis",
     ]
 
     _tool_selector = None
