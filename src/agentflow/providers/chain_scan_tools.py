@@ -12,32 +12,38 @@ from src.util.configuration import Config
 from src.agentflow.utils.shared_tools import handle_exceptions
 
 
-_config = Config.get_config()
-_ether_scan_config = Config.get_service_config(_config, "ETHER_SCAN")
+supported_chain_ids = chain_ids = [
+    1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614,
+    43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773,
+    56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003,
+    4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101,
+    534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009,
+    167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50,
+    324, 300
+]
+
+
+def _url_ok(
+    url: str,
+    *,
+    only_https: bool = True,
+    no_placeholders: bool = True,
+    banned_substrings: List[str] | None = None,
+) -> bool:
+    if only_https and not url.startswith("https://"):
+        return False
+    if no_placeholders and "${" in url:
+        return False
+    return True
 
 
 def _get_chain_config(chain_id: str) -> Dict:
     _config = {}
-    if chain_id == "1":
-        _config["RPC"] = os.environ["ETH_RPC"]
+
+    if int(chain_id) in supported_chain_ids:
+        _config["RPC"] = get_rpc_url.invoke({"chain_id": int(chain_id)})
         _config["URL"] = "https://api.etherscan.io/v2/api"
         _config["API_KEY"] = os.environ["ETHER_SCAN_API_KEY"]
-    elif chain_id == "42161":
-        _config["RPC"] = os.environ["ARBITRUM_ONE_RPC"]
-        _config["URL"] = "https://api.arbiscan.io/api"
-        _config["API_KEY"] = os.environ["ARBI_SCAN_API_KEY"]
-    elif chain_id == "8453":
-        _config["RPC"] = os.environ["BASE_RPC"]
-        _config["URL"] = "https://api.basescan.org/api"
-        _config["API_KEY"] = os.environ["BASE_SCAN_API_KEY"]
-    elif chain_id == "137":
-        _config["RPC"] = os.environ["POLYGON_RPC"]
-        _config["URL"] = "https://api.polygonscan.com/api"
-        _config["API_KEY"] = os.environ["POLYGON_SCAN_API_KEY"]
-    elif chain_id == "250":
-        _config["RPC"] = os.environ["FANTOM_RPC"]
-        _config["URL"] = "https://api.ftmscan.com/api"
-        _config["API_KEY"] = os.environ["FTM_SCAN_API_KEY"]
     else:
         raise ValueError(f"Invalid chain ID: {chain_id}")
 
@@ -81,7 +87,7 @@ def fetch_contract_source_code(contract_address: str, chain_id: str, api_key: st
 
     Args:
         contract_address (str): The contract address.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
         api_key (str): The decrypted Etherscan API key.
 
     Returns:
@@ -96,6 +102,7 @@ def fetch_contract_source_code(contract_address: str, chain_id: str, api_key: st
         "apikey": api_key
     }
     response = requests.get(url, params=params)
+
     return response.json()["result"][0]
 
 
@@ -144,6 +151,43 @@ def timestamp_to_block_number(timestamp: int, chain_id: str, api_key: str) -> in
 
 
 @tool
+def get_rpc_url(chain_id: int) -> Optional[str]:
+    """
+    Retrieves a valid RPC URL for a specified blockchain network.
+
+    Args:
+        chain_id (int): The chain ID to find an RPC URL for
+    Returns:
+        Optional[str]: A valid RPC URL for the specified chain ID, or None if no
+                      suitable RPC URL was found
+    """
+    source_url = "https://chainlist.org/rpcs.json"
+    resp = requests.get(source_url, timeout=10)
+    resp.raise_for_status()
+    all_chains = resp.json()
+
+    for entry in all_chains:
+        if entry.get("chainId") != chain_id:
+            continue
+
+        for raw in entry.get("rpc", []):
+            # ChainList sometimes gives dicts like {"url": "..."} – normalise
+            rpc_url = (
+                raw
+                if isinstance(raw, str)
+                else raw.get("url")               # most common field
+                or raw.get("address")             # fallback seen in some lists
+                if isinstance(raw, dict)
+                else None
+            )
+            if rpc_url and _url_ok(rpc_url):
+                return rpc_url
+        break  # we found the chain, no acceptable RPCs
+
+    return None
+
+
+@tool
 @handle_exceptions
 def get_contract_source_code(contract_address: str, chain_id: str) -> str:
     """
@@ -151,7 +195,7 @@ def get_contract_source_code(contract_address: str, chain_id: str) -> str:
 
     Args:
         contract_address (str): The contract address.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
 
     Returns:
         str: The contract source code.
@@ -182,7 +226,7 @@ def get_contract_abi(contract_address: str, chain_id: str) -> Dict:
 
     Args:
         contract_address (str): The contract address.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
 
     Returns:
         Dict: The contract ABI.
@@ -213,7 +257,7 @@ def get_abi_of_event(contract_address: str, chain_id: str, event_name: str) -> D
 
     Args:
         contract_address (str): The smart contract address.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
         event_name (str): The name of the event.
 
     Returns:
@@ -244,7 +288,7 @@ def get_contract_events(
 
     Args:
         contract_address (str): The smart contract address.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
         event_name (str): The name of the event to fetch.
         from_block (Optional[int]): The starting block (default: current block - 10).
         to_block (Optional[int]): The ending block (default: current block).
@@ -255,6 +299,8 @@ def get_contract_events(
     Raises:
         Exception: If the event is not found in the contract's ABI.
     """
+    contract_address = Web3.to_checksum_address(contract_address)
+
     api_key = _get_chain_config(chain_id)["API_KEY"]
     abi = fetch_contract_abi(contract_address, chain_id, api_key)
 
@@ -289,7 +335,7 @@ def get_latest_chain_block_number(chain_id: str) -> int:
     Retrieve the latest chain block number.
 
     Args:
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
 
     Returns:
         int: The current block number on the Ethereum mainnet.
@@ -306,7 +352,7 @@ def convert_timestamp_to_block_number(timestamp: int, chain_id: str) -> int:
 
     Args:
         timestamp (int): The Unix timestamp.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
 
     Returns:
         int: The block number closest to the provided timestamp.
@@ -322,7 +368,7 @@ def get_latest_eth_block_hash(chain_id: str) -> str:
     Retrieve the hash of the latest chain block.
 
     Args:
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
 
     Returns:
         str: The hash of the latest block on the Ethereum mainnet.
@@ -340,7 +386,7 @@ def get_block_transactions(block_number: int, chain_id: str, output_include: Lis
 
     Args:
         block_number (int): The block number to retrieve transactions from.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
         output_include (List[str]): List of fields to include in the output.
 
      Returns:
@@ -397,7 +443,7 @@ def decode_transaction_input(transaction_input: str, contract_address: str, chai
     Args:
         transaction_input (str): The input data of the transaction (hex string starting with '0x')
         contract_address (str): The address of the contract that was called in the transaction
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
 
     Returns:
         Dict[str, Any]: A dictionary containing the decoded transaction input with the following fields:
@@ -619,7 +665,7 @@ def call_contract_function(contract_address: str, chain_id: str, function_name: 
 
     Args:
         contract_address (str): The address of the smart contract.
-        chain_id (str): The chain ID can be 1, 42161, 8453, 137, 250
+        chain_id (str): The chain ID can be 1, 11155111, 17000, 2741, 11124, 33111, 33139, 42170, 42161, 421614, 43114, 43113, 8453, 84532, 80094, 80069, 199, 1028, 81457, 168587773, 56, 97, 44787, 42220, 25, 252, 2522, 100, 59144, 59141, 5000, 5003, 4352, 43521, 1287, 1284, 1285, 10, 11155420, 80002, 137, 2442, 1101, 534352, 534351, 57054, 146, 50104, 531050104, 1923, 1924, 167009, 167000, 130, 1301, 1111, 1112, 480, 4801, 660279, 37714555429, 51, 50, 324, 300
         function_name (str): The name of the function to call.
         function_params (Optional[List[Any]]): List of parameters to pass to the function. Default is None (no parameters).
 
