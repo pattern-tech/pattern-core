@@ -9,13 +9,14 @@ from src.agentflow.utils.shared_tools import log_method
 
 # Test constants
 solana_wallet_address = "79hptMY3E6JWvU4dDGQCUT5hDncG4XbyPGyJQXVgUMSd"
-solana_token_address = "DKTfwG6EJmEhVyJopLz895BmS9PY8BRNFCNex1Fvp8Je" 
+solana_token_address = "DKTfwG6EJmEhVyJopLz895BmS9PY8BRNFCNex1Fvp8Je"
 solana_nft_address = "7887a9bb00df7cf53080564fa55c2dc720bba44a6ee1b1b9776e6baecdba32c2"
 # Example transaction hash
 solana_transaction_hash = "4WitbbbytbqsQch7VZfg4SHcgTo6qRw984Q5uEQ5DvdRjg5KCw3VqkBRnggAGZVw6M7kXZsCvdKHq6RPk4YDpAJw"
 solana_collection_id = "degods"  # Example collection ID
 solana_block_number = 180000000  # Example block number
-solana_market_address = "8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6"  # Example market address
+# Example market address
+solana_market_address = "8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6"
 
 
 @log_method
