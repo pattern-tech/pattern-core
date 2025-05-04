@@ -304,7 +304,8 @@ def init_prompt(llm: Any, agent_type: AgentType):
 def log_method(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        print(f"Running function: {func.__name__}")
+        # Green color
+        print(f"\033[32mRunning function: {func.__name__}\033[0m")
         result = func(*args, **kwargs)
         print(f"Execution completed. Result: {result}")
         print("----------------------------------------")
