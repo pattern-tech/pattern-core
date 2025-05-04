@@ -15,6 +15,7 @@ class ToolRegistery:
         "chain_scan",
         "evm_moralis",
         "solana_moralis",
+        "solana"
     ]
 
     _tool_selector = None
