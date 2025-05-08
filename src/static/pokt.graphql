@@ -1,0 +1,5089 @@
+enum CacheControlScope {
+	PUBLIC
+	PRIVATE
+}
+
+enum ErrorLayer {
+	Input
+	Response
+	Datasource
+	Cache
+}
+
+type Error {
+	code: String!
+	message: String!
+	timestamp: String!
+	layer: ErrorLayer!
+	stack_trace: [String]
+}
+
+type PaginationResponse {
+	# True if have a previous page
+	has_previous: Boolean!
+
+	# True if have a next page
+	has_next: Boolean!
+
+	# Cursor of the previous page
+	previous: ID
+
+	# Cursor of the next page
+	next: ID
+	totalCount: Int
+}
+
+type UpdateManyResponse {
+	matched_count: Boolean!
+	modified_count: Boolean!
+	success: Boolean!
+}
+
+input SortInput {
+	# The property you want to sort by
+	property: String!
+
+	# The direction you want to sort. Accept two values: 1 for ascending and -1 for descending
+	direction: Int!
+}
+
+enum FilterOperatorType {
+	# The records should match all the filters
+	AND
+
+	# The records should match at least one of the conditions
+	OR
+}
+
+enum FilterPropertyType {
+	# Equal to
+	EQ
+
+	# Not equal to
+	NE
+
+	# Greater than
+	GT
+
+	# Greater than or equal to
+	GTE
+
+	# Lesser than
+	LT
+
+	# Lesser than or equal to
+	LTE
+
+	# Regex Operation that do no accept options, only the i is set by default
+	REGEX
+
+	# Check if the records have one or more of the passed items in value
+	IN
+
+	# Text search
+	TEXT
+
+	# Check if field exists
+	EXISTS
+}
+
+enum FilterPropertyValueType {
+	# Text
+	STRING
+
+	# Number without decimals
+	INT
+
+	# Number with decimals
+	FLOAT
+
+	# True or false
+	BOOLEAN
+
+	# Date in ISO format
+	DATE
+	NULL
+}
+
+input FilterPropertyInput {
+	# Property to apply the filter
+	property: String!
+
+	# Operator of the filter
+	operator: FilterPropertyType!
+
+	# Type of the value
+	type: FilterPropertyValueType!
+
+	# The value passed here will be converted to the type selected
+	value: String!
+}
+
+input FilterInput {
+	# The operator of the filter. If AND then the records should match all the filters and if OR the records should match at least one of the conditions
+	operator: FilterOperatorType!
+
+	# Set of property filters
+	properties: [FilterPropertyInput!]!
+
+	# Set of filters inputs
+	filters: [FilterInput!]
+}
+
+input ListInput {
+	# Cursor of the page
+	cursor: ID
+
+	# Specify the amount of items you want to receive
+	limit: Int!
+
+	# Array of sort input
+	sort: [SortInput!]
+
+	# With this input you can filter the items
+	filter: FilterInput
+
+	# If true include the total count that match the filter
+	includeCount: Boolean
+}
+
+scalar BigInt
+
+type TotalByType {
+	type: String!
+	total: BigInt!
+}
+
+type Point {
+	point: String!
+	start_date: String!
+	end_date: String!
+}
+
+enum UnitTimeGroup {
+	hour
+	day
+	week
+	month
+	year
+}
+
+enum UnitTimeGroupWithBlock {
+	block
+	hour
+	day
+	week
+	month
+	year
+}
+
+enum UnitTimeGroupWithoutHour {
+	day
+	week
+	month
+	year
+}
+
+input ServiceUrlItemInput {
+	address: String
+	service_url: String
+	service_domain: String
+	status: Int
+	partial_url: String
+	service_urls_count: Int
+}
+
+input NodesSelectionInput {
+	addresses: [String]!
+}
+
+type Account {
+	# ID of the record 
+	_id: ID!
+
+	# Address of the account 
+	address: ID!
+
+	# Height of the last block in which this account was scanned 
+	height: Int!
+
+	# Time of the last block in which this account was scanned 
+	block_time: String!
+
+	# Public key of the account 
+	public_key: ID!
+
+	# Balance (in uPOKT) of the account 
+	amount: BigInt!
+
+	# Time in which this record was parsed from RPC to our database 
+	parse_time: String!
+}
+
+type ListPoktAccountResponse {
+	items: [Account]
+	pageInfo: PaginationResponse
+}
+
+type MigratedApp {
+	# Address of the from/to app 
+	address: String!
+
+	# Chains staked at migration time  
+	chains: [String!]!
+
+	# Tokens staked (in uPOKT) at migration time  
+	tokens: BigInt!
+
+	# Height of the block when the migration occurred  
+	height: BigInt!
+
+	# Datetime of the block when the migration occurred  
+	block_time: String!
+}
+
+type App {
+	# Time of the last block in which this app was scanned 
+	block_time: String!
+
+	# Height of the last block in which this app was scanned 
+	height: Int!
+
+	# Public key of the app 
+	public_key: ID!
+
+	# Address of the app 
+	address: ID!
+
+	# Balance (in uPOKT) of the account of the app 
+	balance: BigInt!
+
+	# Status of the app. Can be three: staked (2), unstaking (1) and unstaked (0) 
+	status: Int!
+
+	# Ids of the chains this app support 
+	chains: [String!]!
+
+	# Tokens (in uPOKT) this app have staked/unstaking 
+	tokens: BigInt!
+
+	# Max amount of relays that a node in a session with this app can serve 
+	max_relays: BigInt!
+
+	# Time in which this app start the unstaking process 
+	unstaking_time: String!
+
+	# Time in which this record was parsed from RPC to our database 
+	parse_time: String!
+
+	# Data of the migration when the app was migrated from another one. 
+	migrated_from: MigratedApp
+
+	# Data of the migration when the app was migrated to another one. 
+	migrated_to: MigratedApp
+
+	# Id of the gateway (Portal) that uses this app 
+	gateway_id: Int
+}
+
+type ListPoktAppResponse {
+	# Apps in this page 
+	items: [App]
+
+	# Info related to the current page of the list 
+	pageInfo: PaginationResponse
+}
+
+type BlockSupply {
+	# Nodes tokens (in uPOKT) staked supply 
+	node_staked: BigInt!
+
+	# Apps tokens (in uPOKT) staked supply 
+	app_staked: BigInt!
+
+	# DAO tokens (in uPOKT) supply 
+	dao: BigInt!
+
+	# Total Stake tokens (in uPOKT) supply 
+	total_staked: BigInt!
+
+	# Total unstaked tokens (in uPOKT) supply 
+	total_unstaked: BigInt!
+
+	# Total tokens (in uPOKT) supply 
+	total: BigInt!
+}
+
+type StakeByChain {
+	# Id of the chain 
+	chain: String!
+
+	# amount of items that support this chain 
+	amount: BigInt!
+}
+
+type Monetary {
+	# Amount of staked tokens in this block 
+	ms: BigInt
+
+	# Amount of tokens in the circulating accounts (wallets) in this block 
+	m0: BigInt
+
+	# Sum of the amount of tokens in the circulating accounts (wallets) and the amount of staked tokens in this block 
+	mb: BigInt
+
+	# Amount of unstaking tokens in this block 
+	mu: BigInt
+}
+
+type StakeWeightSummary {
+	# Stake weight multiplier 
+	weight: Float!
+
+	# Staked nodes with this stake weight multiplier 
+	staked_nodes: BigInt!
+
+	# Unstaking nodes with this stake weight multiplier 
+	unstaking_nodes: BigInt!
+
+	# Staked nodes with this stake weight multiplier 
+	jailed: BigInt!
+
+	# Tokens of the nodes with this stake weight multiplier 
+	tokens: BigInt!
+
+	# Relays served by the nodes with this stake weight multiplier 
+	relays: BigInt!
+
+	# Rewards earned by serving relays by the nodes with this stake weight multiplier 
+	rewards: BigInt!
+}
+
+type CountByCodeError {
+	code: String
+	counter: Int
+}
+
+type BlockRelaysByGatewayAndChain {
+	# Id of the gateway 
+	gateway: Int!
+
+	# Id of the chain 
+	chain: String!
+
+	# Relays 
+	relays: BigInt!
+
+	# Tokens 
+	tokens: BigInt!
+
+	# Service multiplier (relays to token multiplier of the chain, if not defined then the default) 
+	service_multiplier: BigInt!
+	computed_units: Float!
+}
+
+type BlockRelaysByChain {
+	# Id of the chain 
+	chain: String!
+
+	# Relays 
+	relays: BigInt!
+
+	# Tokens 
+	tokens: BigInt!
+
+	# Service multiplier (relays to token multiplier of the chain, if not defined then the default) 
+	service_multiplier: BigInt!
+	computed_units: Float!
+}
+
+type RelaysByChain {
+	# Id of the chain 
+	chain: String!
+
+	# Relays 
+	relays: BigInt!
+}
+
+type Block {
+	# ID of the record 
+	_id: ID!
+
+	# Height of the block 
+	height: Int!
+
+	# Time of the block 
+	time: String!
+
+	# Producer of the block 
+	producer: String
+
+	# Relays to token multiplier param in this block 
+	token_multiplier: Int!
+
+	# Fee multiplier param in this block 
+	fee_multiplier: Float!
+
+	# Blocks per session param in this block 
+	block_per_session: Int!
+
+	# Supported chains param in this block 
+	supported_block_chains: [String!]!
+
+	# Amount of transactions (both valid and invalid) in this block 
+	total_txs: Int!
+
+	# Amount of nodes (staked, jailed, unstaking, unstaked) in this block 
+	total_nodes: Int!
+
+	# Amount of apps (staked, unstaking, unstaked) in this block 
+	total_apps: Int!
+
+	# Amount of accounts in this block 
+	total_accounts: Int!
+
+	# Amount of nodes jailed 
+	nodes_jailed_staked: Int
+
+	# Tokens staked of the nodes jailed 
+	nodes_jailed_staked_tokens: BigInt
+
+	# Amount of unjailed staked nodes 
+	nodes_unjailed_staked: Int
+
+	# Tokens (uPOKT) staked of the unjailed staked nodes 
+	nodes_unjailed_staked_tokens: BigInt
+
+	# Amount of unstaking nodes 
+	nodes_unjailed_unstaking: Int
+
+	# Tokens (uPOKT) of the unstaking nodes 
+	nodes_unjailed_unstaking_tokens: BigInt
+
+	# Amount of staked apps in this block 
+	apps_staked: Int
+
+	# Tokens (uPOKT) of the staked apps 
+	apps_staked_tokens: BigInt
+
+	# Amount of unstaking apps in this block 
+	apps_unstaking: Int
+
+	# Tokens (uPOKT) of the unstaking apps 
+	apps_unstaking_tokens: BigInt
+
+	# Tokens supply data 
+	supply: BlockSupply!
+
+	# Amount of nodes staked by chain 
+	nodes_stake_by_chain: [StakeByChain]!
+
+	# Amount of apps staked by chain 
+	apps_stake_by_chain: [StakeByChain]!
+
+	# Time in which this record was parsed from RPC to our database 
+	parse_time: String!
+
+	# Minutes the block took to be processed 
+	took: Float!
+	verified: Boolean
+
+	# Total relays from proof transactions in this block 
+	total_relays_completed: Int
+	total_challenges_completed: Int
+
+	# Total tokens minted in this block 
+	total_minted: BigInt
+
+	# Amount of valid transactions in this block 
+	total_good_txs: BigInt
+
+	# Amount of invalid transactions in this block 
+	total_bad_txs: BigInt
+
+	# Amount of valid proof transactions in this block 
+	proof_msgs: Int
+
+	# Array of object that contain the amount of invalid transactions by grouped by the result code 
+	bad_txs_count_by_error: [CountByCodeError]
+
+	# Size of the block in bytes 
+	block_size: BigInt
+
+	# Size of the state of this block in bytes 
+	state_size: BigInt
+
+	# Total size (sum block size + state size) in bytes 
+	total_size: BigInt
+
+	# Object that have the monetary fields 
+	monetary: Monetary
+
+	# Chain with more relays in this block 
+	best_chain: String
+
+	# Chain with more computed units in this block 
+	best_computed_unit_chain: String
+
+	# Amount of valid claim transactions in this block 
+	claim_msgs: Int
+
+	# DAO allocation param in this block 
+	dao_allocation: Float
+
+	# Multiplier that tells how many POKT the DAO will receive for each relay 
+	dao_earning_multiplier: Float
+
+	# Array containing the addresses of the new apps in this block 
+	new_apps: [String]
+
+	# Array containing the addresses of the new nodes in this block 
+	new_nodes: [String]
+
+	# Node allocation (100 - DAO allocation - Proposer allocation) in this block 
+	node_allocation: Float
+
+	# Multiplier that tells how many POKT the nodes will receive for each relay the node serves 
+	node_earning_multiplier: Float
+
+	# Proposer percentage param in this block 
+	proposer_allocation: Float
+
+	# Multiplier that tells how many POKT the producer will receive for each relay in the block 
+	proposer_earning_multiplier: Float
+
+	# Service URL of the producer of this block 
+	producer_service_url: String
+
+	# Amount of new apps in this block 
+	total_new_apps: Int
+
+	# Amount of new nodes in this block 
+	total_new_nodes: Int
+
+	# Array containing the relays by chain  
+	total_relays_by_chain: [BlockRelaysByChain]
+
+	# Array containing the relays by gateway and chain  
+	total_relays_by_gateway: [BlockRelaysByGatewayAndChain]
+
+	# Total relays from claim transactions in this block 
+	total_relays_claimed: BigInt
+
+	# Rewards (uPOKT) given to nodes for serving relays 
+	node_rewards: BigInt
+
+	# Rewards (uPOKT) given to block producer for producing the block 
+	producer_rewards: BigInt
+
+	# Rewards (uPOKT) given to DAO 
+	dao_rewards: BigInt
+	total_computed_units: Float
+	delegator_rewards: BigInt
+	returned_fees: BigInt
+
+	# Array that contains a summary of the nodes for every stake weight multiplier on the block 
+	stake_weight_summary: [StakeWeightSummary]
+
+	# Array that contains the each stake weight multipliers on the block 
+	stake_weight_tiers: [Float]
+
+	# Amount of nodes that was unstaked in this block 
+	total_unstaked_nodes: BigInt
+
+	# Amount of apps that was unstaked in this block 
+	total_unstaked_apps: BigInt
+}
+
+type ListPoktBlockResponse {
+	# Blocks on this page 
+	items: [Block]
+
+	# Info related to the current page of the list 
+	pageInfo: PaginationResponse
+}
+
+type PoktscanStatus {
+	# Height of the latest block on the POKTscan database 
+	poktscan_height: BigInt!
+
+	# Height of the latest block on the network 
+	network_height: BigInt!
+
+	# True if POKTscan is synced with the network 
+	is_sync: Boolean!
+
+	# True if POKTscan is syncing it database with the network 
+	is_syncing: Boolean!
+
+	# Show how many blocks behind is POKTscan from the network 
+	blocks_behind: BigInt!
+
+	# Time of the latest block on the POKTscan database
+	time: String
+}
+
+type NodeChainRelays {
+	# Chain Id
+	chain: String!
+
+	# Relays served for this chain id
+	relays: BigInt!
+}
+
+type Delegator {
+	# Address of the account 
+	address: String!
+
+	# Percent of the rewards to share 
+	share: Float!
+}
+
+type PendingClaims {
+	# 0 is for RelaysEvidence and 1 for ChallengeEvidence 
+	evidence_type: Int
+
+	# Height in which the claim will expire 
+	expiration_height: BigInt
+
+	# Height of the session of the claim 
+	session_height: BigInt
+
+	# Amount of relays processed in this claim 
+	total_proofs: BigInt
+
+	# this will be the uPOKT you will receive when the pending claim is processed. Estimated because we do not know if
+	# one parameter that interfere with the nodes earning multiplier (i.e. RelaysToTokenMultiplier) will change
+	estimated_pokt: BigInt
+
+	# Address of the app
+	app: String
+
+	# ChainID of the claim transaction
+	chain: String
+}
+
+type PoktNode {
+	# ID of the record
+	_id: ID!
+
+	# Time of the last block in which this node was scanned
+	block_time: String!
+
+	# Height of the last block in which this node was scanned
+	height: Int!
+
+	# Time in which this record was parsed from RPC to our database
+	parse_time: String!
+
+	# True if the node was the producer of the latest block
+	producer: Boolean!
+
+	# Public key of the node
+	public_key: ID!
+
+	# Address of the node (operator address)
+	address: ID!
+
+	# Address of the output address (if the node is custodial then it output address will be the operator address)
+	output_address: ID!
+
+	# Balance (in uPOKT) of the operator address
+	balance: BigInt!
+
+	# Balance of the output address (if the node is custodial then it output balance will be the operator balance)
+	output_balance: BigInt
+
+	# Status of the node. Can be: staked (2), unstaking (1) and unstaked (0)
+	status: Int!
+
+	# Service URL of the node
+	service_url: String!
+
+	# Service domain of the node
+	service_domain: String!
+
+	# Chain supported by this node
+	chains: [String!]!
+
+	# Tokens (in uPOKT) this node have staked/unstaking
+	tokens: BigInt!
+
+	# Time in which the node start the unstaking process
+	unstaking_time: String!
+
+	# True if the node is jailed
+	jailed: Boolean!
+
+	# How many blocks the node have not sign
+	missed_signing_blocks_counter: Int!
+	index_offset: Int!
+
+	# How many blocks the node have been jailed
+	jailed_blocks_counter: Int!
+
+	# Date time when the node can be unjailed
+	jailed_until: String!
+
+	# Height of the block when the node staked for the first time
+	start_height: Int!
+
+	# Version of the node
+	version: String!
+	missing_blocks: Int
+
+	# History about how many relays a node have served for each chain
+	chains_history: [NodeChainRelays]
+
+	# True if the node is custodial, if false then the node is non custodial
+	custodial: Boolean
+
+	# True if the node was a validator in the latest block
+	validator: Boolean
+
+	# Stake Weight multiplier of the node 
+	stake_weight: Float
+
+	# Claim relays waiting to receive the proof 
+	total_pending_claim_relays: BigInt
+
+	# this will be the uPOKT you will receive when the pending claims are processed. Estimated because we do not know if one
+	# parameter that interfere with the nodes earning multiplier (i.e. RelaysToTokenMultiplier) will change.
+	total_pending_claim_tokens: BigInt
+
+	# Array of pending claims 
+	pending_claims: [PendingClaims]
+
+	# List of delegators of the node staked 
+	reward_delegators: [Delegator]
+}
+
+type PoktNodeDomain {
+	# Domain of the node runner
+	service_domain: String!
+
+	# How many nodes have this domain
+	count: Int
+}
+
+type ListPoktNodeResponse {
+	# Nodes on this page
+	items: [PoktNode]
+
+	# Info related to the current page of the list
+	pageInfo: PaginationResponse
+}
+
+type PoktNodeError {
+	# Address of the node
+	address: ID!
+
+	# Service URL of the node
+	service_url: String!
+
+	# Service domain of the node
+	service_domain: String!
+
+	# ChainId with which the node had the error
+	blockchain: String
+
+	# Date when the error was emitted
+	timestamp: String
+	method: String
+	elapsedtime: Float
+
+	# Error message
+	message: String
+
+	# Public key of the application with which the node had the error
+	applicationpublickey: String
+
+	# Public key of the node
+	nodepublickey: String
+
+	# Error code
+	code: String
+	bytes: Int
+}
+
+type NonCursorPagination {
+	# Page number 
+	page: Int!
+
+	# Amount of items returned in the page
+	pageSize: Int!
+
+	# True if there is another page 
+	hasNext: Boolean!
+}
+
+type ListPoktNodeErrorResponse {
+	items: [PoktNodeError]!
+	pageInfo: NonCursorPagination!
+}
+
+input ListPoktNodeErrorInput {
+	addresses: [String!]!
+	page: Int = 1
+	limit: Int = 20
+	sort: [SortInput!] = []
+}
+
+enum FieldsToSearch {
+	# To search by the height of blocks 
+	height
+
+	# To search by the public key of nodes, accounts and apps 
+	public_key
+
+	# When you don't know for what field do you want to search 
+	unknown
+
+	# To search by the hash of transactions 
+	hash
+
+	# To search by the address of nodes, accounts and apps 
+	address
+}
+
+type SearchItemMeta {
+	# In this field will be the time of the block, if the search item is a block 
+	time: String
+
+	# If the search item is a node, then in this field would be the service url of the node 
+	service_url: String
+
+	# If the search item is a node, then in this field would be the service domain of the node 
+	service_domain: String
+
+	# If the search item is a node, then in this field would be the status of the node (2 for staked, 1 for unstaking and 0 for unstaked 
+	status: Int
+
+	# If the search item is a tx (transaction), then in this field would be the type of the transaction  
+	type: String
+
+	# If the search item is a tx (transaction), then in this field would be the result code of the transaction  
+	result_code: Int
+
+	# If the search item is a tx (transaction), then in this field would be true if the transaction is waiting to be indexed in a block 
+	pending: Boolean
+}
+
+type SearchItem {
+	# Entity of the result item. Can be: block, node, account, tx (for transaction) and app 
+	entity: String!
+
+	# If the search item is a tx (transaction), then in this field would be the hash of the transaction  
+	hash: String
+
+	# If the search item is a node, account or app, then in this field would be the address of the item 
+	address: String
+
+	# If the search item is block, then in this field would be the height of the block  
+	height: BigInt
+
+	# If the search item is a node, account or app and have public key, then in this field would be the public key of the item 
+	public_key: String
+
+	# If the search item is a node, then in this field would be the service domain of the node 
+	service_domain: String
+
+	# If the search item is a node, then in this field would be the service url of the node 
+	service_url: String
+
+	# metadata of the item 
+	meta: SearchItemMeta
+}
+
+input SearchPoktEntitiesInput {
+	# the text for which you would like to search 
+	search_text: String!
+
+	# the field for which you would like to search  
+	search_field: FieldsToSearch!
+
+	# The max amount of items you want to be returned. The max amount is 50, if you pass a greater value than 50 then 50 will be taken as items_to_return. 
+	items_to_return: Int = 25
+}
+
+type Upgrade {
+	# Height in which this feature or version will be activated. Only presented when a version is going to change.
+	Height: BigInt
+
+	# When a version is about to change, this present the version number, but when a feature is going to change this has as value FEATURE.
+	Version: String
+
+	# This has value when a version is about to change. This array when is not null have as item an string that have the
+	# feature key and the height separated with a colon (:). When the height is 0 means the feature has been deactivated.
+	Features: [String]
+}
+
+type Stake {
+	# Chain supported by this node
+	chains: [String]
+
+	# Address of the output address (if the node is custodial then it output address will be the operator address)
+	outputaddress: String
+
+	# Address of the node
+	address: String
+
+	# Service URL of the node
+	serviceurl: String
+
+	# Tokens (in uPOKT) this node have staked.
+	tokens: BigInt
+
+	# List of delegators of the node 
+	reward_delegators: [Delegator]
+}
+
+type AppStake {
+	# Chains staked of this app.
+	chains: [String!]
+
+	# Tokens (in uPOKT) the app staked with.
+	tokens: BigInt
+
+	# Address of the app to where the app was migrated to. 
+	migrated_to: String
+}
+
+type DelegatorReward {
+	address: String!
+	amount: BigInt!
+	share: Float!
+}
+
+type RewardSplit {
+	# Total coins (in uPOKT) pre-split 
+	total: BigInt!
+
+	# Total coins (in uPOKT) pre-split without fees 
+	total_reward: BigInt!
+
+	# Total fees (in uPOKT) 
+	total_fees: BigInt!
+
+	# PIP-32 returned fees (in uPOKT) 
+	returned_fees: BigInt!
+
+	# Amount (in uPOKT) sent to the operator (node address) 
+	operator: BigInt!
+
+	# Amount (in uPOKT) sent to the custodian (output address) 
+	custodian: BigInt!
+
+	# Address of the custodian of the node (output address) 
+	custodian_address: String!
+
+	# Collected fees (in uPOKT) of DAO 
+	dao: BigInt!
+
+	# Collected fees (in uPOKT) of proposer 
+	proposer: BigInt!
+
+	# Amount (in uPOKT) sent to each delegator of the node 
+	delegators: [DelegatorReward!]!
+
+	# Total amount (in uPOKT) sent to the delegators 
+	total_delegator_rewards: BigInt!
+
+	# Relays to token multiplier used for the calculation 
+	chain_rttm: BigInt!
+
+	# Relays to token multiplier source (can be default or per_chain) 
+	chain_rttm_source: String!
+
+	# Result of the division of chain (or default if the chain does not have one) relays to token multiplier by the default relays to token multiplier 
+	service_multiplier: Float!
+
+	# " Result of the multiplication of total relays by service multiplier 
+	computed_units: Float!
+	node_base_multiplier: Float!
+	node_multiplier: Float!
+}
+
+type Transaction {
+	# ID of the record
+	_id: ID!
+
+	# Hash of the transaction
+	hash: String!
+
+	# Height of the block in which the transaction occurred
+	height: BigInt!
+
+	# How many uPOKT was sent. 0 on all transactions except send transactions
+	amount: BigInt
+
+	# Time of the block in which the transaction occurred
+	block_time: String!
+
+	# The address of the account that execute the transaction
+	from_address: String!
+
+	# Index of the transaction in the block
+	index: BigInt!
+
+	# Custom message/description of the transaction that the sender put
+	memo: String
+
+	# Time in which this record was parsed from RPC to our database
+	parse_time: String!
+
+	# Result code of the transaction. If result code is 0 then the transaction is a valid one, otherwise is invalid
+	result_code: BigInt!
+
+	# Address of the account that received the transaction
+	to_address: String!
+
+	# Amount of uPOKT paid as fee
+	total_fee: BigInt!
+
+	# Amount of relays served. This is 0 in all transactions except in claim and proof transactions
+	total_proof: String
+
+	# Amount of uPOTK earned by serving the relays of this transaction. This is 0 in all transactions except in claim and proof transactions
+	total_pokt: BigInt
+
+	# The type of transaction
+	type: String!
+
+	# The chain that the node served relays. This is an empty string in all transactions except in claim and proof transactions
+	chain: String
+
+	# The app that the node served relays. This is an empty string in all transactions except in claim and proof transactions
+	app_public_key: String
+
+	# Hash of the claim transaction. This is an empty string in all transactions except in proof transactions
+	claim_tx_hash: String
+
+	# Height of the block in which the claim transaction will expire
+	expiration_height: BigInt
+
+	# Height of the block in which the node entered in session
+	session_height: BigInt
+
+	# True if the transaction is waiting to be indexed in a block
+	pending: Boolean
+
+	# If the type of the transaction is change_param then the key of the parameter changed in the transaction will be in this field
+	change_param_key: String
+
+	# If the type of the transaction is change_param then the value of the parameter changed in the transaction will be in this field
+	change_param_value: String
+
+	# If the type of the transaction is change_param then the previous value of the parameter changed in the transaction will be in this field
+	change_param_prev_value: String
+
+	# Info related to upgrade transactions
+	upgrade: Upgrade
+
+	# Info related to stake transactions
+	stake: Stake
+
+	# Action of the dao transfer transactions 
+	action: String
+
+	# Info related to app stake transactions 
+	app_stake: AppStake
+
+	# Reward split info, only presented in claim and proof transactions 
+	reward_split: RewardSplit
+}
+
+type ListPoktTransactionResponse {
+	# Transactions on the current page
+	items: [Transaction]
+
+	# Info related to the current page of the list
+	pageInfo: PaginationResponse
+}
+
+type Transfer {
+	# Hash of the transaction 
+	tx_hash: String!
+
+	# Height of the block in which the transaction occurred 
+	height: Int!
+
+	# How many uPOKT was sent. 
+	amount: BigInt
+
+	# Time of the block in which the transaction occurred 
+	block_time: String!
+
+	# The address of the account that execute the send transaction 
+	from_address: String!
+
+	# Custom message/description of the transaction that the sender put 
+	memo: String
+
+	# Time in which this record was parsed from RPC to our database 
+	parse_time: String!
+
+	# Result code of the transaction. If result code is 0 then the transaction is a valid one, otherwise is invalid 
+	tx_result_code: Int!
+
+	# Address of the account that received the transaction 
+	to_address: String!
+
+	# Amount of uPOKT paid as fee 
+	fee: BigInt!
+
+	# True if the transaction is waiting to be indexed in a block 
+	pending: Boolean
+
+	# This field will have value only when a node selection is passed.
+	# In when a address of the node selection is the to_address, out when a address of the node selection is the from_address.
+	flow: String
+}
+
+type ListPoktTransferResponse {
+	# Transactions on the current page 
+	items: [Transfer]
+
+	# Info related to the current page of the list 
+	pageInfo: PaginationResponse
+}
+
+type Query {
+	# Get an account by it address or public key
+	GetAccount(address: ID, public_key: ID): Account
+
+	# List all the accounts in the history of the Pocket Network
+	ListPoktAccount(pagination: ListInput): ListPoktAccountResponse!
+
+	# List all the transactions in the history of the Pocket Network
+	ListPoktTransaction(pagination: ListInput): ListPoktTransactionResponse
+
+	# Get a transaction by its hash
+	GetPoktTransaction(hash: ID!): Transaction
+
+	# List all the transfers (send transactions) in the history of the Pocket Network
+	ListPoktTransfer(pagination: ListInput): ListPoktTransferResponse
+
+	# Get a send transaction by its hash
+	GetPoktTransfer(tx_hash: ID!): Transfer
+
+	# Get a node by its address
+	# or service_url
+	GetPoktNode(property: String, value: ID!): PoktNode
+
+	# List all the nodes in the history of the Pocket Network
+	ListPoktNode(pagination: ListInput): ListPoktNodeResponse
+
+	# Get the sync status of POKTscan with the Pocket Network
+	GetPoktscanStatus: PoktscanStatus
+
+	# Get the domains that match with the search string passed and how many nodes have that domain
+	ListPoktNodeDomains(search: String): [PoktNodeDomain]
+
+	# List all the apps in the history of the Pocket Network
+	ListPoktApp(pagination: ListInput): ListPoktAppResponse!
+
+	# Get an app by it address
+	GetPoktApp(address: ID!): App
+
+	# List all the blocks in the history of the Pocket Network
+	ListPoktBlock(pagination: ListInput): ListPoktBlockResponse!
+
+	# Get a block by it height
+	GetPoktBlock(height: Int!): Block
+
+	# Search for nodes, accounts, blocks, apps and transactions.
+	GetSearchPoktEntities(input: SearchPoktEntitiesInput!): [SearchItem]!
+
+	# List the errors of the specified nodes.
+	ListPoktNodeError(input: ListPoktNodeErrorInput!): ListPoktNodeErrorResponse!
+
+	# Get the raw result of a transaction 
+	GetRawPoktTransaction(hash: String!): String
+
+	# Get the raw result of an account. If height not provided then the result of the last block is returned. 
+	GetRawPoktAccount(address: String!, height: Int): String
+
+	# Get the raw result of a node. If height not provided then the result of the last block is returned. 
+	GetRawPoktNode(address: String!, height: Int): String
+
+	# Get the raw result of an app. If height not provided then the result of the last block is returned. 
+	GetRawPoktApp(address: String!, height: Int): String
+
+	# Get the raw result of an block. If height not provided then the result of the last block is returned. 
+	GetRawPoktBlock(height: Int): String
+
+	# List the total of transactions by type between the date range specified.
+	# If the strings of dates does not coincided with the format you will get an error.
+	# Learn more about the format on the date_format input.
+	GetTotalOfTransactionsByTypeBetweenDates(input: ListTotalOfTransactionsByTypeBetweenDatesInput!): [TotalByType]
+
+	# List the total of transactions between the date range specified.
+	# # If the strings of dates does not coincided with the format you will get an error.
+	# # Learn more about the format on the date_format input.
+	ListTotalOfTransactionBetweenDates(input: ListTotalOfTransactionBetweenDatesInput!): ListTotalOfTransactionBetweenDatesResponse!
+
+	# Get a summary of nodes grouped by their version.
+	GetNodesVersionReport: NodeVersionList
+
+	# Get a summary of validator nodes grouped by their version.
+	GetNodesConsensusReport: NodeConsensusResponse!
+
+	# Get data of nodes grouped by largest node runners (domains).
+	ListLargestNodeRunners(input: ListLargestNodeRunnersInput = { top: 50, sort_by: power}): LargestNodeRunnersList
+
+	# Get the average of tokens staked by apps in the latest block of the date range selected and the average of relays by apps staked between the date range.
+	GetStakedAndRelaysByAppsAveragesBetweenDates(input: GetStakedAndRelaysByAppsAveragesBetweenDatesInput!): StakedAndRelaysAverages!
+
+	# Select apps with the filter input and with this apps you would get the total and average of tokens staked by apps in
+	# the latest block and the average of relays by the apps staked between the date range.
+	GetStakedAndRelaysByAppsAveragesByFilter(input: GetStakedAndRelaysByAppsAveragesByFilterInput): StakedAndRelaysAveragesAndTotals!
+
+	# List how many apps support a chain in a certain block. If you no specify a block,
+	# you will get the data based on the latest block.
+	ListChainDistributionForApps(input: ListChainDistributionForAppsInput): [ChainDistributionForApp!]!
+
+	# Divide the amount of apps in segments (ranges) based on the relays they have done between the date range
+	GetAppsRelaysBySegmentsBetweenDates(input: GetAppsRelaysBySegmentsBetweenDatesInput!): [Segment!]!
+
+	# Select nodes with the filter input and you will receive the sum of balance and tokens of that nodes
+	GetNodesTotalBalanceAndTokensByFilter(input: GetNodesTotalBalanceAndTokensByFilterInput): TotalBalanceAndTokens!
+
+	# Select accounts with the filter input and you will receive the sum of balance of that accounts
+	GetAccountsTotalBalanceByFilter(input: GetAccountsTotalBalanceByFilterInput): TotalBalance!
+
+	# List accounts with their percentage of how many pokt their have in comparison of the
+	# total of pokt that all the accounts (wallets) had on the latest block.
+	GetTopAccountsByBalance(input: GetAccountsDistributionByAmountInput = { top: 5}): [AccountDistribution]!
+
+	# Get rewards info grouped by chain between the date range selected.
+	GetChainsRewardsBetweenDates(input: GetChainsRewardsBetweenDatesInput!): [ChainRewards]!
+
+	# Get data related to the network in general, between the date range selected and grouped by the unit time and interval selected.
+	# View the fields comments to be able to understand what this query return.
+	ListSummaryBetweenDates(input: SummaryWithBlockInput!): SummaryResponse!
+
+	# Get data related to the network in general, between the date range selected. View the fields comments to be able to understand what this query return.
+	GetNetworkSummaryBetweenDates(input: GetNetworkSummaryBetweenDatesInput!): NetworkSummary
+
+	# Get the latest block and validator data
+	GetLatestBlock: LatestBlock!
+
+	# Get the amount of nodes by stake weight.
+	# You can pass a block height. If you do not pass a block height, the last block will be considered.
+	GetServicerStakeWeightDistribution(input: GetServicerStakeWeightDistributionInput): GetServicerStakeWeightDistributionResponse
+
+	# Get the latest report of the network earn performance. The average of pokt no consider the stake weight multiplier, it just the base pokt (relays * base node multiplier)
+	GetNetworkEarnPerformanceReport: NetworkEarnPerformance!
+
+	# Get the amount of nodes validators divided by segments (ranges) of the staked tokens.
+	# Each range have the length of the average unless is the first and last segment.
+	GetValidatorsStakedTokensDistribution: GetValidatorsStakedTokensDistributionResponse!
+
+	# List the history of changes for nodes
+	ListPoktNodeHistory(input: HistoryInput!): ListHistoryResponse!
+
+	# Get totals and averages of the relays and rewards generated by staked nodes grouped by their bin (stake weight multiplier) between dates.
+	GetRewardsByStakeWeightBetweenDates(input: GetRewardsByStakeWeightBetweenDatesInput!): [StakeWeightRewardsItem]!
+
+	# Get a summary for the nodes selection you pass.
+	# If you pass addresses then service_urls, service_domain and output_address are not considered.
+	# If you pass service_domain then service_urls and output_address are not considered.
+	# If you pass output_address then service_urls is not considered.
+	GetSummaryForNodeSelection(input: NodeSelectionInput!): SummaryForNodeSelection!
+
+	# Get total and avg of the relays and rewards for the selected nodes.
+	# If you pass addresses then service_urls, service_domain and output_address are not considered.
+	# If you pass service_domain then service_urls and output_address are not considered.
+	# If you pass output_address then service_urls is not considered.
+	GetStakeWeightRewardsForSelection(input: NodeSelectionInput!): GetStakeWeightRewardsForSelectionResponse!
+
+	# Get rewards data of the network grouped by chain and by unit between the date range selected.
+	GetChainRewardsByUnitBetweenDates(input: GetChainRewardsByUnitBetweenDatesInput!): GetChainRewardsByUnitBetweenDatesResponse!
+
+	# Get rewards data of your selected nodes grouped by chain and by unit between the date range selected.
+	GetChainRewardsForSelectionByUnitBetweenDates(input: GetForSelectionByUnitWithoutHourBetweenDatesInput!): GetChainRewardsForSelectionByUnitBetweenDatesResponse!
+
+	# Get rewards data grouped by chain for the selected nodes in the date range selected.
+	GetChainsRewardsForSelectionBetweenDates(input: NodeSelectionBetweenDatesInput!): [ChainRewardsForSelection]!
+
+	# Divide the amount of nodes in segments (ranges) based on the relays they have done between the last 24 hours for the selected nodes
+	GetNodeRelaysBySegmentsForSelectionOnLast24hrs(input: GetNodeRelaysBySegmentsForSelectionOnLast24hrsInput!): [SegmentNode!]!
+
+	# Get the total rewards grouped by the selected nodes in the date range specified
+	GetTotalRewardsForSelectionBetweenDates(input: GetForSelectionByUnitWithoutHourBetweenDatesInput!): GetTotalRewardsForSelectionBetweenDatesResponse!
+
+	# Get the amount of nodes validators divided by segments (ranges) of the staked tokens only considering the selected nodes.
+	# Each range have the length of the average unless is the first and last segment.
+	GetValidatorsStakedTokensDistributionForSelection(input: NodeSelectionInput!): GetValidatorsStakedTokensDistributionResponse!
+
+	# List transactions of the pokt network passing the nodes selected as an OR filter to filter the transactions using in from_address and to_address the addresses of the nodes selected
+	ListPoktTransactionForSelection(input: ListPoktTxPaginationForSelectionInput!): ListPoktTransactionResponse
+
+	# List transfer of the pokt network passing the nodes selected as an OR filter to filter the transactions using in from_address and to_address the addresses of the nodes selected
+	ListPoktTransferForSelection(input: ListPoktTxPaginationForSelectionInput!): ListPoktTransferResponse
+
+	# Get a summary of the transactions that were sent or received by the selected nodes
+	GetTransactionSummaryForSelectionBetweenDates(input: GetTransactionSummaryForSelectionBetweenDatesInput!): TransactionSummary!
+
+	# List the performance of the nodes
+	ListNodePerformance(pagination: ListInput!): ListNodePerformanceResponse!
+
+	# Get a node performance by its address or service_url
+	GetNodePerformance(property: String, value: ID!): NodePerformance
+
+	# List the performance of the selected nodes by passing an AND filter to filter the nodes performance using the nodes addresses
+	ListNodePerformanceForSelection(input: ListPoktPaginationForSelectionInput!): ListNodePerformanceResponse
+
+	# List all relays items (valid proof transactions) in the history of the Pocket Network
+	ListPoktRelays(pagination: ListInput!): ListPoktRelayResponse!
+
+	# Select nodes with the node_selection input and add more filters using the filter input and you would get the total and average of tokens staked by nodes in
+	# the latest block and the average of relays by the nodes in the last 24 hours.
+	GetAvgAndTotalsOfStakeAndRelaysForSelectionInLast24hrs(input: GetAvgAndTotalsOfStakeAndRelaysForSelectionInLast24hrsInput!): StakedAndRelaysAveragesAndTotals!
+
+	# Get the total relays served by the selected nodes in their history grouped by chain
+	GetRelaysByChainInHistoryForSelection(input: NodeSelectionInput!): [NodeChainRelays]!
+
+	# Get a rewards summary for the selected nodes grouped by the unit time selected and between the date ranges selected
+	GetRewardsReportForSelectionByUnitBetweenDates(input: GetForSelectionByUnitWithoutHourBetweenDatesInput!): GetRewardsReportForSelectionBetweenDatesResponse!
+
+	# Get the addresses of the selected nodes grouped by their output address and/or their stake weight multiplier.
+	GetAddressesByOutputAndWeightForSelection(input: NodeSelectionInput): GetAddressesByOutputAndWeightForSelectionResponse!
+
+	# List the node gateway errors in the last 3 days
+	ListPoktNodeGatewayError(pagination: ListInput): ListPoktNodeGatewayErrorResponse
+
+	# List the node gateway errors in the last 3 days of the selected nodes by passing an AND filter to filter the nodes gateway errors using the nodes addresses
+	ListPoktNodeGatewayErrorForSelection(input: ListPoktPaginationForSelectionInput!): ListPoktNodeGatewayErrorResponse
+
+	# Get a health summary for the selected nodes. We use the start_date and end_date as the date range to count the amount of errors this nodes had between the date range.
+	GetHealthSummaryForSelection(input: NodeSelectionBetweenDatesInput!): HealthSummaryNodeSelection!
+
+	# Metrics grouped by gateway and by chain only considering the selected nodes. At this moment we only store the data for the last 72 hours. This data is slow to process so we do it every few hours.
+	GetMetricsByGatewayAndChainForSelection(input: NodeSelectionInput!): GetMetricsByGatewayAndChainForSelectionResponse!
+
+	# Metrics grouped by gateway and by chain considering all the nodes in the network. At this moment we only store the data for the last 72 hours. This data is slow to process so we do it every few hours.
+	GetMetricsByGatewayAndChainForNetwork: GetMetricsByGatewayAndChainForSelectionResponse!
+
+	# Get the amount of relays by chain and the amount of relays by chain and by gateway in the last 72 hours of the network.
+	GetRelaysByChainAndGatewayReport: GetRelaysByChainAndGatewayReportResponse!
+
+	# Get the rewards and relays for the node selection between the specified date range and grouped by the selected granularity.
+	GetRewardsByGranularityForSelectionBetweenDates(input: GetRewardsByGranularityForSelectionBetweenDatesInput!): RewardsForSelection!
+
+	# Get the array of addresses by passing the group id of that array
+	GetNodeAddressesByGroup(input: GetNodeAddressesByGroupInput!): [String!]!
+
+	# List the node and app growth by chain between the date range specified.
+	ListNodeAndAppGrowthByChainBetweenDates(input: ListNodeAndAppGrowthByChainBetweenDatesInput!): ListNodeAndAppGrowthByChainBetweenDatesResponse!
+
+	# Get the amount of staked nodes and apps by chain in the last block.
+	GetStakedNodesAndAppsByChain(input: GetStakedNodesAndAppsByChainInput!): GetStakedNodesAndAppsByChainResponse!
+
+	# Get network performance data report by chains.
+	GetChainsNetworkDataReport(input: GetChainsNetworkDataReportInput!): [ChainNetworkDataReportSummary]!
+
+	# Get Chains Performance Report for the last 30 days and last 24 hours.
+	GetChainsPoktEarnPerformanceReport(chain: String!): GetChainsPoktEarnPerformanceReportResponse!
+
+	# Get Pokt Network parameters with their current values.
+	GetLastBlockPoktParams: GetLastBlockPoktParamsResponse!
+
+	# Get an array of all active chains in the network with their activation time and height.
+	GetActiveChains: [ActiveChainItem]!
+
+	# List dao expenses amount in uPOKT between the date range specified.
+	ListDaoExpensesBetweenDates(input: SummaryWithBlockInput!): ListDaoExpensesBetweenDatesResponse!
+
+	# List dao burn amount in uPOKT between the date range specified.
+	ListDaoBurnBetweenDates(input: SummaryWithBlockInput!): ListDaoBurnBetweenDatesResponse!
+
+	# Get the supply summary passing the start date and using the current date as end date
+	GetSupplySummaryFromStartToCurrentDate(input: GetSupplySummaryFromStartDateInput!): GetSupplySummaryFromStartDateResponse!
+
+	# Get the DAO treasury by the blocks between the provided date range.
+	GetDaoBalanceByBlockBetweenDates(input: BetweenDatesInput!): [AmountByBlock!]!
+
+	# Get POKT price related data such as price in usd and the percent change in the last 24hs.
+	GetPoktPriceInfo: GetPoktPriceInfoResponse!
+
+	# List app burn rate by unit between the provided date range.
+	ListAppBurnRateBetweenDates(input: ListAppBurnRateBetweenDatesInput!): ListAppBurnRateBetweenDatesResponse
+
+	# Get relevant data grouped by domain in the latest block.
+	GetDataByDomain: GetDataByDomainResult!
+
+	# Get relays grouped by gateway and chain between the date range selected.
+	GetRelaysByGatewayAndChainBetweenDates(input: GetChainsRewardsBetweenDatesInput!): [RelaysByGatewayAndChain]!
+
+	# Get relays of the network grouped by gateway and by unit between the date range selected.
+	ListRelaysByGatewayAndUnitBetweenDates(input: ListRelaysByGatewayAndUnitBetweenDatesInput!): ListRelaysByGatewayAndUnitBetweenDatesResponse!
+
+	# Get the balance of the Wrapped uPOKT account vault (2eb054616797de8565506333afb334655e7774ed) by unit time between the date range selected.
+	ListWrappedPoktBalanceByUnitBetweenDates(input: ListWrappedPoktBalanceByUnitBetweenDatesInput!): ListWrappedPoktBalanceByUnitBetweenDatesResponse!
+
+	# Get the nodes that delegates rewards to the address passed as input and the percent of rewards the nodes delegates. 
+	GetNodesDelegateRewardsToAccount(
+	# Address of the account 
+	address: String!
+	): [PercentByAddress!]!
+
+	# Get the accounts the nodes in the input has as delegators. 
+	GetDelegatorsBySelection(input: NodeSelectionInput!): [DelegatorsBySelectionItem!]!
+
+	# Get the rewards the delegators of the nodes in the selection received in the last 48, 24 and 6 hours. 
+	GetRewardsOfDelegatorsBySelection(input: NodeSelectionInput!): [RewardsPerHourByAddress!]!
+
+	# Get the rewards generated by the selected nodes in the date range specified
+	# grouped by address (the account that received the rewards, it can be delegators, operator, custodian)
+	GetRewardsByAddressForSelectionBetweenDates(input: GetForSelectionByUnitWithoutHourBetweenDatesInput!): GetRewardsByAddressForSelectionBetweenDatesResponse!
+
+	# Get the pending balance of the accounts in the selection.
+	# You can search by accounts using addresses and by nodes using the other fields.
+	GetPendingBalanceByAddressForSelection(input: NodeSelectionInput!): [PendingBalanceByAddress!]!
+
+	# Get a summary of the transfers that were sent or received by the selected accounts or nodes
+	GetTransferSummaryForSelectionBetweenDates(input: GetTransactionSummaryForSelectionBetweenDatesInput!): TransferSummaryResponse!
+
+	# Get all the gateway regions we scrape to have their metrics.
+	GetAllGatewayRegions: [GatewayRegion!]!
+
+	# Get the gateway metrics report where the values are group by the region and the chain.
+	# You can pass a gateway id if you want to consider only one gateway.
+	GetLast24hGatewayMetrics(gateway_id: Int): [GatewayMetrics!]!
+
+	# Get the gateway metrics report where the values are group by the region and gateway.
+	# You must pass a chain id to filter the data by this chain.
+	GetLast24hGatewayMetricsByChain(chain: String!): [GatewayMetricsByChain!]!
+
+	# Get the gateway metrics report by the nodes you specify where the values are group by the region and the chain.
+	# You can pass a gateway id if you want to consider only one gateway.
+	GetLast24hGatewayMetricsByNodeSelection(input: GetLast24hGatewayMetricsByNodesInput!): [GatewayMetrics!]!
+
+	# List the errors that we have received from the different gateways filtering by selected nodes
+	ListNodeErrorsFromGatewayMetrics(input: ListPoktPaginationForSelectionInput!): ListErrorsFromGatewayMetricsResponse!
+
+	# Get the list of domains for the selected nodes 
+	GetServiceDomainsByNodeSelection(input: GetServiceDomainsByNodeSelectionInput!): [String!]!
+
+	# Get a result of what services you should stake to get the best results for your nodes
+	GetWhatToStake(input: WtsProcessRequestInput!): WtsOptimizationResponse!
+	GetDelegatorRewardsBetweenDates(input: GetDelegatorRewardsBetweenDatesInput!): [DelegatorRewards!]!
+
+	# Get a summary of the chain.
+	GetChainSummary(chain: String!): ChainSummary!
+}
+
+type AccountDistribution {
+	# This will be the address of the account or the string "Others" specifying that all the accounts that are not in one point are grouped in this point 
+	point: String!
+
+	# Balance (in uPOKT) of the account or the sum of balance of all the accounts considered in the point "Others" 
+	balance: BigInt!
+
+	# Percentage of the balance of the account or the percentage of the sum of balance of all the accounts considered in the point "Others" 
+	percentage: Float!
+}
+
+input GetAccountsDistributionByAmountInput {
+	# How many accounts you would like to get in order descending by the balance. Also you would receive another point called "Other" to group all the accounts not considered on the top 
+	top: Int = 5
+}
+
+type TotalBalance {
+	# Sum of the balance (in uPOKT) of the accounts
+	total_balance: BigInt!
+}
+
+input GetAccountsTotalBalanceByFilterInput {
+	# Input to be able to specify the filter of the accounts you want to be considered
+	filter: FilterInput!
+}
+
+input BetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+
+	# By default is false. When false, the start date you pass is converted to the start of the day and the end date is converted
+	# to the end of the day. When true, the start and end date are considered as you pass.
+	# Example: When false, if you pass the start date as 2023-05-05 and end date as 2023-05-06 the query will cover the following
+	# range from 2023-05-05T00:00:00.000Z to 2023-05-06T23:59:59.999Z and when true, if you pass the start date as 2023-05-05 and
+	# end date as 2023-05-06 the query will cover the following range from 2023-05-05T00:00:00.000Z to 2023-05-06T00:00:00.000Z.
+	exclusive_date: Boolean = false
+}
+
+type AmountByBlock {
+	# Height of the block. 
+	point: String!
+
+	# Amount (in uPOKT). 
+	amount: BigInt!
+
+	# Height of the block. 
+	height: BigInt!
+
+	# Time of the block. 
+	block_time: String!
+}
+
+type StakedAndRelaysAverages {
+	# Average of the tokens (in uPOKT) staked by the apps staked in the highest block
+	avg_staked: Float!
+
+	# Average of relays by the apps staked. This is a weighted average where we sum the amount of relays of every block and divide it by the sum of apps staked on every block and then multiply this value with the amount of blocks
+	avg_relays: Float!
+}
+
+type StakedAndRelaysAveragesAndTotals {
+	# Average of the tokens (in uPOKT) staked by the apps/nodes staked in the latest block
+	avg_staked: Float!
+
+	# Total tokens (in uPOKT) staked by apps/nodes in the latest block
+	total_staked: BigInt!
+
+	# Average of relays by the apps/nodes staked. To get this average we sum the amount of relays between the last hours selected, divide it by the division of the sum of hours working of each app/node between the hours selected by the hours selected
+	avg_relays: Float!
+
+	# Sum of the relays in the last hours selected
+	total_relays: BigInt!
+}
+
+input GetStakedAndRelaysByAppsAveragesBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+input GetStakedAndRelaysByAppsAveragesByFilterInput {
+	# Input to be able to specify the filter of the apps you want to be considered
+	filter: FilterInput
+
+	# Specifies how many hours you want to go back from the current time. For example: actual time is 2022-09-06T12:15:01.234Z and you specify hours as 24, then the considered range will be: 2022-09-05T12:15:01.234Z as start date and 2022-09-06T12:15:01.234Z as end date
+	hours: Int = 24
+}
+
+type ChainDistributionForApp {
+	# ChainId
+	chain: String!
+
+	# Amount of apps that support this chainId
+	apps: BigInt!
+
+	# Percentage of the amount of apps that support this chainId
+	percentage: Float!
+}
+
+input ListChainDistributionForAppsInput {
+	# Height of the block in which the chain distribution by apps will be looked. If you do not pass any value the latest block will be considered. By default nothing is passed.
+	height: Int
+}
+
+type Segment {
+	# Segment (range) identifier (ID)
+	segment: Int!
+
+	# Amount in which the segment starts
+	start: Float
+
+	# Amount in which the segment ends. If null that means the end it's the infinite
+	end: Float
+
+	# Amount of items between the ranges (start and end) of the segment
+	count: Int!
+}
+
+input GetAppsRelaysBySegmentsBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# How many segments do you want. Each segment will have a range of the value you specify
+	# on relays_on_every_segments.
+	segments: Int!
+
+	# How many relays do you want on every segment.
+	relays_on_every_segments: Float!
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+
+	# Pass an array of chains to filter app relays by chains. By default will include all chains.
+	chains: [String!] = []
+}
+
+type TookAndSizeAverage {
+	# Average of the minutes the blocks took to be finished
+	took_avg: Float!
+
+	# Average of total size (in bytes) considering the blocks and states sizes
+	size_avg: Float!
+}
+
+type NetworkSummary {
+	# Height of the highest block in the range
+	last_height: BigInt
+
+	# Height of the lowest block in the range
+	first_height: BigInt
+
+	# Sum of the relays of every block in the range
+	total_relays: BigInt
+
+	# Sum of the uPOKT minted of every block in the range
+	total_minted: BigInt
+
+	# Sum of the uPOKT earned (considering the stake weight multiplier) by nodes staked serving relays on every block in the range
+	total_servicer_rewards: BigInt
+
+	# Sum of the uPOKT given to the DAO on every block in the range
+	total_dao_rewards: BigInt
+
+	# Sum of the uPOKT earned (without considering the stake weight multiplier) by nodes staked serving relays on every block in the range
+	total_base_servicer_rewards: BigInt
+
+	# Sum of the uPOKT earned by nodes validators producing blocks on every block in the range
+	total_producer_rewards: BigInt
+
+	# Number of staked apps in the highest block in the range
+	apps_staked: BigInt
+
+	# Amount of tokens (in uPOKT) owned by staked apps in the highest block in the range
+	apps_staked_tokens: BigInt
+
+	# Number of unstaking apps in the highest block in the range
+	apps_unstaking: BigInt
+
+	# Amount of tokens (in uPOKT) owned by unstaking apps in the highest block in the range
+	apps_unstaking_tokens: BigInt
+
+	# Number of staked nodes in the highest block in the range
+	nodes_staked: BigInt
+
+	# Amount of tokens (in uPOKT) owned by staked nodes in the highest block in the range
+	nodes_staked_tokens: BigInt
+
+	# Number of jailed nodes in the highest block in the range
+	nodes_jailed: BigInt
+
+	# Amount of tokens (in uPOKT) owned by jailed nodes in the highest block in the range
+	nodes_jailed_tokens: BigInt
+	nodes_unstaking: BigInt
+
+	# Amount of tokens (in uPOKT) owned by unstaking nodes in the highest block in the range
+	nodes_unstaking_tokens: BigInt
+
+	# Number of nodes (staked, unstaking) in the highest block in the range
+	total_nodes: BigInt
+
+	# Number of apps (staked, unstaking) in the highest block in the range
+	total_apps: BigInt
+
+	# Number of accounts in the highest block in the range
+	total_accounts: BigInt
+
+	# Sum of the amount of new nodes on every block in the range
+	total_new_nodes: BigInt
+
+	# Number of new nodes in the highest block in the range
+	last_block_new_nodes: BigInt
+
+	# Sum of the amount of new apps on every block in the range
+	total_new_apps: BigInt
+
+	# Number of new apps in the highest block in the range
+	last_block_new_apps: BigInt
+
+	# Sum of the amount of transactions (valid and invalid) on every block in the range
+	total_txs: BigInt
+
+	# Sum of the amount of valid transactions on every block in the range
+	total_good_txs: BigInt
+
+	# Sum of the amount of invalid transactions on every block in the range
+	total_bad_txs: BigInt
+
+	# Number of new nodes in the highest block in the range
+	blocks_amount: BigInt
+
+	# Average of the minutes the blocks took to be finished
+	took_avg: Float
+
+	# Tokens (in uPOKT) supply by staked nodes in the highest block in the range
+	nodes_staked_supply: BigInt
+
+	# Tokens (in uPOKT) supply by apps nodes in the highest block in the range
+	apps_staked_supply: BigInt
+
+	# Tokens (in uPOKT) supply by dao in the highest block in the range
+	dao_supply: BigInt
+
+	# Staked Tokens (in uPOKT) supply in the highest block in the range
+	total_staked_supply: BigInt
+
+	# Unstaked Tokens (in uPOKT) supply by in the highest block in the range
+	total_unstaked_supply: BigInt
+
+	# Total Tokens (in uPOKT) supply in the highest block in the range
+	total_supply: BigInt
+
+	# Amount of staked tokens (in uPOKT) in the highest block in the range
+	ms: BigInt
+
+	# Amount of tokens (in uPOKT) in the circulating accounts (wallets) in the highest block in the range
+	m0: BigInt
+
+	# Sum of the tokens (in uPOKT) of tokens in the circulating accounts (wallets) and the amount of staked tokens in the highest block in the range
+	mb: BigInt
+
+	# Amount of unstaking tokens (in uPOKT) in the highest block in the range
+	mu: BigInt
+
+	# Amount of staked tokens (in uPOKT) in the highest block in the range.
+	# In string to return the whole number without loosing precision.
+	ms_precised: String
+
+	# Amount of tokens (in uPOKT) in the circulating accounts (wallets) in the highest block in the range
+	# In string to return the whole number without loosing precision.
+	m0_precised: String
+
+	# Sum of the tokens (in uPOKT) of tokens in the circulating accounts (wallets) and the amount of staked tokens in the highest block in the range
+	# In string to return the whole number without loosing precision.
+	mb_precised: String
+
+	# Amount of unstaking tokens (in uPOKT) in the highest block in the range
+	# In string to return the whole number without loosing precision.
+	mu_precised: String
+
+	# Average of the minutes the blocks took to be finished
+	took_avg_by_block: Float
+
+	# Average of the block size (in bytes) by the blocks in the range
+	block_size_avg_by_block: Float
+
+	# Average of the state size (in bytes) by the blocks in the range
+	state_size_avg_by_block: Float
+
+	# Average of the total size (in bytes), block and state, by the blocks in the range
+	total_size_avg_by_block: Float
+
+	# Average of the relays by the blocks in the range
+	relays_avg_by_block: Float
+
+	# Average of the servicer rewards (in uPOKT considering the stake weight multiplier of the nodes) by the blocks in the range
+	servicer_rewards_avg_by_block: Float
+
+	# Average of the servicer base rewards (without considering the stake weight multiplier of the nodes) by the blocks in the range
+	servicer_base_rewards_avg_by_block: Float
+
+	# Average of the validator rewards by the blocks in the range
+	validator_rewards_avg_by_block: Float
+
+	# Average of relays by staked nodes in the blocks in the range
+	relays_avg_by_nodes_staked: Float
+
+	# Average of the servicer rewards (in uPOKT considering the stake weight multiplier of the nodes) by staked nodes in the blocks in the range
+	rewards_avg_by_nodes_staked: Float
+
+	# Average of the servicer base rewards (in uPOKT without considering the stake weight multiplier of the nodes) by staked nodes in the blocks in the range
+	base_rewards_avg_by_nodes_staked: Float
+
+	# Average of the validator rewards (in uPOKT) by nodes validators in the blocks in the range
+	rewards_avg_by_validators: Float
+
+	# This metric is the sum of the multiplication of total relays per chain and the chain relays to token multiplier (if the chain does not have it, the default is used)
+	total_computed_cost: Float
+}
+
+type NetworkSummaryPoint {
+	# Date that represents the point
+	point: String
+
+	# Datetime that represents the beginning of the point
+	start_date: String
+
+	# Datetime that represents the end of the point
+	end_date: String
+
+	# Datetime that represents time of the block. Only returned when unit time is block.
+	block_time: String
+
+	# Height of the highest block in the range
+	last_height: BigInt
+
+	# Height of the lowest block in the range
+	first_height: BigInt
+
+	# Sum of the relays of every block in the range
+	total_relays: BigInt
+
+	# Sum of the uPOKT minted of every block in the range
+	total_minted: BigInt
+
+	# Sum of the uPOKT earned (considering the stake weight multiplier) by nodes staked serving relays on every block in the range
+	total_servicer_rewards: BigInt
+
+	# Sum of the uPOKT earned (without considering the stake weight multiplier) by nodes staked serving relays on every block in the range
+	total_base_servicer_rewards: BigInt
+
+	# Sum of the uPOKT earned by nodes validators producing blocks on every block in the range
+	total_producer_rewards: BigInt
+
+	# Sum of the uPOKT given to DAO on every block in the range.
+	total_dao_rewards: BigInt
+
+	# Number of staked apps in the highest block in the range
+	apps_staked: BigInt
+
+	# Amount of tokens (in uPOKT) owned by staked apps in the highest block in the range
+	apps_staked_tokens: BigInt
+
+	# Number of unstaking apps in the highest block in the range
+	apps_unstaking: BigInt
+
+	# Amount of tokens (in uPOKT) owned by unstaking apps in the highest block in the range
+	apps_unstaking_tokens: BigInt
+
+	# Number of staked nodes in the highest block in the range
+	nodes_staked: BigInt
+
+	# Amount of tokens (in uPOKT) owned by staked nodes in the highest block in the range
+	nodes_staked_tokens: BigInt
+
+	# Number of jailed nodes in the highest block in the range
+	nodes_jailed: BigInt
+
+	# Amount of tokens (in uPOKT) owned by jailed nodes in the highest block in the range
+	nodes_jailed_tokens: BigInt
+	nodes_unstaking: BigInt
+
+	# Amount of tokens (in uPOKT) owned by unstaking nodes in the highest block in the range
+	nodes_unstaking_tokens: BigInt
+
+	# Number of nodes (staked, unstaking) in the highest block in the range
+	total_nodes: BigInt
+
+	# Number of apps (staked, unstaking) in the highest block in the range
+	total_apps: BigInt
+
+	# Number of accounts in the highest block in the range
+	total_accounts: BigInt
+
+	# Sum of the amount of new nodes on every block in the range
+	total_new_nodes: BigInt
+
+	# Number of new nodes in the highest block in the range
+	last_block_new_nodes: BigInt
+
+	# Sum of the amount of new apps on every block in the range
+	total_new_apps: BigInt
+
+	# Number of new apps in the highest block in the range
+	last_block_new_apps: BigInt
+
+	# Sum of the amount of transactions (valid and invalid) on every block in the range
+	total_txs: BigInt
+
+	# Sum of the amount of valid transactions on every block in the range
+	total_good_txs: BigInt
+
+	# Sum of the amount of invalid transactions on every block in the range
+	total_bad_txs: BigInt
+
+	# Number of new nodes in the highest block in the range
+	blocks_amount: BigInt
+
+	# Tokens (in uPOKT) supply by staked nodes in the highest block in the range
+	nodes_staked_supply: BigInt
+
+	# Tokens (in uPOKT) supply by apps nodes in the highest block in the range
+	apps_staked_supply: BigInt
+
+	# Tokens (in uPOKT) supply by dao in the highest block in the range
+	dao_supply: BigInt
+
+	# Tokens (in uPOKT) tokens supply in the highest block in the range
+	total_staked_supply: BigInt
+
+	# Unstaked Tokens (in uPOKT) supply by in the highest block in the range
+	total_unstaked_supply: BigInt
+
+	# Total Tokens (in uPOKT) supply in the highest block in the range
+	total_supply: BigInt
+
+	# Amount of staked tokens (in uPOKT) in the highest block in the range
+	ms: BigInt
+
+	# Amount of tokens (in uPOKT) in the circulating accounts (wallets) in the highest block in the range
+	m0: BigInt
+
+	# Sum of the amount of tokens (in uPOKT) in the circulating accounts (wallets) and the amount of staked tokens in the highest block in the range
+	mb: BigInt
+
+	# Amount of unstaking tokens (in uPOKT) in the highest block in the range
+	mu: BigInt
+
+	# Amount of staked tokens (in uPOKT) in the highest block in the range
+	# In string to return the whole number without loosing precision.
+	ms_precised: String
+
+	# Amount of tokens (in uPOKT) in the circulating accounts (wallets) in the highest block in the range
+	# In string to return the whole number without loosing precision.
+	m0_precised: String
+
+	# Sum of the tokens (in uPOKT) of tokens in the circulating accounts (wallets) and the amount of staked tokens in the highest block in the range
+	# In string to return the whole number without loosing precision.
+	mb_precised: String
+
+	# Amount of unstaking tokens (in uPOKT) in the highest block in the range
+	# In string to return the whole number without loosing precision.
+	mu_precised: String
+
+	# Average of the minutes the blocks took to be finished
+	took_avg_by_block: Float
+
+	# Average of the block size (in bytes) by the blocks in the range
+	block_size_avg_by_block: Float
+
+	# Average of the state size (in bytes) by the blocks in the range
+	state_size_avg_by_block: Float
+
+	# Average of the total size (in bytes), block and state, by the blocks in the range
+	total_size_avg_by_block: Float
+
+	# Average of the relays by the blocks in the range
+	relays_avg_by_block: Float
+
+	# Average of the servicer rewards (in uPOKT considering the stake weight multiplier of the nodes) by the blocks in the range
+	servicer_rewards_avg_by_block: Float
+
+	# Average of the servicer base rewards (without considering the stake weight multiplier of the nodes) by the blocks in the range
+	servicer_base_rewards_avg_by_block: Float
+
+	# Average of the validator rewards by the blocks in the range
+	validator_rewards_avg_by_block: Float
+
+	# Average of relays by staked nodes in the blocks in the range
+	relays_avg_by_nodes_staked: Float
+
+	# Average of the servicer rewards (in uPOKT considering the stake weight multiplier of the nodes) by staked nodes in the blocks in the range
+	rewards_avg_by_nodes_staked: Float
+
+	# Average of the servicer base rewards (in uPOKT without considering the stake weight multiplier of the nodes) by staked nodes in the blocks in the range
+	base_rewards_avg_by_nodes_staked: Float
+
+	# Average of the validator rewards (in uPOKT) by nodes validators in the blocks in the range
+	rewards_avg_by_validators: Float
+
+	# Array of all Network parameters and their values in the highest block in the range.
+	all_params: [ParameterItem]!
+
+	# This metric is the sum of the multiplication of total relays per chain and the chain relays to token multiplier (if the chain does not have it, the default is used)
+	total_computed_cost: Float
+}
+
+type SummaryResponse {
+	# Date format that represents the points. Only returned when unit_time is not block.
+	point_format: String
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [NetworkSummaryPoint]
+}
+
+input SummaryInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroup!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+input SummaryWithBlockInput {
+	# Start date of the date range.
+	start_date: String
+
+	# End date of the date range.
+	end_date: String
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroupWithBlock!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+
+	# By default is false. When false, the start date you pass is converted to the start of the unit you are using in
+	# unit_time and the end date is converted to the end of the unit time. When true, the start and end date are considered as you pass.
+	# When unit time is block the start date will be converted to the start of the day and the end date to the end of the day.
+	# Example if unit_time is day: When false, if you pass the start date as 2023-05-05 and end date as 2023-05-06 the query will cover the following
+	# range from 2023-05-05T00:00:00.000Z to 2023-05-06T23:59:59.999Z and when true, if you pass the start date as 2023-05-05 and
+	# end date as 2023-05-06 the query will cover the following range from 2023-05-05T00:00:00.000Z to 2023-05-06T00:00:00.000Z.
+	exclusive_date: Boolean = false
+}
+
+input GetNetworkSummaryBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+type ValidatorData {
+	# Tokens (in uPOKT) threshold that establish the beginning of the nodes validators
+	validator_threshold: BigInt!
+
+	# Tokens (in uPOKT) threshold that would establish the beginning of the nodes validators if all the nodes were not jailed
+	validator_threshold_with_jailed: BigInt!
+
+	# Average of the tokens staked (in uPOKT) by the validator nodes
+	avg_validator_tokens_staked: Float!
+
+	# Greater amount of the tokens staked (in uPOKT) by one node
+	max_validator_tokens_staked: BigInt!
+}
+
+type LatestBlock {
+	# Data of the block
+	block: Block!
+
+	# Data related to the validators
+	validator_data: ValidatorData!
+}
+
+type ParameterItem {
+	# Parameter name.
+	name: String!
+
+	# Parameter value.
+	value: String!
+}
+
+type GetLastBlockPoktParamsResponse {
+	# Set of parameters of the Pocket Network in the latest block.
+	parameters: [ParameterItem!]
+
+	# Height of the block.
+	height: BigInt!
+}
+
+type RelaysByGatewayAndChain {
+	# Id of the gateway that redirected the relays to the nodes 
+	gateway: Int!
+
+	# Chain Id 
+	chain: String!
+
+	# Total relays that went through this gateway and for this chain
+	total_relays: BigInt!
+
+	# uPOKT generated by the nodes for serving relays that went through this gateway and for this chain
+	total_rewards: BigInt!
+}
+
+type RelaysByGatewayItem {
+	# Id of the gateway that redirected the relays to the nodes 
+	gateway: Int!
+
+	# Total relays that went through this gateway
+	total_relays: BigInt!
+
+	# uPOKT generated by the nodes for serving relays that went through this gateway
+	total_rewards: BigInt!
+}
+
+type RelaysByGatewayPoint {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String!
+
+	# Datetime that represents the end of the point
+	end_date: String!
+
+	# Height of the highest block in the range
+	last_height: BigInt
+
+	# Height of the lowest block in the range
+	first_height: BigInt
+
+	# Sum of the relays of every block in the range
+	total_relays: BigInt
+
+	# Sum of the uPOKT earned (considering the stake weight multiplier) by nodes staked serving relays on every block in the range
+	total_rewards: BigInt
+
+	# Relays and uPOKT generated by the nodes grouped by the gateways from where the relays where redirected to the nodes
+	relays_by_gateway: [RelaysByGatewayItem]!
+
+	# Chains 
+	chains: [String]!
+}
+
+input ListRelaysByGatewayAndUnitBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroup!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+
+	# Array to filter by chains. By default if nothing is passed will consider all chains.
+	chains: [String!] = []
+
+	# By default is false. When false, the start date you pass is converted to the start of the unit you are using in
+	# unit_time and the end date is converted to the end of the unit time. When true, the start and end date are considered as you pass.
+	# When unit time is block the start date will be converted to the start of the day and the end date to the end of the day.
+	# Example: When false, if you pass the start date as 2023-05-05 and end date as 2023-05-06 the query will cover the following
+	# range from 2023-05-05T00:00:00.000Z to 2023-05-06T23:59:59.999Z and when true, if you pass the start date as 2023-05-05 and
+	# end date as 2023-05-06 the query will cover the following range from 2023-05-05T00:00:00.000Z to 2023-05-06T00:00:00.000Z.
+	exclusive_date: Boolean = false
+}
+
+type ListRelaysByGatewayAndUnitBetweenDatesResponse {
+	# Date format that represents the points
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [RelaysByGatewayPoint]!
+}
+
+type ChainRewards {
+	# ChainId
+	chain: String!
+
+	# Sum of the relays by this chain on every block
+	total_relays: BigInt!
+
+	# Sum of the computed units by this chain on every block
+	computed_units: BigInt!
+
+	# Sum of the rewards generated by this chain on every block
+	total_pokt: BigInt!
+
+	# Average of the staked nodes who support this chain
+	staked_nodes_avg: BigInt!
+
+	# Average of the rewards by the staked nodes who support this chain. This is a weighted average where we sum the amount of rewards of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	pokt_avg: Float!
+
+	# Average of relays by the staked nodes who support this chain. This is a weighted average where we sum the amount of relays of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	relays_avg: Float!
+
+	# Average of computed units by the staked nodes who support this chain. This is a weighted average where we sum the amount of computed units of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	computed_units_avg: Float!
+}
+
+input GetChainsRewardsBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+type ChainRewardsByUnit {
+	# ChainId
+	chain: String!
+
+	# Sum of the relays by this chain on every block
+	total_relays: BigInt!
+
+	# Sum of the computed units by this chain on every block
+	total_computed_units: BigInt!
+
+	# Sum of the rewards (in uPOKT) generated by this chain on every block
+	total_rewards: Float!
+
+	# Average of the staked nodes who support this chain
+	staked_nodes_avg: BigInt!
+
+	# Average of the rewards by the staked nodes who support this chain. This is a weighted average where we sum the amount of rewards of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	rewards_avg: Float!
+
+	# Average of relays by the staked nodes who support this chain. This is a weighted average where we sum the amount of relays of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	relays_avg: Float!
+
+	# Average of computed units by the staked nodes who support this chain. This is a weighted average where we sum the amount of computed units of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	computed_units_avg: Float!
+
+	# Average of Rewards (in uPOKT) if all nodes where in 15k bin.
+	first_bin_pokt_avg: Float!
+}
+
+type ChainRewardsByUnitPoint {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String
+
+	# Datetime that represents the end of the point
+	end_date: String
+
+	# Datetime that represents time of the block. Only returned when unit time is block.
+	block_time: String
+
+	# Height of the highest block in the range
+	last_height: BigInt!
+
+	# Height of the lowest block in the range
+	first_height: BigInt!
+
+	# Sum of the relays on every block
+	total_relays: BigInt!
+
+	# Sum of the computed units on every block
+	total_computed_units: BigInt!
+
+	# Sum of the rewards (in uPOKT) generated on every block
+	total_rewards: Float!
+
+	# Average of the staked nodes by the amount of blocks
+	staked_nodes_avg: BigInt!
+
+	# Average of the rewards by the staked nodes. This is a weighted average where we sum the amount of rewards of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	rewards_avg: Float!
+
+	# Average of relays by the staked nodes. This is a weighted average where we sum the amount of relays of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	relays_avg: Float!
+
+	# Average of computed units by the staked nodes. This is a weighted average where we sum the amount of computed units of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	computed_units_avg: Float!
+
+	# Rewards grouped by chain
+	rewards_by_chain: [ChainRewardsByUnit]!
+}
+
+type GetChainRewardsByUnitBetweenDatesResponse {
+	# Date format that represents the points. Only returned when unit_time is not block.
+	point_format: String
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [ChainRewardsByUnitPoint]!
+}
+
+input GetChainRewardsByUnitBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroupWithBlock!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+
+	# Array to filter by chains. By default if nothing is passed will consider all chains.
+	chains: [String!] = []
+
+	# By default is false. When false, the start date you pass is converted to the start of the unit you are using in
+	# unit_time and the end date is converted to the end of the unit time. When true, the start and end date are considered as you pass.
+	# When unit time is block the start date will be converted to the start of the day and the end date to the end of the day.
+	# Example: When false, if you pass the start date as 2023-05-05 and end date as 2023-05-06 the query will cover the following
+	# range from 2023-05-05T00:00:00.000Z to 2023-05-06T23:59:59.999Z and when true, if you pass the start date as 2023-05-05 and
+	# end date as 2023-05-06 the query will cover the following range from 2023-05-05T00:00:00.000Z to 2023-05-06T00:00:00.000Z.
+	exclusive_date: Boolean = false
+
+	# Id of the gateway that will be considered as a filter. Optional. 
+	gateway_id: Int
+}
+
+input NodeSelectionBetweenDatesInput {
+	# Input where you need to pass your node selection
+	node_selection: NodeSelectionInput
+
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+type ChainRewardsForSelection {
+	# ChainId
+	chain: String!
+
+	# Sum of the relays by this chain on every block
+	total_relays: BigInt!
+
+	# Sum of the computed units by this chain on every block
+	computed_units: BigInt!
+
+	# Sum of the rewards generated by this chain on every block
+	total_rewards: Float!
+
+	# Average of the staked nodes who support this chain
+	staked_nodes_avg: BigInt!
+
+	# Current amount of staked nodes who support this chain
+	current_staked_nodes: BigInt!
+
+	# Average of the rewards by the staked nodes who support this chain. This is a weighted average where we sum the amount of rewards of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	rewards_avg: Float!
+
+	# Average of relays by the staked nodes who support this chain. This is a weighted average where we sum the amount of relays of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	relays_avg: Float!
+
+	# Average of computed units by the staked nodes who support this chain. This is a weighted average where we sum the amount of computed units of every block and divide it by the sum of nodes staked on every block and then multiply this value with the amount of blocks
+	computed_units_avg: Float!
+}
+
+input ListNodeAndAppGrowthByChainBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroup!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Array to filter by chains. By default if nothing is passed will consider all chains.
+	chains: [String!] = []
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+type ChainGrowthByUnit {
+	# Chain Id
+	chain: String!
+
+	# Amount of apps by this chain on this unit.
+	apps: BigInt!
+
+	# Amount of nodes by this chain on this unit.
+	nodes: BigInt!
+}
+
+type ChainGrowthByUnitPoint {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String!
+
+	# Datetime that represents the end of the point
+	end_date: String!
+
+	# Last block in range
+	height: BigInt!
+
+	# Growth grouped by chain
+	growth_by_chain: [ChainGrowthByUnit]!
+}
+
+type ListNodeAndAppGrowthByChainBetweenDatesResponse {
+	# Date format that represents the points
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [ChainGrowthByUnitPoint]!
+}
+
+input GetStakedNodesAndAppsByChainInput {
+	# Array to filter by chains. By default will consider all chains.
+	chains: [String]! = []
+}
+
+type GetStakedNodesAndAppsByChain {
+	# ChainId
+	chain: String!
+
+	# Amount of staked nodes that support this chain
+	nodes: BigInt!
+
+	# Amount of apps for this chain
+	apps: BigInt!
+}
+
+type GetStakedNodesAndAppsByChainResponse {
+	height: BigInt
+	staked_by_chains: [GetStakedNodesAndAppsByChain]
+}
+
+input GetChainsNetworkDataReportInput {
+	# Array to filter by chains. By default will consider all chains.
+	chains: [String]! = []
+}
+
+type ChainNetworkDataByUnit {
+	# Gateway (region)
+	gateway: String!
+
+	# Nodes amount in this gateway with this chain.
+	nodes: BigInt!
+
+	# Amount of relays in all observed sessions in the last 72 hours with this chain and through this gateway.
+	total_relays: BigInt!
+
+	# Amount of relays that failed in all observed sessions in the last 72 hours with this chain and through this gateway.
+	total_failures: BigInt!
+
+	# Amount of relays that were successful in all observed sessions in the last 72 hours with this chain and through this gateway.
+	total_success: BigInt!
+
+	# Mean value of the median success latency of the relays in this gateway, in all the observed sessions in the last 72 hours.
+	median_success_latency: Float!
+
+	# Mean value of the weighted success latency of the relays in this gateway, in all the observed sessions in the last 72 hours.
+	weighted_success_latency: Float!
+
+	# Mean value of the p90 success latency of the relays in this gateway, in all the observed sessions in the last 72 hours.
+	p90_latency: Float!
+
+	# Mean value of the success rate of the relays in this gateway, in all the observed sessions in the last 72 hours.
+	success_rate: Float!
+
+	# Failures amount in this gateway.
+	failure: Float!
+
+	# Amount of nodes in this gateway that take less than 150ms to answer requests.
+	nodes_less_than_150_ms: BigInt!
+
+	# Amount of nodes in this gateway that take greater than 300ms to answer requests.
+	nodes_greater_than_300_ms: BigInt!
+
+	# Amount of nodes in this gateway that take between 150ms and 300ms to answer requests.
+	nodes_between_150_and_300_ms: BigInt!
+}
+
+type ChainNetworkDataReportSummary {
+	# Amount of relays that failed in all observed sessions in the last 72 hours with this chain.
+	total_failures: BigInt!
+
+	# Amount of relays that were successful in all observed sessions in the last 72 hours with this chain.
+	total_success: BigInt!
+
+	# Mean value of the median success latency of the relays in all the observed sessions in the last 72 hours with this chain.
+	median_success_latency: Float!
+
+	# Mean value of the weighted success latency of the relays in all the observed sessions in the last 72 hours with this chain.
+	weighted_success_latency: Float!
+
+	# Mean value of the p90 success latency of the relays in all the observed sessions in the last 72 hours with this chain.
+	p90_latency: Float!
+
+	# Mean value of the success rate of the relays in all the observed sessions in the last 72 hours with this chain.
+	success_rate: Float!
+
+	# Failures amount of this chain.
+	failure: Float!
+
+	# Amount of nodes with this chain that take less than 150ms to answer requests.
+	nodes_less_than_150_ms: Float!
+
+	# Amount of nodes with this chain that take greater than 300ms to answer requests.
+	nodes_greater_than_300_ms: Float!
+
+	# Amount of nodes with this chain that take between 150ms and 300ms to answer requests.
+	nodes_between_150_and_300_ms: Float!
+
+	# Nodes amount with this chain.
+	nodes: BigInt!
+
+	# Amount of relays in all observed sessions in the last 72 hours with this chain.
+	total_relays: BigInt!
+
+	# Chain Id.
+	chain: String!
+
+	# Array of this chain cherry picker data grouped by gateway.
+	data_by_gateway: [ChainNetworkDataByUnit]!
+}
+
+type GetChainsPoktEarnPerformanceReportResponse {
+	# Rewards Average (in uPOKT) in the last 24 hours for the specified chain.
+	rewards_avg_last_twenty_four: BigInt!
+
+	# Rewards Average (in uPOKT) in the last 30 days for the specified chain.
+	rewards_avg_last_thirty_days: BigInt!
+
+	# Maximum Rewards Average value (in uPOKT) in the last 30 days for the specified chain.
+	rewards_avg_max_last_thirty_days: BigInt!
+
+	# Relays Average in the last 24 hours for the specified chain.
+	relays_avg_last_twenty_four: BigInt!
+
+	# Relays Average in the last 30 days for the specified chain.
+	relays_avg_last_thirty_days: BigInt!
+
+	# Maximum Relays Average value in the last 30 days for the specified chain.
+	relays_avg_max_last_thirty_days: BigInt!
+
+	# Computed units Average in the last 24 hours for the specified chain.
+	computed_units_avg_last_twenty_four: Float
+
+	# Computed units Average in the last 30 days for the specified chain.
+	computed_units_avg_last_thirty_days: Float
+
+	# Maximum Computed units Average value in the last 30 days for the specified chain.
+	computed_units_avg_max_last_thirty_days: Float
+
+	# Nodes Average in the last 24 hours for the specified chain.
+	nodes_avg_last_twenty_four: BigInt!
+
+	# Nodes Average in the last 30 days for the specified chain.
+	nodes_avg_last_thirty_days: BigInt!
+
+	# Maximum Nodes Average value in the last 30 days for the specified chain.
+	nodes_avg_max_last_thirty_days: BigInt!
+
+	# Total of relays in the last 24 hours for the specified chain.
+	total_relays_last_twenty_four: BigInt!
+
+	# Total of computed units in the last 24 hours for the specified chain.
+	total_computed_units_last_twenty_four: Float
+
+	# Total of rewards (in uPOKT) in the last 24 hours for the specified chain.
+	total_rewards_last_twenty_four: BigInt!
+
+	# Total of relays in the last 30 days for the specified chain.
+	total_relays_last_thirty_days: BigInt!
+
+	# Total of computed units in the last 30 days for the specified chain.
+	total_computed_units_last_thirty_days: Float
+
+	# Total of rewards (in uPOKT) in the last 30 days for the specified chain.
+	total_rewards_last_thirty_days: BigInt!
+}
+
+type ActiveChainItem {
+	# Chain Id.
+	chain: String!
+
+	# Datetime in which the chain was last activated.
+	time: String
+
+	# Height where the chain was last activated.
+	height: String
+}
+
+type GatewayAndApps {
+	# Gateway Id
+	gateway: Int!
+
+	# Amount of apps staked with this gateway
+	apps: Int!
+}
+
+type ChainSummary {
+	# List of gateways that have apps staked with this chain.
+	gateways: [GatewayAndApps!]!
+
+	# Number of apps staked with this chain.
+	staked_apps: Int!
+
+	# Number of nodes staked with this chain.
+	staked_nodes: Int!
+
+	# Relays to Token Multiplier (RTTM) for this chain.
+	rttm: Int!
+}
+
+type GatewayRegionStatus {
+	# Status of the process to fetch the metrics from the gateway region 
+	status: String!
+
+	# Date (in UTC and ISO format) in which the status was updated 
+	date: String!
+
+	# True if the status is healthy. That means we were able to fetch the metrics from the gateway region. 
+	healthy: Boolean!
+
+	# Milliseconds took to complete the metrics' fetch and insert process 
+	took: Int!
+
+	# Error message if there was an error 
+	error: String
+}
+
+type GatewayRegion {
+	# Id of the gateway 
+	gateway_id: Int!
+
+	# Region of the gateway 
+	region: String!
+
+	# Last known status of the metrics fetched from this gateway and region 
+	status: GatewayRegionStatus
+}
+
+type GatewayMetrics {
+	# Last session height that was considered 
+	last_session_height: BigInt!
+
+	# Start session height that was considered 
+	start_session_height: BigInt!
+
+	# Amount of nodes that was found 
+	nodes: Int!
+
+	# Amount of healthy nodes that was found 
+	healthy_nodes: Int!
+
+	# Amount of synced nodes that was found 
+	synced_nodes: Int!
+
+	# Amount of nodes with errors that was found 
+	nodes_with_error: Int!
+
+	# Region 
+	region: String!
+
+	# ChainId 
+	chain: String!
+
+	# Percent of healthy nodes found 
+	healthy_nodes_percent: Float!
+
+	# Percent of synced nodes found 
+	synced_nodes_percent: Float!
+
+	# Percent of nodes with errors found 
+	nodes_with_error_percent: Float!
+
+	# Average of the p90 latency 
+	avg_p90_latency: Float!
+}
+
+type GatewayMetricsByChain {
+	# Last session height that was considered 
+	last_session_height: BigInt!
+
+	# Start session height that was considered 
+	start_session_height: BigInt!
+
+	# Amount of nodes that was found 
+	nodes: Int!
+
+	# Amount of healthy nodes that was found 
+	healthy_nodes: Int!
+
+	# Amount of synced nodes that was found 
+	synced_nodes: Int!
+
+	# Amount of nodes with errors that was found 
+	nodes_with_error: Int!
+
+	# Region 
+	region: String!
+
+	# Id of the gateway 
+	gateway_id: Int!
+
+	# Percent of healthy nodes found 
+	healthy_nodes_percent: Float!
+
+	# Percent of synced nodes found 
+	synced_nodes_percent: Float!
+
+	# Percent of nodes with errors found 
+	nodes_with_error_percent: Float!
+
+	# Average of the p90 latency 
+	avg_p90_latency: Float!
+}
+
+input GetLast24hGatewayMetricsByNodesInput {
+	# Nodes you want to consider 
+	node_selection: NodeSelectionInput!
+
+	# Id of gateway you want to be considered 
+	gateway_id: Int
+}
+
+type ErrorFromGatewayMetric {
+	# Address of the node with the error 
+	node: String!
+
+	# ChainId 
+	chain: String!
+
+	# Error message 
+	error: String!
+
+	# Region 
+	region: String!
+
+	# Id if the gateway that provided the error 
+	gateway_id: Int!
+}
+
+type ListErrorsFromGatewayMetricsResponse {
+	# Info related to the current page of the list
+	pageInfo: PaginationResponse!
+
+	# Changes on this page
+	items: [ErrorFromGatewayMetric]!
+}
+
+type ServicerEarnPerformance {
+	# Max amount of computed units in one day between the last 30 days
+	thirty_days_max_computed_units: Float!
+
+	# Highest average of computed units by staked nodes in a day in the last 30 days
+	thirty_days_max_computed_units_avg: Float!
+
+	# Max amount of relays in one day between the last 30 days
+	thirty_days_max_relays: BigInt!
+
+	# Highest average of relays by staked nodes in a day in the last 30 days
+	thirty_days_max_relays_avg: Float!
+
+	# Highest average of uPOKT by staked nodes in a day in the last 30 days
+	thirty_days_max_pokt_avg: Float!
+
+	# Highest average of nodes staked per block in a day in the last 30 days
+	thirty_days_max_stake_nodes_avg: Float!
+
+	# Amount of relays in the last 24 hours
+	twenty_fours_hs_less_relays: BigInt!
+
+	# Average of relays by staked nodes in the last 24 hours
+	twenty_fours_hs_less_relays_avg: Float!
+
+	# Amount of computed units in the last 24 hours
+	twenty_fours_hs_less_computed_units: Float!
+
+	# Average of computed units by staked nodes in the last 24 hours
+	twenty_fours_hs_less_computed_units_avg: Float!
+
+	# Average of uPOKT by staked noes in the last 24 hours
+	twenty_fours_hs_less_pokt_avg: Float!
+
+	# Average of nodes staked per block in the last 24 hours
+	twenty_fours_hs_less_stake_nodes_avg: Float!
+
+	# Amount of relays on the last 30 days
+	thirty_days_relays: BigInt!
+
+	# Amount of computed units on the last 30 days
+	thirty_days_computed_units: Float!
+
+	# Average of uPOKT by staked nodes per day in the last 30 days
+	thirty_days_pokt_avg: Float!
+
+	# Average of nodes staked per day in the last 30 days
+	thirty_days_stake_nodes_avg: Float!
+
+	# Average of relays by staked nodes per day in the last 30 days
+	thirty_days_relays_avg: Float!
+
+	# Average of computed units by staked nodes per day in the last 30 days
+	thirty_days_computed_units_avg: Float!
+}
+
+type ValidatorEarnPerformance {
+	# Highest average of uPOKT by nodes validators in a day in the last 30 days
+	thirty_days_max_pokt_avg: Float!
+
+	# Average of uPOKT by nodes validators in the last 24 hours
+	twenty_fours_hs_less_pokt_avg: Float!
+
+	# Average of uPOKT by nodes validators per day in the last 30 days
+	thirty_days_pokt_avg: Float!
+}
+
+type NetworkEarnPerformance {
+	# Contains the network earned performance related to the servicer nodes
+	servicer: ServicerEarnPerformance!
+
+	# Contains the network earned performance related to the producer (validator) nodes
+	producer: ValidatorEarnPerformance!
+
+	# height of the block considered to create the report.
+	height: BigInt!
+}
+
+type RelaysByGatewayAndByChain {
+	# Gateway (region)
+	gateway: String!
+
+	# Relays by chain of this gateway
+	relays_by_chain: [RelaysByChain!]!
+}
+
+type GetRelaysByChainAndGatewayReportResponse {
+	# Datetime when the report was updated.
+	last_updated: String!
+
+	# Relays by chain and by gateway
+	relays_by_gateway_by_chain: [RelaysByGatewayAndByChain!]!
+
+	# Relays by chain
+	relays_by_chain: [RelaysByChain!]!
+}
+
+input GetSupplySummaryFromStartDateInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+# Get the change and current amount from the start date and the current date.
+# To get the change amount we look for the amount between the start date and the previous date.
+# The previous date is the date resulting of subtract the time difference between the start date and the end date to the start date.
+type CurrentLastAndChange {
+	# Amount from the start date to the current date
+	current: BigInt!
+
+	# Amount from the previous date to the start date
+	previous: BigInt!
+
+	# Difference between current and last. This is calculated in the following way: current - last
+	change_amount: BigInt!
+
+	# Percentage Difference between current and last. This is calculated in the following way: ((current - last) / last) * 100
+	change_percentage: Float!
+}
+
+type GetSupplySummaryFromStartDateResponse {
+	# Value of the burn per year (in uPOKT). This is calculated in the following way: t * (365 / d).
+	# # Where: t is the total burn between start and current date and d is the number of days between the start and the current date.
+	burn_per_year: Float!
+
+	# Value of the issuance per year (in uPOKT). This is calculated in the following way: t * (365 / d).
+	# # Where: t is the total uPOKT minted between start and current date and d is the number of days between the start and the current date.
+	issuance_per_year: Float!
+
+	# Percentage of the supply growth per year. This is calculated in the following way: (((m - b) * (365/ d))  / s) * 100.
+	# # Where: m is the total uPOKT minted between start and current date, b is the total burn between the start and current
+	# date, s is the current total supply and d is the number of days between the start and the current date.
+	supply_growth_per_year: Float!
+
+	# Total uPOKT burned between the start and current date including the change amount and percentage.
+	total_burned: CurrentLastAndChange!
+
+	# Total uPOKT minted between the start and current date including the change amount and percentage.
+	total_minted: CurrentLastAndChange!
+
+	# Total supply (in uPOKT) between the start and current date including the change amount and percentage.
+	total_supply: CurrentLastAndChange!
+
+	# Total monetary base (in uPOKT) between the start and current date including the change amount and percentage.
+	mb: CurrentLastAndChange!
+
+	# Liquid uPOKT (amount of uPOKT in wallets) between the start and current date including the change amount and percentage.
+	m0: CurrentLastAndChange!
+
+	# Staked uPOKT (amount of uPOKT staked by nodes and apps) between the start and current date including the change amount and percentage.
+	ms: CurrentLastAndChange!
+
+	# Unstaking uPOKT (amount of uPOKT in process of unstaking by nodes and apps) between the start and current date including the change amount and percentage.
+	mu: CurrentLastAndChange!
+}
+
+type GetPoktPriceInfoResponse {
+	# POKT token price in usd.
+	usd_price: BigInt!
+
+	# Price percent change in the last 24hs.
+	percent_change_24h: Float!
+}
+
+type WrappedPoktBalancePoint {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String!
+
+	# Datetime that represents the end of the point
+	end_date: String!
+
+	# Height of the highest block in the range
+	last_height: BigInt!
+
+	# Balance of the Wrapped uPOKT account vault (2eb054616797de8565506333afb334655e7774ed) in the latest block (last_height) of the range
+	amount: BigInt!
+}
+
+type ListWrappedPoktBalanceByUnitBetweenDatesResponse {
+	# Date format that represents the points
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [WrappedPoktBalancePoint]!
+}
+
+input ListWrappedPoktBalanceByUnitBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroup!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+type LargestNodeRunner {
+	# Domain of the node runner
+	service_domain: String!
+
+	# Tokens staked (in uPOKT) by the nodes of the node runner
+	tokens: BigInt!
+
+	# Percentage of the tokens staked by the nodes of the node runner
+	power: Float!
+
+	# Percentage of the amount of validator nodes of the node runner
+	validators_power: Float!
+
+	# Amount of validator nodes of the node runner
+	validators: BigInt!
+
+	# Amount of staked nodes of the node runner
+	staked: BigInt!
+
+	# Amount of jailed nodes of the node runner
+	jailed: BigInt!
+}
+
+type LargestNodeRunnersList {
+	# Set of node runners
+	items: [LargestNodeRunner]!
+
+	# Total tokens (in uPOKT) staked by nodes
+	total_tokens: Float!
+
+	# Height of the block of the data of the node runners
+	block: BigInt
+}
+
+enum LargestNodeRunnerProperties {
+	service_domain
+	tokens
+	power
+	validators_power
+	validators
+	staked
+	jailed
+}
+
+input ListLargestNodeRunnersInput {
+	# Specify how many node runners you want to get. If you pass top as 0 you will be receiving all the node runners. By default is 50.
+	top: Int = 50
+
+	# Specify the property to sort descendingly the node runners.
+	sort_by: LargestNodeRunnerProperties = power
+}
+
+type ServicerWeightDistribution {
+	# Amount of nodes staked with this stake weight.
+	staked_nodes: BigInt!
+
+	# Tokens (uPOKT) in which the segment starts.
+	start: BigInt!
+
+	# Tokens (uPOKT) in which the segment ends. If is null that means the segment does not have an end.
+	end: BigInt
+
+	# Stake weight of the segment.
+	weight: Float!
+
+	# Relays processed by the staked nodes with this stake weight
+	relays: BigInt!
+
+	# Rewards (in uPOKT) by the staked nodes with this stake weight
+	rewards: BigInt!
+
+	# Amount of jailed nodes with this stake weight.
+	jailed: BigInt!
+
+	# Amount of unstaking nodes with this stake weight.
+	unstaking_nodes: BigInt!
+
+	# Amount of staked tokens by the nodes with this stake weight
+	staked_tokens: BigInt!
+}
+
+type GetServicerStakeWeightDistributionResponse {
+	# Height of the block that was considered for the data
+	height: BigInt!
+
+	# Set of the segments (one segment for every stake weight multiplier)
+	segments: [ServicerWeightDistribution]!
+}
+
+input GetServicerStakeWeightDistributionInput {
+	# Height of the block in which the data will be looked. If you do not pass any value the latest block will be considered. By default nothing is passed.
+	height: BigInt
+}
+
+type NodeVersion {
+	# Version of the nodes
+	version: ID!
+
+	# Amount of jailed nodes with this version
+	total_jailed: Int!
+
+	# Amount of not jailed nodes with this version
+	total_not_jailed: Int!
+
+	# Amount of staked tokens (in uPOKT) with this version
+	tokens: BigInt!
+
+	# Amount of staked nodes with this version
+	staked: Int!
+}
+
+type NodeVersionList {
+	# Array of data grouped by the nodes version
+	items: [NodeVersion]
+
+	# Height of the block that was considered for the data
+	block: Int
+}
+
+type NodeConsensus {
+	# Version of the validators nodes
+	version: ID!
+
+	# Percentage of staked tokens with this version
+	version_power: Float!
+
+	# Amount of staked tokens (in uPOKT) with this version
+	version_tokens: BigInt!
+
+	# Amount of validators nodes with this version
+	validators: BigInt!
+}
+
+type NodeConsensusResponse {
+	# Array of data grouped by the validators nodes version
+	items: [NodeConsensus!]!
+
+	# Height of the block that was considered for the data
+	block: Int
+
+	# Total staked tokens for the validators nodes considered in this report
+	total_tokens: BigInt!
+}
+
+type TotalBalanceAndTokens {
+	# Sum of the balance (in uPOKT) of the nodes
+	total_balance: BigInt!
+
+	# Sum of the tokens (in uPOKT) of the nodes
+	total_tokens: BigInt!
+}
+
+input GetNodesTotalBalanceAndTokensByFilterInput {
+	# Input to be able to specify the filter of the nodes you want to be considered
+	filter: FilterInput!
+}
+
+type ValidatorsStakedDistribution {
+	# Amount of nodes validators.
+	nodes: BigInt!
+
+	# Tokens (uPOKT) in which the segment starts.
+	start: BigInt!
+
+	# Tokens (uPOKT) in which the segment ends.
+	end: BigInt!
+
+	# Number of the segment (basically an identifier).
+	segment: BigInt!
+}
+
+type GetValidatorsStakedTokensDistributionResponse {
+	# Height of the block that was considered for the data
+	height: BigInt!
+
+	# Set of the segments (one segment for every stake weight multiplier)
+	segments: [ValidatorsStakedDistribution]!
+}
+
+type HistoryItem {
+	# New value. Returned as string in JSON format. 
+	to_value: String!
+
+	# Previous value. Returned as string in JSON format. 
+	from_value: String!
+
+	# Height of the block in which the change was made. 
+	height: BigInt!
+
+	# Time of the block in which the change was made. 
+	block_time: String!
+
+	# Address of the entity. 
+	address: String!
+
+	# Property that had it value changed 
+	property: String!
+}
+
+type ListHistoryResponse {
+	# Info related to the current page of the list
+	pageInfo: PaginationResponse!
+
+	# Changes on this page
+	items: [HistoryItem]!
+}
+
+input HistoryInput {
+	# Addresses of the entity you want to get the history changes 
+	addresses: [String!]!
+
+	# Pagination input
+	pagination: ListInput!
+}
+
+type StakeWeightSummaryLastBlock {
+	# Stake weight multiplier 
+	weight: Float!
+
+	# Staked nodes with this stake weight multiplier 
+	staked_nodes: BigInt!
+
+	# Unstaking nodes with this stake weight multiplier 
+	unstaking_nodes: BigInt!
+
+	# Staked nodes with this stake weight multiplier 
+	jailed: BigInt!
+
+	# Tokens of the nodes with this stake weight multiplier 
+	tokens: BigInt!
+
+	# Relays served by the nodes with this stake weight multiplier 
+	relays: BigInt!
+
+	# Rewards earned by serving relays by the nodes with this stake weight multiplier 
+	rewards: BigInt!
+
+	# Height of the block 
+	height: BigInt!
+}
+
+type StakeWeightRewardsItem {
+	# Bin of the nodes considered. 
+	bin: BigInt!
+
+	# Total amount of relays served by the nodes with this bin between the date range. 
+	total_relays: BigInt!
+
+	# Total amount of rewards (in uPOKT) generated by the nodes with this bin between the date range. 
+	total_rewards: BigInt!
+
+	# Average of the staked nodes by block considering the nodes with this bin. 
+	staked_nodes_avg: BigInt!
+
+	# Average of the rewards (in uPOKT) by the staked nodes who have this bin. This is a weighted average where we sum
+	# the amount of rewards of every block and divide it by the sum of nodes staked on every block and then multiply the
+	# result of this division with the amount of blocks.
+	rewards_avg: Float!
+
+	# Average of relays by the staked nodes who have this bin. This is a weighted average where we sum the amount of
+	# relays of every block and divide it by the sum of the amount of staked nodes on every block and then multiply the
+	# result of this division with the amount of blocks.
+	relays_avg: Float!
+
+	# Tokens (uPOKT) in which the bin range starts. 
+	start: BigInt!
+
+	# Tokens (uPOKT) in which the bin range ends. If is null that means the bin does not have an end. 
+	end: BigInt
+
+	# Stake weight summary in the latest block between the date range. 
+	last_block_weight_summary: StakeWeightSummaryLastBlock!
+}
+
+input GetRewardsByStakeWeightBetweenDatesInput {
+	# Start date of the date range. 
+	start_date: String!
+
+	# End date of the date range. 
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+enum ServiceUrlSearchType {
+	find
+	exact
+}
+
+input ServiceUrlSelection {
+	# When type is exact then the search will be exact. For example, url is "asdasdas.poktscan.com"
+	# then the search will look for a node with that service url.
+	# # When type is find then the search will look for all the nodes that contain the passed url using regex. For example,
+	# if url is "poktscan.com" then the search will look for all the nodes that contain "poktscan.com" in their service url
+	type: ServiceUrlSearchType!
+
+	# can pass a partial url when type is find and a complete url when type is exact 
+	url: String!
+}
+
+input NodeSelectionInput {
+	# Select nodes by their service url
+	service_urls: [ServiceUrlSelection!]
+
+	# Select nodes by their service domain (node runner domain)
+	service_domain: String
+
+	# Select nodes by their non custodial wallets
+	output_address: [String!]
+
+	# Select nodes by passing their addresses
+	addresses: [String!]
+
+	# Select nodes by passing their delegator addresses
+	delegator_addresses: [String!]
+}
+
+type SummaryForNodeSelection {
+	computed_units_last_48hrs: Float!
+	computed_units_last_24hrs: Float!
+	computed_units_last_6hrs: Float!
+	avg_computed_units_last_48hrs: Float!
+	avg_computed_units_last_24hrs: Float!
+	avg_computed_units_last_6hrs: Float!
+
+	# Rewards (in uPOKT) the operators receive in the last 48 hours. 
+	operator_rewards_last_48hr: BigInt!
+
+	# Rewards (in uPOKT) the operators receive in the last 24 hours. 
+	operator_rewards_last_24hr: BigInt!
+
+	# Rewards (in uPOKT) the operators receive in the last 6 hours. 
+	operator_rewards_last_6hr: BigInt!
+
+	# Rewards (in uPOKT) the custodians of the nodes receive in the last 48 hours. 
+	custodian_rewards_last_48hr: BigInt!
+
+	# Rewards (in uPOKT) the custodians of the nodes receive in the last 24 hours. 
+	custodian_rewards_last_24hr: BigInt!
+
+	# Rewards (in uPOKT) the custodians of the nodes receive in the last 6 hours. 
+	custodian_rewards_last_6hr: BigInt!
+
+	# Rewards (in uPOKT) the delegators of the nodes receive in the last 48 hours. 
+	delegators_rewards_last_48hr: BigInt!
+
+	# Rewards (in uPOKT) the delegators of the nodes receive in the last 24 hours. 
+	delegators_rewards_last_24hr: BigInt!
+
+	# Rewards (in uPOKT) the delegators of the nodes receive in the last 6 hours. 
+	delegators_rewards_last_6hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed to the DAO for processing relays in the last 48 hours. 
+	dao_fees_last_48hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed to the DAO for processing relays in the last 48 hours. 
+	dao_fees_last_24hr: BigInt
+
+	# Fees (in uPOKT) the nodes payed to the DAO for processing relays in the last 48 hours. 
+	dao_fees_last_6hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed to the producers of the blocks for processing relays in the last 48 hours. 
+	producer_fees_last_48hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed to the producers of the blocks for processing relays in the last 24 hours. 
+	producer_fees_last_24hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed to the producers of the blocks for processing relays in the last 6 hours. 
+	producer_fees_last_6hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed in claim/proof transactions in the last 48 hours. 
+	returned_fees_last_48hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed in claim/proof transactions in the last 24 hours. 
+	returned_fees_last_24hr: BigInt!
+
+	# Fees (in uPOKT) the nodes payed in claim/proof transactions in the last 6 hours. 
+	returned_fees_last_6hr: BigInt!
+
+	# Total amount of loss (in uPOKT) the nodes losses for processing relays where the nodes paid more in fees than
+	# the reward they received in the last 48 hours.
+	loss_by_fees_last_48hr: BigInt!
+
+	# Total amount of loss (in uPOKT) the nodes losses for processing relays where the nodes paid more in fees than
+	# the reward they received in the last 24 hours.
+	loss_by_fees_last_24hr: BigInt!
+
+	# Total amount of loss (in uPOKT) the nodes losses for processing relays where the nodes paid more in fees than
+	# the reward they received in the last 6 hours.
+	loss_by_fees_last_6hr: BigInt!
+
+	# Weighted average by hour of the base servicer rewards (without considering the stake weight multiplier)
+	# by node staked in the last 48 hours (average in uPOKT).
+	avg_base_servicer_rewards_last_48hrs: Float!
+
+	# Weighted average by hour of the base servicer rewards (without considering the stake weight multiplier)
+	# by node staked in the last 24 hours (average in uPOKT).
+	avg_base_servicer_rewards_last_24hrs: Float!
+
+	# Weighted average by hour of the base servicer rewards (without considering the stake weight multiplier)
+	# by node staked in the last 6 hours (average in uPOKT).
+	avg_base_servicer_rewards_last_6hrs: Float!
+
+	# Total rewards (in uPOKT) generated by serving relay (servicer rewards) and by
+	# producing blocks (producer rewards) in the last 48 hours
+	total_rewards_last_48hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relay (servicer rewards) and by
+	# producing blocks (producer rewards) in the last 24 hours
+	total_rewards_last_24hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relay (servicer rewards) and by
+	# producing blocks (producer rewards) in the last 6 hours
+	total_rewards_last_6hrs: BigInt!
+
+	# Total relays served by the staked nodes in the selection on the last 48 hours
+	relays_last_48hrs: BigInt!
+
+	# Total relays served by the staked nodes in the selection on the last 24 hours
+	relays_last_24hrs: BigInt!
+
+	# Total relays served by the staked nodes in the selection on the last 6 hours
+	relays_last_6hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by producing blocks in the last 48 hours
+	producer_rewards_last_48hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by producing blocks in the last 24 hours
+	producer_rewards_last_24hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by producing blocks in the last 6 hours
+	producer_rewards_last_6hrs: BigInt!
+
+	# Times when a validator in the node selection produced a block in the last 48 hours
+	producer_times_last_48hrs: BigInt!
+
+	# Times when a validator in the node selection produced a block in the last 24 hours
+	producer_times_last_24hrs: BigInt!
+
+	# Times when a validator in the node selection produced a block in the last 6 hours
+	producer_times_last_6hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relays in the last 48 hours
+	servicer_rewards_last_48hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relays in the last 24 hours
+	servicer_rewards_last_24hrs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relays in the last 6 hours
+	servicer_rewards_last_6hrs: BigInt!
+
+	# Weighted average by hour of the relays served by staked nodes in the last 48 hours.
+	avg_relays_last_48hrs: Float!
+
+	# Weighted average by hour of the relays served by staked nodes in the last 24 hours.
+	avg_relays_last_24hrs: Float!
+
+	# Weighted average by hour of the relays served by staked nodes in the last 6 hours.
+	avg_relays_last_6hrs: Float!
+
+	# Weighted average by hour of the servicer rewards (considering the stake weight multiplier)
+	# by node staked in the last 48 hours (average in uPOKT).
+	avg_servicer_rewards_last_48hrs: Float!
+
+	# Weighted average by hour of the servicer rewards (considering the stake weight multiplier)
+	# by node staked in the last 24 hours (average in uPOKT).
+	avg_servicer_rewards_last_24hrs: Float!
+
+	# Weighted average by hour of the servicer rewards (considering the stake weight multiplier)
+	# by node staked in the last 6 hours (average in uPOKT).
+	avg_servicer_rewards_last_6hrs: Float!
+
+	# Weighted average by hour of the total rewards (servicer rewards considering the stake weight
+	# multiplier + producer rewards) by node staked in the last 48 hours (average in uPOKT).
+	avg_total_rewards_last_48hrs: Float!
+
+	# Weighted average by hour of the total rewards (servicer rewards considering the stake weight
+	# multiplier + producer rewards) by node staked in the last 24 hours (average in uPOKT).
+	avg_total_rewards_last_24hrs: Float!
+
+	# Weighted average by hour of the total rewards (servicer rewards considering the stake weight
+	# multiplier + producer rewards) by node staked in the last 6 hours (average in uPOKT).
+	avg_total_rewards_last_6hrs: Float!
+
+	# Weighted average by hour of the producer rewards by nodes validators in the last 48 hours (average in uPOKT).
+	avg_producer_rewards_last_48hrs: Float!
+
+	# Weighted average by hour of the producer rewards by nodes validators in the last 24 hours (average in uPOKT).
+	avg_producer_rewards_last_24hrs: Float!
+
+	# Weighted average by hour of the producer rewards by nodes validators in the last 6 hours (average in uPOKT).
+	avg_producer_rewards_last_6hrs: Float!
+
+	# Amount of unique chains that the nodes selected have.
+	total_chains: Int!
+
+	# Unique chains that the nodes selected have.
+	chains: [String]!
+
+	# Total balance (in uPOKT) that nodes have in their operator wallet
+	total_balance: BigInt!
+
+	# Total balance (in uPOKT) that nodes have in their output (non custodial) wallet.
+	# Note that when a node is custodial then it's output wallet will be their operator wallet.
+	total_output_balance: BigInt!
+
+	# Amount of nodes that are jailed in the selection at the block in the last_height field
+	jailed_now: Int!
+
+	# Amount of nodes in the selection at the block in the last_height field
+	total_nodes: Int!
+
+	# Amount of staked nodes in the selection at the block in the last_height field
+	nodes_staked: BigInt!
+
+	# Amount of unstaked nodes in the selection at the block in the last_height field
+	nodes_unstaked: BigInt!
+
+	# Amount of unstaking nodes in the selection at the block in the last_height field
+	nodes_unstaking: BigInt!
+
+	# Amount of validators nodes in the selection at the current time
+	validators: BigInt!
+
+	# Last height of block considered to get the data for the summary
+	last_height: BigInt!
+
+	# Amount of claims waiting to be processed as proof transaction 
+	pending_claims: BigInt!
+
+	# Total relays waiting to receive the proof 
+	total_pending_relays: BigInt!
+
+	# This will be the uPOKT the nodes will receive when the pending relays are processed. Estimated because we do not know if one
+	# parameter that interfere with the nodes earning multiplier (i.e. RelaysToTokenMultiplier) will change.
+	total_estimated_pending_rewards: BigInt!
+
+	# Sum of the amount of tokens staked (in uPOKT) that every staked nodes have in the selection 
+	total_tokens_staked: BigInt!
+
+	# Sum of the amount of tokens staked (in uPOKT) that every validator node have in the selection 
+	validators_tokens_staked: BigInt!
+}
+
+type StakeWeightRewards {
+	stake_weight: Float!
+
+	# Amount of nodes staked with this bin (stake weight multiplier) 
+	nodes: BigInt!
+
+	# Total relays served by the staked nodes in the selection on the last 24 hours only considering the nodes staked with this bin (stake weight multiplier)
+	total_relays_last_24hs: BigInt!
+
+	# Total relays served by the staked nodes in the selection on the last 48 hours only considering the nodes staked with this bin (stake weight multiplier)
+	total_relays_last_48hs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relays in the last 24 hours only considering the nodes staked with this bin (stake weight multiplier)
+	total_rewards_last_24hs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relays in the last 48 hours only considering the nodes staked with this bin (stake weight multiplier)
+	total_rewards_last_48hs: BigInt!
+
+	# Weighted average by hour of the relays served by staked nodes in the last 24 hours only considering the nodes staked with this bin (stake weight multiplier)
+	avg_relays_last_24hs: Float!
+
+	# Weighted average by hour of the relays served by staked nodes in the last 48 hours only considering the nodes staked with this bin (stake weight multiplier)
+	avg_relays_last_48hs: Float!
+
+	# Weighted average by hour of the servicer rewards (considering the stake weight multiplier)
+	# by node staked in the last 24 hours (average in uPOKT) only considering the nodes staked with this bin (stake weight multiplier)
+	avg_rewards_last_24hs: Float!
+
+	# Weighted average by hour of the servicer rewards (considering the stake weight multiplier)
+	# by node staked in the last 48 hours (average in uPOKT) only considering the nodes staked with this bin (stake weight multiplier)
+	avg_rewards_last_48hs: Float!
+
+	# Tokens (in uPOKT) in which the bin range starts. 
+	start: BigInt!
+
+	# Tokens (in uPOKT) in which the bin range ends. If is null that means the bin does not have an end. 
+	end: BigInt
+}
+
+type GetStakeWeightRewardsForSelectionResponse {
+	# Height of the latest block considered in the data 
+	last_block: BigInt!
+
+	# Amount of nodes staked 
+	nodes: BigInt!
+
+	# Total relays served by the staked nodes in the selection on the last 24 hours
+	total_relays_last_24hs: BigInt!
+
+	# Total relays served by the staked nodes in the selection on the last 48 hours
+	total_relays_last_48hs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relays in the last 24 hours
+	total_rewards_last_24hs: BigInt!
+
+	# Total rewards (in uPOKT) generated by serving relays in the last 48 hours
+	total_rewards_last_48hs: BigInt!
+
+	# Weighted average by hour of the relays served by staked nodes in the last 24 hours.
+	avg_relays_last_24hs: Float!
+
+	# Weighted average by hour of the relays served by staked nodes in the last 48 hours.
+	avg_relays_last_48hs: Float!
+
+	# Weighted average by hour of the servicer rewards (considering the stake weight multiplier)
+	# by node staked in the last 24 hours (average in uPOKT).
+	avg_rewards_last_24hs: Float!
+
+	# Weighted average by hour of the servicer rewards (considering the stake weight multiplier)
+	# by node staked in the last 48 hours (average in uPOKT).
+	avg_rewards_last_48hs: Float!
+
+	# Rewards grouped by bins (stake weight multipliers) 
+	weights_summary: [StakeWeightRewards]!
+}
+
+type ChainRewardsForSelectionByUnitPoint {
+	# Date that represents the point 
+	point: String
+
+	# Datetime that represents the beginning of the point 
+	start_date: String
+
+	# Datetime that represents the end of the point 
+	end_date: String
+
+	# Sum of the relays on every block 
+	total_relays: BigInt!
+
+	# Sum of the rewards (in uPOKT) generated on every block  
+	total_rewards: Float!
+
+	# Rewards grouped by chain 
+	rewards_by_chain: [ChainRewardsByUnit]!
+}
+
+type GetChainRewardsForSelectionByUnitBetweenDatesResponse {
+	# Date format that represents the points 
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected 
+	points: [ChainRewardsForSelectionByUnitPoint]!
+}
+
+input GetForSelectionByUnitWithoutHourBetweenDatesInput {
+	# Start date of the date range. 
+	start_date: String!
+
+	# End date of the date range. 
+	end_date: String!
+
+	# The unit of time by which the data will be grouped. 
+	unit_time: UnitTimeGroupWithoutHour!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Input where you need to pass your node selection 
+	node_selection: NodeSelectionInput!
+
+	# Service domain to filter alongside with the node_selection 
+	domain: String
+}
+
+type SegmentNode {
+	# Segment (range) identifier (ID) 
+	segment: Int!
+
+	# Amount in which the segment starts 
+	start: Float
+
+	# Amount in which the segment ends. If null that means the end it's the infinite 
+	end: Float
+
+	# Amount of nodes between the ranges (start and end) of the segment 
+	count: Int!
+
+	# Addresses of the nodes that are in this segment 
+	addresses: [String!]
+}
+
+input GetNodeRelaysBySegmentsForSelectionOnLast24hrsInput {
+	# Input where you need to pass your node selection 
+	node_selection: NodeSelectionInput!
+
+	# How many segments do you want. Each segment will have a range of the value you specify
+	# on relays_on_every_segments.
+	segments: Int!
+
+	# How many relays do you want on every segment. 
+	relays_on_every_segments: Float!
+}
+
+type TotalRewardsForSelection {
+	# Date that represents the point 
+	point: String!
+
+	# Datetime that represents the beginning of the point 
+	start_date: String!
+
+	# Datetime that represents the end of the point 
+	end_date: String!
+
+	# Sum of the relays of every block in the range 
+	total_relays: BigInt
+
+	# Sum of the uPOKT earned (considering the stake weight multiplier) by nodes staked in the selection for serving relays on every block in the range 
+	total_servicer_rewards: BigInt
+
+	# Sum of the uPOKT earned by nodes validators in the selection for producing blocks on every block in the range 
+	total_producer_rewards: BigInt
+
+	# Sum of the fees in uPOKT generated by the selected nodes on every block in the range 
+	total_fee: BigInt!
+
+	# Result of the following operation: total_servicer_rewards + total_producer_rewards - total_fee 
+	total_net_rewards: BigInt!
+}
+
+type GetTotalRewardsForSelectionBetweenDatesResponse {
+	# Date format that represents the points 
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected 
+	points: [TotalRewardsForSelection!]!
+}
+
+type RewardByAddress {
+	# Address of the account 
+	address: String!
+
+	# Amount of rewards (in uPOKT) the address received 
+	reward: BigInt!
+}
+
+type NodePerformance {
+	# Height of the last block in which this node was scanned
+	height: BigInt!
+
+	# Address of the node (operator address)
+	address: String!
+
+	# Service domain of the node
+	service_domain: String!
+
+	# Service URL of the node
+	service_url: String!
+
+	# Chains supported by this node
+	chains: [String!]!
+
+	# Balance of the operator address
+	balance: BigInt!
+
+	# True if the node is jailed
+	jailed: Boolean!
+
+	# Amount of rewards (in uPOKT) that the node have earned by serving relays in the last 6 hours 
+	last6: BigInt!
+
+	# Amount of rewards (in uPOKT) that the node have earned by serving relays in the last 24 hours 
+	last24: BigInt!
+
+	# Amount of rewards (in uPOKT) that the node have earned by serving relays in the last 48 hours 
+	last48: BigInt!
+
+	# Amount of relays that the node have served in the last 6 hours 
+	last6_relays: BigInt!
+
+	# Amount of relays that the node have served in the last 24 hours 
+	last24_relays: BigInt!
+
+	# Amount of relays that the node have served in the last 48 hours 
+	last48_relays: BigInt!
+
+	# Amount of computed units that the node have processed in the last 6 hours 
+	last6_computed_units: Float
+
+	# Amount of computed units that the node have processed in the last 24 hours 
+	last24_computed_units: Float
+
+	# Amount of computed units that the node have processed in the last 48 hours 
+	last48_computed_units: Float
+
+	# Amount of rewards using the base node multiplier (in uPOKT) that the node have earned in the last 6 hours 
+	last6_base: BigInt
+
+	# Amount of rewards using the base node multiplier (in uPOKT) that the node have earned in the last 24 hours 
+	last24_base: BigInt
+
+	# Amount of rewards using the base node multiplier (in uPOKT) that the node have earned in the last 6 hours 
+	last48_base: BigInt!
+
+	# Amount of rewards (in uPOKT) the custodian(s) of the node received in the last 6 hours 
+	last6_custodian_reward: BigInt
+
+	# Amount of rewards (in uPOKT) the custodian(s) of the node received in the last 24 hours 
+	last24_custodian_reward: BigInt
+
+	# Amount of rewards (in uPOKT) the custodian(s) of the node received in the last 48 hours 
+	last48_custodian_reward: BigInt
+
+	# Amount of fee (in uPOKT) the DAO have received from the rewards of the node for serving relays in the last 6 hours 
+	last6_dao_fee: BigInt
+
+	# Amount of fee (in uPOKT) the DAO have received from the rewards of the node for serving relays in the last 24 hours 
+	last24_dao_fee: BigInt
+
+	# Amount of fee (in uPOKT) the DAO have received from the rewards of the node for serving relays in the last 48 hours 
+	last48_dao_fee: BigInt
+
+	# Amount of fee (in uPOKT) the producers of the blocks have received from the rewards of the node for serving relays in the last 6 hours 
+	last6_proposer_fee: BigInt
+
+	# Amount of fee (in uPOKT) the producers of the blocks have received from the rewards of the node for serving relays in the last 24 hours 
+	last24_proposer_fee: BigInt
+
+	# Amount of fee (in uPOKT) the producers of the blocks have received from the rewards of the node for serving relays in the last 48 hours 
+	last48_proposer_fee: BigInt
+
+	# Amount of fee (claim and proof txs, in uPOKT) the node have payed for serving relays in the last 6 hours 
+	last6_returned_fees: BigInt
+
+	# Amount of fee (claim and proof txs, in uPOKT) the node have payed for serving relays in the last 24 hours 
+	last24_returned_fees: BigInt
+
+	# Amount of fee (claim and proof txs, in uPOKT) the node have payed for serving relays in the last 48 hours 
+	last48_returned_fees: BigInt
+
+	# Amount of rewards (in uPOKT) the operator account of the node received in the last 6 hours 
+	last6_operator_reward: BigInt
+
+	# Amount of rewards (in uPOKT) the operator account of the node received in the last 24 hours 
+	last24_operator_reward: BigInt
+
+	# Amount of rewards (in uPOKT) the operator account of the node received in the last 48 hours 
+	last48_operator_reward: BigInt
+
+	# Total Amount of rewards (in uPOKT) the delegators of the node have received in the last 6 hours 
+	last6_total_delegator_rewards: BigInt
+
+	# Total Amount of rewards (in uPOKT) the delegators of the node have received in the last 24 hours 
+	last24_total_delegator_rewards: BigInt
+
+	# Total Amount of rewards (in uPOKT) the delegators of the node have received in the last 48 hours 
+	last48_total_delegator_rewards: BigInt
+
+	# Amount of rewards (in uPOKT) by delegators of the node have received in the last 6 hours 
+	last6_delegator_rewards: [RewardByAddress]
+
+	# Amount of rewards (in uPOKT) by delegators of the node have received in the last 24 hours 
+	last24_delegator_rewards: [RewardByAddress]
+
+	# Amount of rewards (in uPOKT) by delegators of the node have received in the last 48 hours 
+	last48_delegator_rewards: [RewardByAddress]
+
+	# Status of the node. Can be: staked (2), unstaking (1) and unstaked (0)
+	status: Int!
+
+	# Balance of the output address (if the node is custodial then it output balance will be the operator balance)
+	output_balance: Float!
+
+	# Address of the output address (if the node is custodial then it output address will be the operator address)
+	output_address: String!
+
+	# True if the node is custodial, if false then the node is non custodial
+	custodial: Boolean
+
+	# Claim relays waiting to receive the proof 
+	total_pending_claim_relays: BigInt
+
+	# this will be the uPOKT you will receive when the pending claims are processed. Estimated because we do not know if one
+	# parameter that interfere with the nodes earning multiplier (i.e. RelaysToTokenMultiplier) will change.
+	total_pending_claim_tokens: BigInt
+
+	# Times that the node have produced a blocks in the last 6 hours 
+	producer_times_last6: BigInt!
+
+	# Amount of rewards (in uPOKT) that the node have earned by producing blocks in the last 6 hours 
+	producer_rewards_last6: BigInt!
+
+	# Times that the node have produced a blocks in the last 24 hours 
+	producer_times_last24: BigInt!
+
+	# Amount of rewards (in uPOKT) that the node have earned by producing blocks in the last 24 hours 
+	producer_rewards_last24: BigInt!
+
+	# Times that the node have produced a blocks in the last 48 hours 
+	producer_times_last48: BigInt!
+
+	# Amount of rewards (in uPOKT) that the node have earned by producing blocks in the last 48 hours 
+	producer_rewards_last48: BigInt!
+
+	# Stake Weight multiplier of the node 
+	stake_weight: Float
+
+	# Tokens (in uPOKT) this node have staked/unstaking
+	stake_amount: BigInt!
+
+	# Amount of claims waiting to be processed as proof transaction 
+	pending_claims: BigInt!
+
+	# True if the node was a validator in the latest block
+	validator: Boolean!
+}
+
+type RewardsReportItem {
+	# Date that represents the point 
+	point: String
+
+	# Datetime that represents the beginning of the point 
+	start_date: String
+
+	# Datetime that represents the end of the point 
+	end_date: String
+
+	# Amount of proof transactions between the date range for the selected nodes 
+	amount_of_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for serving relays between the date range for the selected nodes 
+	total_servicer_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for producing blocks between the date range for the selected nodes 
+	total_producer_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for serving relays and producing blocks between the date range for the selected nodes 
+	total_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for serving relays and producing blocks but discounting the fees between the date range for the selected nodes 
+	total_net_rewards: BigInt!
+
+	# Amount of relays served by the selected nodes between the date range
+	total_relays: BigInt!
+
+	# Amount of fee (in uPOKT) that the selected nodes have paid between the date ranges 
+	total_fee: BigInt!
+
+	# Times the selected nodes produced a block between the date range 
+	times_as_producer: BigInt!
+
+	# Times the selected nodes got jailed between the date range 
+	jails: BigInt!
+
+	# Chains that the selected nodes had staked between the date range 
+	chains: [String]!
+
+	# Amount of nodes that got staked for their first time between the date range 
+	nodes_added: BigInt!
+
+	# Amount of nodes that was staked between the date range 
+	nodes_staked: BigInt!
+
+	# Avg of relays  by day by node for the selected nodes between the date range 
+	avg_relays: Float!
+
+	# Avg of rewards (in uPOKT) by day by node for the selected nodes between the date range 
+	avg_rewards: Float!
+
+	# Amount of rewards (in uPOKT) for serving relays that the delegators of the nodes received between the date range for the selected nodes 
+	total_delegators_rewards: BigInt
+
+	# Amount of rewards (in uPOKT) for serving relays that the nodes themself received between the date range for the selected nodes 
+	total_custodian_rewards: BigInt
+
+	# Amount of rewards (in uPOKT) for serving relays that the custodian address of the nodes received between the date range for the selected nodes 
+	total_non_custodial_rewards: BigInt
+}
+
+type ListNodePerformanceResponse {
+	# Nodes performance on this page
+	items: [NodePerformance!]!
+
+	# Info related to the current page of the list
+	pageInfo: PaginationResponse
+}
+
+input GetAvgAndTotalsOfStakeAndRelaysForSelectionInLast24hrsInput {
+	# Input where you need to pass your node selection 
+	node_selection: NodeSelectionInput!
+
+	# Input to be able to specify the filter of the nodes you want to be considered alongside the node selection. Only will consider operator AND. 
+	filter: FilterInput
+}
+
+type GetRewardsReportForSelectionBetweenDatesResponse {
+	# Date format that represents the points 
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected 
+	points: [RewardsReportItem]
+
+	# Amount of proof transactions between the date range for the selected nodes 
+	amount_of_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for serving relays between the date range for the selected nodes 
+	total_servicer_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for producing blocks between the date range for the selected nodes 
+	total_producer_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for serving relays and producing blocks between the date range for the selected nodes 
+	total_rewards: BigInt!
+
+	# Amount of rewards (in uPOKT) for serving relays and producing blocks but discounting the fees between the date range for the selected nodes 
+	total_net_rewards: BigInt!
+
+	# Amount of relays served by the selected nodes between the date range
+	total_relays: BigInt!
+
+	# Amount of fee (in uPOKT) that the selected nodes have paid between the date ranges 
+	total_fee: BigInt!
+
+	# Times the selected nodes produced a block between the date range 
+	times_as_producer: BigInt!
+
+	# Times the selected nodes got jailed between the date range 
+	total_jails: BigInt!
+
+	# Amount of rewards (in uPOKT) for serving relays that the delegators of the nodes received between the date range for the selected nodes 
+	total_delegators_rewards: BigInt
+
+	# Amount of rewards (in uPOKT) for serving relays that the nodes themself received between the date range for the selected nodes 
+	total_custodian_rewards: BigInt
+
+	# Amount of rewards (in uPOKT) for serving relays that the custodian address of the nodes received between the date range for the selected nodes 
+	total_non_custodial_rewards: BigInt
+}
+
+type AddressesByWeight {
+	# Addresses of the nodes with this stake weight multiplier 
+	addresses: [String]!
+
+	# Sum of the balance (in uPOKT) of the nodes that have this stake weight multiplier 
+	balance: BigInt!
+
+	# Staked nodes with this stake weight multiplier 
+	staked_nodes: BigInt!
+
+	# Stake weight multiplier 
+	stake_weight: Float!
+
+	# Bin of the stake weight multiplier 
+	bin: BigInt!
+
+	# Start (in uPOKT) of the range of staked tokens of this bin 
+	start: BigInt!
+
+	# End (in uPOKT) of the range of staked tokens of this bin. If end is null then the end is the infinite 
+	end: BigInt
+}
+
+type AddressesByOutput {
+	# Addresses of the nodes with this output address 
+	addresses: [String]!
+
+	# Output address 
+	output_address: String!
+
+	# Balance (in uPOKT) of the output address 
+	output_balance: BigInt!
+
+	# Staked nodes with this output address 
+	staked_nodes: BigInt!
+}
+
+type AddressesByWeightAndTheirOutputs {
+	# Addresses of the nodes with this stake weight multiplier 
+	addresses: [String]!
+
+	# Sum of the balance (in uPOKT) of the nodes that have this stake weight multiplier 
+	balance: BigInt!
+
+	# Staked nodes with this stake weight multiplier 
+	staked_nodes: BigInt!
+
+	# Stake weight multiplier 
+	stake_weight: Float!
+
+	# Bin of the stake weight multiplier 
+	bin: BigInt!
+
+	# Start (in uPOKT) of the range of staked tokens of this bin 
+	start: BigInt!
+
+	# End (in uPOKT) of the range of staked tokens of this bin. If end is null then the end is the infinite 
+	end: BigInt
+
+	# Addresses grouped by their output address only considering the nodes with this stake weight. The output addresses
+	# considered should have more than one node with this output address or one node but its operator address
+	# should be different of the output address.  
+	addresses_by_output: [AddressesByOutput]!
+}
+
+type AddressesByOutputAndTheirWeights {
+	# Addresses of the nodes with this output address 
+	addresses: [String]!
+
+	# Output address 
+	output_address: String!
+
+	# Balance (in uPOKT) of the output address 
+	output_balance: BigInt!
+
+	# Staked nodes with this output address 
+	staked_nodes: BigInt!
+
+	# Addresses grouped by their stake weight multiplier only considering the nodes with this output address 
+	addresses_by_weight: [AddressesByWeight]!
+}
+
+type GetAddressesByOutputAndWeightForSelectionResponse {
+	height: BigInt!
+
+	# Addresses grouped by their stake weight multiplier considering the selected nodes 
+	addresses_by_weight: [AddressesByWeightAndTheirOutputs]!
+
+	# Addresses grouped by their output address considering the selected nodes. The output addresses considered should
+	# have more than one node with this output address or one node but its operator address should be
+	# different of the output address.
+	addresses_by_output: [AddressesByOutputAndTheirWeights]!
+}
+
+type PoktNodeErrorGateway {
+	# ID of the record 
+	_id: ID
+
+	# Address of the node 
+	address: String!
+
+	# Start of the range 
+	from_time: String!
+
+	# End of the range 
+	to_time: String!
+
+	# Message of the error 
+	message: String!
+
+	# Method of the error 
+	method: String!
+
+	# Severity of the error 
+	severity: BigInt!
+
+	# Amount of time this error occurs between the from_time and the to_time for this node 
+	count: BigInt!
+
+	# Average of the elapsed time 
+	avg_elapsed_time: Float!
+
+	# ChainId with which the node had the error 
+	chain: String!
+}
+
+type ListPoktNodeGatewayErrorResponse {
+	# Nodes gateway errors on this page
+	items: [PoktNodeErrorGateway]
+
+	# Info related to the current page of the list
+	pageInfo: PaginationResponse
+}
+
+type LossByChain {
+	# Id of chain 
+	chain: String!
+
+	# Amount of uPOKT loss for this chain when the rewards are not enough to pay the fees for the claim and proof transactions. 
+	loss_by_fees: BigInt!
+
+	# Amount of records (pair of claim and proof transactions) where the rewards were not enough to pay the fess 
+	records_with_losses: BigInt!
+}
+
+type HealthSummaryNodeSelection {
+	# Amount of errors between the date range. 
+	amount_of_errors: BigInt!
+
+	# Amount of staked nodes that haven't done any rewards in the last 48 hours. 
+	unproductive_48hrs: BigInt!
+
+	# Addresses of staked nodes that haven't done any rewards in the last 48 hours. 
+	addresses_unproductive_48hrs: [String!]!
+
+	# Amount of staked nodes that haven't done any rewards in the last 24 hours. 
+	unproductive_24hrs: BigInt!
+
+	# Addresses of staked nodes that haven't done any rewards in the last 24 hours. 
+	addresses_unproductive_24hrs: [String!]!
+
+	# Amount of staked nodes that are jailed in the latest block. 
+	jailed: BigInt!
+
+	# Addresses of staked nodes that are jailed in the latest block. 
+	addresses_jailed: [String!]!
+
+	# Amount of staked nodes are in risk of getting unstaked. These are the nodes that their staked tokens are lesser than the stake minimum amount plus 1. 
+	unstaked_risk: BigInt!
+
+	# Addresses of staked nodes that are in risk of getting unstaked. These are the nodes that their staked tokens are lesser than the stake minimum amount plus 1. 
+	addresses_unstaked_risk: [String!]!
+
+	# Amount of staked nodes that are in risk of cannot get any rewards. These are the nodes that have as balance 0.5 POKT or less. 
+	rewardless_risk: BigInt!
+
+	# Addresses of staked nodes that are in risk of cannot get any rewards. These are the nodes that have as balance 0.5 POKT or less. 
+	addresses_rewardless_risk: [String!]!
+
+	# Amount of uPOKT loss when the rewards were not enough to pay the fees for the claim and proof transactions. 
+	total_loss_by_fees: BigInt!
+
+	# Amount of records (pair of claim and proof transactions) where the rewards were not enough to pay the fess 
+	records_with_losses: BigInt!
+
+	# Amount of uPOKT loss by chain 
+	loss_by_chain: [LossByChain!]!
+}
+
+type NodeCherryPickerData {
+	# Region in which the gateway is located. 
+	gateway: String!
+
+	# ChainId 
+	chain: String!
+
+	# Amount of nodes that had a session in the last 72 hours with this chain and through this gateway. 
+	nodes: BigInt!
+
+	# Amount of relays that were successful in all observed sessions in the last 72 hours with this chain and through this gateway. 
+	total_success_relays: BigInt!
+
+	# Amount of relays that failed in all observed sessions in the last 72 hours with this chain and through this gateway. 
+	total_failures_relays: BigInt!
+
+	# Amount of relays in all observed sessions in the last 72 hours with this chain and through this gateway. 
+	total_relays: BigInt!
+
+	# Mean value of the median success latency of the relays in all the observed sessions in the last 72 hours. 
+	median_success_latency: Float!
+
+	# Mean value of the weighted success latency of the relays in all the observed sessions in the last 72 hours. 
+	weighted_success_latency: Float!
+
+	# Mean value of the p90 success latency of the relays in all the observed sessions in the last 72 hours. 
+	p90_latency: Float!
+
+	# Mean value of the success rate of the relays measured by the cherry picker in all the observed sessions in the last 72 hours. 
+	success_rate: Float!
+}
+
+type GetMetricsByGatewayAndChainForSelectionResponse {
+	# Date on which the data was last updated. 
+	last_updated: String
+
+	# Metrics grouped by gateway and by chain. 
+	metrics_by_chain_and_gateway: [NodeCherryPickerData]!
+}
+
+type RewardsByChain {
+	# Chain id 
+	chain: String!
+
+	# Relays grouped by this chain 
+	total_relays: BigInt!
+
+	# Rewards (in uPOKT) grouped by this chain 
+	total_rewards: BigInt!
+}
+
+type RewardsByNode {
+	# Address of the node 
+	node: String!
+
+	# Relays grouped by this node 
+	total_relays: BigInt!
+
+	# Rewards (in uPOKT) grouped by this node 
+	total_rewards: BigInt!
+
+	# Rewards by chain generated by this node 
+	rewards_by_chain: [RewardsByChain]
+}
+
+type RewardsForSelection {
+	# Relays grouped by this node 
+	total_relays: BigInt!
+
+	# Rewards (in uPOKT) grouped by this node 
+	total_rewards: BigInt!
+
+	# Rewards by the nodes includes in the node selection 
+	rewards_by_nodes: [RewardsByNode]
+}
+
+enum RewardsGranularity {
+	General
+	Nodes
+	Chains
+}
+
+input GetRewardsByGranularityForSelectionBetweenDatesInput {
+	# Input where you need to pass your node selection 
+	node_selection: NodeSelectionInput!
+
+	# When General is specified, you only will get the total relays and rewards in general.
+	# When Nodes is specified, you will get the total rewards and relays in general and the rewards by node.
+	# When Chains is specified, you will get the total rewards and relays in general, the rewards by nodes and the rewards by chain for each node.
+	granularity: RewardsGranularity = Nodes
+
+	# Start date of the date range. 
+	start_date: String!
+
+	# End date of the date range. 
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+input GetNodeAddressesByGroupInput {
+	# Id of the array of addresses 
+	group_id: String!
+}
+
+type RelaysByGateway {
+	# Gateway (region) 
+	gateway: String
+
+	# Total relays that were successful on this point and in this gateway 
+	total_success: BigInt
+
+	# Total relays (successful + failed) on this point and in this gateway 
+	total_relays: BigInt
+
+	# Total relays that were failed on this point and in this gateway 
+	total_failure: BigInt
+}
+
+type TrafficEvolutionPoint {
+	# Start date of the point. 
+	start_date: String!
+
+	# End date of the point. 
+	end_date: String!
+
+	# Date that represents the point 
+	point: String
+
+	# Total relays that were successful on this point 
+	total_success: BigInt
+
+	# Last session height between the start date and the end date of the point. Only returned when by_hour is true. 
+	last_session_height: BigInt
+
+	# Total relays (successful + failed) on this point 
+	total_relays: BigInt
+
+	# Total relays that were failed on this point 
+	total_failure: BigInt
+
+	# Relays by gateway in this point 
+	relays_by_gateway: [RelaysByGateway]
+}
+
+type DomainDataItem {
+	# Domain 
+	service_domain: String!
+
+	# Number of staked nodes 
+	staked_nodes: BigInt!
+
+	# Number of staked tokens (in uPOKT) 
+	staked_tokens: BigInt!
+
+	# Number of validator nodes 
+	validator_nodes: BigInt!
+
+	# Number of validator tokens (in uPOKT) 
+	validator_tokens: BigInt!
+
+	# Number of jailed nodes 
+	jailed_nodes: BigInt!
+
+	# Sum of the balance of the staked nodes (in uPOKT) 
+	total_balance: BigInt!
+
+	# Relays made by the staked nodes in the last 6 hours 
+	relays_last_6h: BigInt!
+
+	# Relays made by the staked nodes in the last 24 hours 
+	relays_last_24h: BigInt!
+
+	# Relays made by the staked nodes in the last 48 hours 
+	relays_last_48h: BigInt!
+
+	# Servicer rewards (in uPOKT) earned by the staked nodes in the last 6 hours 
+	servicer_rewards_last6h: BigInt!
+
+	# Servicer rewards (in uPOKT) earned by the staked nodes in the last 24 hours 
+	servicer_rewards_last24h: BigInt!
+
+	# Servicer rewards (in uPOKT) earned by the staked nodes in the last 48 hours 
+	servicer_rewards_last48h: BigInt!
+
+	# Producer rewards (in uPOKT) earned by the validators in the last 6 hours 
+	producer_rewards_last6h: BigInt!
+
+	# Producer rewards (in uPOKT) earned by the validators in the last 24 hours 
+	producer_rewards_last24h: BigInt!
+
+	# Producer rewards (in uPOKT) earned by the validators in the last 48 hours 
+	producer_rewards_last48h: BigInt!
+
+	# Times the validators were producer of a block in the last 6 hours 
+	producer_times_last6h: BigInt!
+
+	# Times the validators were producer of a block in the last 24 hours 
+	producer_times_last24h: BigInt!
+
+	# Times the validators were producer of a block in the last 48 hours 
+	producer_times_last48h: BigInt!
+
+	# Sum of the relays that are in the claims waiting to be confirmed 
+	total_pending_claim_relays: BigInt!
+
+	# This will be the uPOKT you will receive when the pending claims are processed. Estimated because we do not know if one
+	# parameter that interfere with the nodes earning multiplier (i.e. RelaysToTokenMultiplier) will change.
+	total_pending_claim_tokens: BigInt!
+
+	# Claims waiting to be confirmed 
+	pending_claims: BigInt!
+}
+
+type GetDataByDomainResult {
+	# Height of the block used to get the data by domain 
+	height: BigInt!
+
+	# Data grouped by service domain 
+	items: [DomainDataItem]!
+}
+
+type PercentByAddress {
+	# Address of the account 
+	address: String!
+
+	# Percent of the rewards to share  
+	value: Float!
+}
+
+type DelegatorsBySelectionItem {
+	# Address of the account 
+	address: String!
+
+	# Percent of the rewards to share  
+	percent: Float!
+
+	# Nodes that have the account (address) with the percent as rewards share 
+	nodes: [String!]!
+}
+
+type RewardsPerHourByAddress {
+	# Address of the account. 
+	address: String!
+
+	# Rewards (in uPOKT) the account received in the last 48 hours. 
+	last48_reward: BigInt!
+
+	# Rewards (in uPOKT) the account received in the last 24 hours. 
+	last24_reward: BigInt!
+
+	# Rewards (in uPOKT) the account received in the last 6 hours. 
+	last6_reward: BigInt!
+}
+
+type RewardsByAddress {
+	# Address of the account 
+	address: String!
+
+	# Amount of rewards (in uPOKT) the address received 
+	rewards: BigInt!
+}
+
+type RewardsByAddressPoint {
+	# Date that represents the point 
+	point: String
+
+	# Datetime that represents the beginning of the point 
+	start_date: String
+
+	# Datetime that represents the end of the point 
+	end_date: String
+
+	# Sum of the rewards (in uPOKT) by address 
+	total_rewards: BigInt!
+
+	# Rewards by address 
+	rewards_by_address: [RewardsByAddress!]!
+}
+
+type GetRewardsByAddressForSelectionBetweenDatesResponse {
+	# Date format that represents the points 
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected 
+	points: [RewardsByAddressPoint!]!
+}
+
+input GetServiceDomainsByNodeSelectionInput {
+	# The nodes selection that will be used to filter the domains 
+	node_selection: NodeSelectionInput!
+
+	# To specify if only want to consider staked nodes 
+	only_staked: Boolean = false
+}
+
+type WtsMinServiceStake {
+	# Service to stake 
+	service: String!
+
+	# Minimum number of nodes to stake 
+	min_nodes: Int!
+}
+
+type WtsStakeNode {
+	# Address of the node 
+	address: String!
+
+	# Services to stake 
+	services: [String!]!
+}
+
+type WtsOptimizationResponse {
+	# Flag to indicate if you should use this result to update the stake of the nodes 
+	do_update: Boolean!
+
+	# Reason to update the stake of the nodes 
+	reason: String!
+
+	# List of the nodes and services to update
+	servicers: [WtsStakeNode!]!
+
+	# Expected income in POKT in 24Hs according to our simplified model, using the current deployment strategy 
+	current_modeled_gain_24h: Float!
+
+	# Expected income in POKT in 24Hs according to our simplified model, using the proposed deployment strategy 
+	optimal_modeled_gain_24h: Float!
+
+	# Difference between the POKT incomes of the current and proposed strategy in % 
+	gain_change_percent: Float!
+}
+
+input WtsMinServiceStakeInput {
+	# Service to stake 
+	service: String!
+
+	# Minimum number of nodes to stake 
+	min_nodes: Int!
+}
+
+input WtsProcessRequestInput {
+	# Domain of the node runner 
+	domain: String!
+
+	# Service pool to stake 
+	service_pool: [String!]!
+
+	# Minimum increase percentage 
+	min_increase_percent: Float
+
+	# Stake weight multiplier of the nodes 
+	stake_weight: Int
+
+	# List of the minimum number of nodes to stake by service 
+	min_service_stake: [WtsMinServiceStakeInput!]
+
+	# Time period in hours used to get the amount of relays 
+	time_period: Int
+}
+
+type NodesDelegatingRewards {
+	address: String!
+	share: Float!
+}
+
+type DelegatorRewards {
+	nodes: [NodesDelegatingRewards!]!
+	operator_rewards: BigInt!
+	custodian_rewards: BigInt!
+	delegator_rewards: BigInt!
+	total_rewards: BigInt!
+}
+
+input GetDelegatorRewardsBetweenDatesInput {
+	# Start date of the date range. 
+	start_date: String!
+
+	# End date of the date range. 
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+
+	# Input where you need to pass your node selection 
+	node_selection: NodeSelectionInput!
+}
+
+type PoktRelay {
+	# The chain for which the node served relays. 
+	chain: String!
+
+	# Height of the proof transaction 
+	height: BigInt!
+
+	# Hash of the proof transaction 
+	tx_proof: String
+
+	# Amount of relays served 
+	amount: BigInt!
+
+	# Address of the app for which the node served relays 
+	app: String!
+
+	# Relay to token multiplier without considering the stake_weight 
+	base_multiplier: Float
+
+	# Time of the block in which the proof transaction was processed 
+	block_time: String!
+
+	# uPOKT that correspond to the DAO 
+	dao_fee: BigInt!
+
+	# uPOKT earning multiplier (this value is multiplied with amount to get the rewards): base relay to token multiplier * stake_weight 
+	earning_multiplier: BigInt!
+
+	# Address of the node that served the relays 
+	node: String!
+
+	# Index of the proof transaction in its block 
+	proof_index: BigInt!
+
+	# Amount of uPOKT that correspond to the producer of the block 
+	proposer_fee: BigInt!
+
+	# Amount of uPOKT that correspond to the node 
+	reward: BigInt!
+
+	# Height of the block in which the node entered in session 
+	session_height: BigInt!
+
+	# Stake Weight multiplier of the node 
+	stake_weight: Float!
+
+	# Sum of the dao_fee and proposer_fee 
+	total_fee: BigInt!
+
+	# Hash of the claim transaction 
+	tx_claim: String
+
+	# Amount (in uPOKT) sent to the custodian (output address) 
+	custodian_reward: BigInt
+
+	# Address of the custodian of the node (output address) 
+	custodian_address: String
+
+	# PIP-32 returned fees (in uPOKT) 
+	returned_fees: BigInt
+
+	# Amount (in uPOKT) sent to the operator (node address) 
+	operator_reward: BigInt
+
+	# Total uPOKT minted result of this proof transaction (the relays served by the node) 
+	total_minted: BigInt
+
+	# Amount (in uPOKT) sent to each delegator of the node 
+	delegator_reward: [DelegatorReward]
+
+	# Total amount (in uPOKT) sent to the delegators 
+	total_delegators_rewards: BigInt
+
+	# Relays to token multiplier used for the calculation 
+	chain_rttm_multiplier: Float
+
+	# Relays to token multiplier source (can be default or per_chain) 
+	chain_rttm_multiplier_source: String
+
+	# Result of the division of chain (or default if the chain does not have one) relays to token multiplier by the default relays to token multiplier 
+	service_multiplier: Float
+
+	# " Result of the multiplication of total relays by service multiplier 
+	computed_units: Float
+
+	# True when the node loss money because the relays it served in this proof weren't enough to pay the fees 
+	reward_lt_fees: Boolean
+
+	# Amount (in uPOKT) the node loss because the relays it served in this proof weren't enough to pay the fees 
+	loss_by_fees: BigInt
+}
+
+type ListPoktRelayResponse {
+	# Relays item on this page
+	items: [PoktRelay!]!
+
+	# Info related to the current page of the list
+	pageInfo: PaginationResponse
+}
+
+type PointWithTransactionsTotal {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String!
+
+	# Datetime that represents the end of the point
+	end_date: String!
+
+	# Sum of the amount of transactions (valid and invalid) on every block in the range
+	total_txs: BigInt!
+
+	# Sum of the amount of valid transactions on every block in the range
+	total_good_txs: BigInt!
+
+	# Sum of the amount of invalid transactions on every block in the range
+	total_bad_txs: BigInt!
+}
+
+type ListTotalOfTransactionBetweenDatesResponse {
+	# Date format that represents the points
+	point_format: String!
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [PointWithTransactionsTotal]
+}
+
+input ListTotalOfTransactionsByTypeBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	date_format: String = "YYYY-MM-DD"
+
+	# If you only want to get the total transactions of certain types, you can pass the types here.
+	types: [String!]
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+input ListTotalOfTransactionBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroup!
+
+	# The number of intervals by which the data will be grouped. By default it is: 1.
+	# For example: if you have day as unit_time and specify 2 as interval, the data will be grouped by every two days.
+	interval: Int = 1
+
+	# If you only want to get the total transactions of certain types, you can pass the types here.
+	# The query will be lounger if you specify types.
+	types: [String!] = []
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+input ListPoktTxPaginationForSelectionInput {
+	# Input where you need to pass your node selection
+	node_selection: NodeSelectionInput!
+
+	# Input to pass the pagination parameters
+	pagination: ListInput!
+
+	# When true it will only look for transactions of staked nodes. 
+	only_staked: Boolean = false
+}
+
+input ListPoktPaginationForSelectionInput {
+	# Input where you need to pass your node selection
+	node_selection: NodeSelectionInput!
+
+	# Input to pass the pagination parameters
+	pagination: ListInput!
+}
+
+type TransactionSummary {
+	# Amount of transactions that are waiting to be indexed in a block
+	pending_transactions: BigInt!
+
+	# Amount of valid transactions (their result_code is 0)
+	success_transactions: BigInt!
+
+	# Amount of invalid transactions (their result_code is not 0)
+	fail_transactions: BigInt!
+
+	# Amount of valid send transactions (their result_code is 0) that were received by one of the selected nodes
+	in_transfers: BigInt!
+
+	# Amount of valid send transactions (their result_code is 0) that were sent by one of the selected nodes
+	out_transfers: BigInt!
+
+	# Amount of tokens (in uPOKT) received in valid send transactions (their result_code is 0) that were received by one of the selected nodes
+	in_transfers_amount: BigInt!
+
+	# Amount of tokens (in uPOKT) sent in valid send transactions (their result_code is 0) that were sent by one of the selected nodes
+	out_transfers_amount: BigInt!
+
+	# Amount of claim transactions that are awaiting for receive the proof in the current latest block (without considering the date range)
+	incoming_claims: BigInt!
+}
+
+input GetTransactionSummaryForSelectionBetweenDatesInput {
+	# Input where you need to pass your node selection
+	node_selection: NodeSelectionInput!
+
+	# Start date of the date range.
+	start_date: String!
+
+	# End date of the date range.
+	end_date: String!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DDTHH:mm:ss.SSSZ.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DDTHH: mm: ss.SSSZ"
+
+	# Pass the timezone of the start date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+type PointWithDaoExpenses {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String!
+
+	# Datetime that represents the end of the point
+	end_date: String!
+
+	# How many uPOKT was sent in the dao transfer.
+	amount: BigInt
+
+	# Height of the highest block in the range
+	last_height: BigInt
+
+	# Height of the lowest block in the range
+	first_height: BigInt
+}
+
+type ListDaoExpensesBetweenDatesResponse {
+	# Date format that represents the points. Only returned when unit_time is not block.
+	point_format: String
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [PointWithDaoExpenses]!
+}
+
+type PointWithDaoBurn {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String!
+
+	# Datetime that represents the end of the point
+	end_date: String!
+
+	# Datetime that represents time of the block. Only returned when unit time is block.
+	block_time: String
+
+	# How many uPOKT was burn.
+	amount: BigInt!
+}
+
+type ListDaoBurnBetweenDatesResponse {
+	# Date format that represents the points. Only returned when unit_time is not block.
+	point_format: String
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [PointWithDaoBurn]!
+}
+
+type PendingBalanceByAddress {
+	# Address of the account (wallet). 
+	address: String!
+
+	# Pending balance of account. 
+	pending_balance: BigInt!
+}
+
+type TransferSummaryResponse {
+	# Amount of transfers that are waiting to be indexed in a block
+	pending_transfers: BigInt!
+
+	# Total pending balance (in uPOKT) of the selection.
+	pending_amount: BigInt!
+
+	# Amount of valid transfers (their result_code is 0)
+	successfully_transfers: BigInt!
+
+	# Amount of failed transfers (their result_code is not 0)
+	failed_transfers: BigInt!
+
+	# Amount of valid send transactions (their result_code is 0) that were received by one of the selected nodes
+	in_transfers: BigInt!
+
+	# Amount of valid send transactions (their result_code is 0) that were sent by one of the selected nodes
+	out_transfers: BigInt!
+
+	# Amount of tokens (in uPOKT) received in valid send transactions (their result_code is 0) that were received by one of the selected nodes
+	in_transfers_amount: BigInt!
+
+	# Amount of tokens (in uPOKT) sent in valid send transactions (their result_code is 0) that were sent by one of the selected nodes
+	out_transfers_amount: BigInt!
+}
+
+input ListAppBurnRateBetweenDatesInput {
+	# Start date of the date range.
+	start_date: String
+
+	# End date of the date range.
+	end_date: String
+
+	# The unit of time by which the data will be grouped.
+	unit_time: UnitTimeGroup!
+
+	# This is the format to convert the string to date. By default is: YYYY-MM-DD.
+	# But if you want to use another format supported by momentjs you can pass it here.
+	# More about momentjs formats: https://momentjs.com/docs/#/displaying/format/
+	# When using hour as unit_time we recommend to use YYYY-MM-DDTHH:mm:ss.SSSZ as format.
+	date_format: String = "YYYY-MM-DD"
+
+	# Pass the timezone of the start date and end date. By default is UTC.
+	# # List of supported timezones: https://gist.github.com/diogocapela/12c6617fc87607d11fd62d2a4f42b02a#file-moment-js-timezones-txt
+	timezone: String = "UTC"
+}
+
+type DaoBurnRatePoint {
+	# Date that represents the point
+	point: String!
+
+	# Datetime that represents the beginning of the point
+	start_date: String!
+
+	# Datetime that represents the end of the point
+	end_date: String!
+
+	# Amount of uPOKT burned
+	burned_amount: BigInt
+
+	# Amount of relays
+	relays: BigInt
+
+	# Burn rate: burned_amount / relays
+	burn_rate: Float
+}
+
+type ListAppBurnRateBetweenDatesResponse {
+	# Date format that represents the points. Only returned when unit_time is not block.
+	point_format: String
+
+	# Set of points between the date range selected and by the unit time and interval selected
+	points: [DaoBurnRatePoint]!
+}

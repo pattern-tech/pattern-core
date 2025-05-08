@@ -93,6 +93,10 @@ jobs:
               -e FANTOM_RPC=${{ vars.FANTOM_RPC }} \
               -e BASE_RPC=${{ vars.BASE_RPC }} \
               -e SOLSCAN_API_KEY=${{ secrets.SOLSCAN_API_KEY }} \
+              -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+              -e POKT_API_KEY=${{ secrets.POKT_API_KEY }} \
+              -e POKT_GRAPH_SCHEMA_PATH=${{ vars.POKT_GRAPH_SCHEMA_PATH }} \
+              -e POKT_GRAPH_ENDPOINT=${{ vars.POKT_GRAPH_ENDPOINT }} \
               patterntechnology/pattern-core-api:latest
 
             # Wait a few seconds to give the container time to start
