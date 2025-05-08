@@ -1,4 +1,5 @@
 import re
+import os
 import functools
 import threading
 
@@ -311,3 +312,15 @@ def log_method(func):
         print("----------------------------------------")
         return result
     return wrapper
+
+
+def load_pokt_schema():
+    """Load the POKT GraphQL schema from the file specified in environment variables."""
+    file_path = os.environ.get("POKT_GRAPH_SCHEMA_PATH")
+    if file_path is None:
+        raise ValueError(
+            "Environment variable 'POKT_GRAPH_SCHEMA_PATH' is not set.")
+
+    # Read the contents of the file
+    with open(file_path, "r") as file:
+        return file.read()
