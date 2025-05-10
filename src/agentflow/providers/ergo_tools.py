@@ -108,7 +108,7 @@ def get_box(box_id: str) -> Dict[str, Any]:
         box_id (str): Box ID
 
     Returns:
-        Dict[str, Any]: Ergo box details
+        Dict[str, Any]: Ergo box details with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/{box_id}"
     return _make_request(endpoint)
@@ -124,7 +124,7 @@ def get_unspent_boxes_by_last_epochs(last_epochs: int) -> Dict[str, Any]:
         last_epochs (int): Number of last epochs (max 1536)
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes
+        Dict[str, Any]: List of unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = "/api/v1/boxes/unspent/byLastEpochs/stream"
     params = {
@@ -144,7 +144,7 @@ def get_unspent_boxes_by_global_index(min_gix: int, limit: int) -> Dict[str, Any
         limit (int): Maximum number of items to retrieve (max 500)
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes
+        Dict[str, Any]: List of unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = "/api/v1/boxes/unspent/byGlobalIndex/stream"
     params = {
@@ -165,7 +165,7 @@ def get_unspent_boxes_stream(min_height: int, max_height: int) -> Dict[str, Any]
         max_height (int): Maximum block height
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes
+        Dict[str, Any]: List of unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = "/api/v1/boxes/unspent/stream"
     params = {
@@ -187,7 +187,7 @@ def get_boxes_by_ergo_tree_template_hash_stream(hash: str, min_height: int, max_
         max_height (int): Maximum block height
 
     Returns:
-        Dict[str, Any]: List of Ergo boxes
+        Dict[str, Any]: List of Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/byErgoTreeTemplateHash/{hash}/stream"
     params = {
@@ -209,7 +209,7 @@ def get_unspent_boxes_by_ergo_tree_template_hash_stream(hash: str, min_height: i
         max_height (int): Maximum block height
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes
+        Dict[str, Any]: List of unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/unspent/byErgoTreeTemplateHash/{hash}/stream"
     params = {
@@ -232,7 +232,7 @@ def get_unspent_boxes_by_token_id(token_id: str, offset: int = 0, limit: int = 5
         sort_direction (str): Sort direction, "asc" or "desc"
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes containing the token
+        Dict[str, Any]: List of unspent Ergo boxes containing the token with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/unspent/byTokenId/{token_id}"
     params = {
@@ -255,7 +255,7 @@ def get_boxes_by_token_id(token_id: str, offset: int = 0, limit: int = 50) -> Di
         limit (int): Number of items per page (max 100)
 
     Returns:
-        Dict[str, Any]: List of Ergo boxes containing the token
+        Dict[str, Any]: List of Ergo boxes containing the token with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/byTokenId/{token_id}"
     params = {
@@ -277,7 +277,7 @@ def get_boxes_by_ergo_tree(ergo_tree: str, offset: int = 0, limit: int = 100) ->
         limit (int): Number of items per page (max 500)
 
     Returns:
-        Dict[str, Any]: List of Ergo boxes
+        Dict[str, Any]: List of Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/byErgoTree/{ergo_tree}"
     params = {
@@ -299,7 +299,7 @@ def get_boxes_by_ergo_tree_template_hash(hash: str, offset: int = 0, limit: int 
         limit (int): Number of items per page (max 500)
 
     Returns:
-        Dict[str, Any]: List of Ergo boxes
+        Dict[str, Any]: List of Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/byErgoTreeTemplateHash/{hash}"
     params = {
@@ -322,7 +322,7 @@ def get_unspent_boxes_by_ergo_tree(ergo_tree: str, offset: int = 0, limit: int =
         sort_direction (str): Sort direction, "asc" or "desc"
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes
+        Dict[str, Any]: List of unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/unspent/byErgoTree/{ergo_tree}"
     params = {
@@ -345,7 +345,7 @@ def get_unspent_boxes_by_ergo_tree_template_hash(hash: str, offset: int = 0, lim
         limit (int): Number of items per page (max 500)
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes
+        Dict[str, Any]: List of unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/unspent/byErgoTreeTemplateHash/{hash}"
     params = {
@@ -367,7 +367,7 @@ def get_boxes_by_address(address: str, offset: int = 0, limit: int = 100) -> Dic
         limit (int): Number of items per page (max 500)
 
     Returns:
-        Dict[str, Any]: List of Ergo boxes
+        Dict[str, Any]: List of Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/byAddress/{address}"
     params = {
@@ -388,7 +388,7 @@ def get_unconfirmed_unspent_boxes_by_address(address: str, sort_direction: str =
         sort_direction (str): Sort direction, "asc" or "desc"
 
     Returns:
-        Dict[str, Any]: List of unconfirmed unspent Ergo boxes
+        Dict[str, Any]: List of unconfirmed unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/unspent/unconfirmed/byAddress/{address}"
     params = {
@@ -410,7 +410,7 @@ def get_unspent_boxes_by_address(address: str, offset: int = 0, limit: int = 100
         sort_direction (str): Sort direction, "asc" or "desc"
 
     Returns:
-        Dict[str, Any]: List of unspent Ergo boxes
+        Dict[str, Any]: List of unspent Ergo boxes with Erg token values using 9 decimal places
     """
     endpoint = f"/api/v1/boxes/unspent/byAddress/{address}"
     params = {
@@ -436,7 +436,7 @@ def get_tokens(offset: int = 0, limit: int = 100, sort_direction: str = "desc", 
         hide_nfts (bool): Whether to exclude NFTs from results
 
     Returns:
-        Dict[str, Any]: List of Ergo tokens
+        Dict[str, Any]: List of Ergo tokens with decimal places (typically 9 for Ergo tokens)
     """
     endpoint = "/api/v1/tokens"
     params = {
@@ -460,7 +460,7 @@ def search_tokens(query: str, offset: int = 0, limit: int = 100) -> Dict[str, An
         limit (int): Number of items per page (max 500)
 
     Returns:
-        Dict[str, Any]: List of matching Ergo tokens
+        Dict[str, Any]: List of matching Ergo tokens with decimal places (typically 9 for Ergo tokens)
     """
     endpoint = "/api/v1/tokens/search"
     params = {
@@ -481,7 +481,7 @@ def get_tokens_by_symbol(symbol: str) -> Dict[str, Any]:
         symbol (str): Token symbol
 
     Returns:
-        Dict[str, Any]: List of Ergo tokens with the given symbol
+        Dict[str, Any]: List of Ergo tokens with the given symbol with decimal places (typically 9 for Ergo tokens)
     """
     endpoint = f"/api/v1/tokens/bySymbol/{symbol}"
     return _make_request(endpoint)
@@ -497,7 +497,7 @@ def get_token(token_id: str) -> Dict[str, Any]:
         token_id (str): Token ID
 
     Returns:
-        Dict[str, Any]: Ergo token details
+        Dict[str, Any]: Ergo token details with decimal places (typically 9 for Ergo tokens)
     """
     endpoint = f"/api/v1/tokens/{token_id}"
     return _make_request(endpoint)
@@ -516,7 +516,7 @@ def get_assets(offset: int = 0, limit: int = 100, sort_direction: str = "desc", 
         hide_nfts (bool): Whether to exclude NFTs from results
 
     Returns:
-        Dict[str, Any]: List of Ergo assets
+        Dict[str, Any]: List of Ergo assets with decimal places (typically 9 for Ergo tokens)
     """
     endpoint = "/api/v1/assets"
     params = {
@@ -540,7 +540,7 @@ def search_assets_by_token_id(query: str, offset: int = 0, limit: int = 100) -> 
         limit (int): Number of items per page (max 500)
 
     Returns:
-        Dict[str, Any]: List of matching Ergo assets
+        Dict[str, Any]: List of matching Ergo assets with decimal places (typically 9 for Ergo tokens)
     """
     endpoint = "/api/v1/assets/search/byTokenId"
     params = {
@@ -590,7 +590,7 @@ def get_address_transactions(
         to_height (int, optional): Maximum block height
 
     Returns:
-        Dict[str, Any]: List of Ergo transactions for the address
+        Dict[str, Any]: List of Ergo transactions for the address with token values using 9 decimal places
     """
     endpoint = f"/api/v1/addresses/{address}/transactions"
     params = {
@@ -617,7 +617,7 @@ def get_address_balance_confirmed(address: str, min_confirmations: Optional[int]
         min_confirmations (int, optional): Minimum number of confirmations
 
     Returns:
-        Dict[str, Any]: Confirmed Ergo balance for the address
+        Dict[str, Any]: Confirmed Ergo balance for the address with token values using 9 decimal places
     """
     endpoint = f"/api/v1/addresses/{address}/balance/confirmed"
     params = {}
@@ -637,7 +637,7 @@ def get_address_balance_total(address: str) -> Dict[str, Any]:
         address (str): Ergo blockchain address
 
     Returns:
-        Dict[str, Any]: Total Ergo balance for the address including confirmed and unconfirmed
+        Dict[str, Any]: Total Ergo balance for the address including confirmed and unconfirmed with token values using 9 decimal places
     """
     endpoint = f"/api/v1/addresses/{address}/balance/total"
     return _make_request(endpoint)
