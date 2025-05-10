@@ -16,7 +16,8 @@ class ToolRegistery:
         "evm_moralis",
         "solana_moralis",
         "solana",
-        "pokt"
+        "pokt",
+        "ergo"
     ]
 
     _tool_selector = None
